@@ -2503,10 +2503,15 @@ describe("XsltEngine", () => {
       let hasText = false;
 
       for (const node of resultEl.childNodes) {
-        if (node.nodeType === 8) hasComment = true;
-        if (node.nodeType === 7) _hasPI = true;
-        if (node.nodeType === 3 && node.textContent.includes("Text"))
+        if (node.nodeType === 8) {
+          hasComment = true;
+        }
+        if (node.nodeType === 7) {
+          _hasPI = true;
+        }
+        if (node.nodeType === 3 && node.textContent.includes("Text")) {
           hasText = true;
+        }
       }
 
       assert.ok(hasComment);
