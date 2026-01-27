@@ -800,17 +800,19 @@ export class XsltEngine {
         break;
 
       case 3: // Text
-      case 4: // CDATA
+      case 4: { // CDATA
         // Copy text value
         const text = context.outputDocument.createTextNode(node.nodeValue || '');
         output.appendChild(text);
         break;
+      }
 
-      case 2: // Attribute
+      case 2: { // Attribute
         // Copy attribute value as text
         const attrText = context.outputDocument.createTextNode(node.nodeValue || '');
         output.appendChild(attrText);
         break;
+      }
 
       // Comments and PIs have no built-in template
     }
@@ -857,7 +859,7 @@ export class XsltEngine {
         break;
 
       case 3: // Text
-      case 4: // CDATA
+      case 4: { // CDATA
         // Output text if not whitespace only (or if preserving space)
         const text = node.nodeValue;
         if (text && (text.trim() || this.shouldPreserveSpace(node))) {
@@ -865,6 +867,7 @@ export class XsltEngine {
           output.appendChild(textNode);
         }
         break;
+      }
     }
   }
 
@@ -1318,7 +1321,7 @@ export class XsltEngine {
     const useAttributeSets = node.getAttribute('use-attribute-sets');
 
     switch (currentNode.nodeType) {
-      case 1: // Element
+      case 1: { // Element
         let copy;
         if (currentNode.namespaceURI) {
           copy = context.outputDocument.createElementNS(
@@ -1336,6 +1339,7 @@ export class XsltEngine {
         this.processChildren(node, context, copy);
         output.appendChild(copy);
         break;
+      }
 
       case 2: // Attribute
         if (output.nodeType === 1) {
@@ -1344,23 +1348,26 @@ export class XsltEngine {
         break;
 
       case 3: // Text
-      case 4: // CDATA
+      case 4: { // CDATA
         const textCopy = context.outputDocument.createTextNode(currentNode.nodeValue || '');
         output.appendChild(textCopy);
         break;
+      }
 
-      case 7: // Processing Instruction
+      case 7: { // Processing Instruction
         const piCopy = context.outputDocument.createProcessingInstruction(
           currentNode.target,
           currentNode.data
         );
         output.appendChild(piCopy);
         break;
+      }
 
-      case 8: // Comment
+      case 8: { // Comment
         const commentCopy = context.outputDocument.createComment(currentNode.nodeValue || '');
         output.appendChild(commentCopy);
         break;
+      }
 
       case 9: // Document
       case 11: // Document Fragment
@@ -1440,7 +1447,7 @@ export class XsltEngine {
     }
   }
 
-  xslVariable(node, context, output) {
+  xslVariable(node, context, _output) {
     const name = node.getAttribute('name');
     const select = node.getAttribute('select');
 
@@ -1518,7 +1525,7 @@ export class XsltEngine {
 
   countNumber(node, level, spec, context) {
     const count = spec.getAttribute('count');
-    const from = spec.getAttribute('from');
+    const _from = spec.getAttribute('from');
 
     // Simplified implementation
     if (level === 'single') {
@@ -1581,7 +1588,7 @@ export class XsltEngine {
     return result;
   }
 
-  xslMessage(node, context, output) {
+  xslMessage(node, context, _output) {
     const terminate = node.getAttribute('terminate') === 'yes';
 
     const fragment = context.outputDocument.createDocumentFragment();

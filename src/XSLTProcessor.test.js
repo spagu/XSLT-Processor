@@ -28,10 +28,8 @@ function parseXML(xmlString) {
 }
 
 describe('XSLTProcessor', () => {
-  let dom;
-
   beforeEach(() => {
-    dom = setupDOM();
+    setupDOM();
   });
 
   describe('Constructor', () => {

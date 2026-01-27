@@ -1595,10 +1595,10 @@ describe('XsltEngine', () => {
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      let hasPI = false;
+      let _hasPI = false;
       const walker = document.createTreeWalker(result, 128); // NodeFilter.SHOW_PROCESSING_INSTRUCTION
       if (walker.nextNode()) {
-        hasPI = true;
+        _hasPI = true;
       }
       // PI may or may not be created depending on DOM impl
       assert.ok(result.querySelector('result'));
@@ -2419,12 +2419,12 @@ describe('XsltEngine', () => {
 
       const resultEl = result.querySelector('result');
       let hasComment = false;
-      let hasPI = false;
+      let _hasPI = false;
       let hasText = false;
 
       for (const node of resultEl.childNodes) {
         if (node.nodeType === 8) hasComment = true;
-        if (node.nodeType === 7) hasPI = true;
+        if (node.nodeType === 7) _hasPI = true;
         if (node.nodeType === 3 && node.textContent.includes('Text')) hasText = true;
       }
 
@@ -2819,6 +2819,213 @@ describe('XsltEngine', () => {
       const includedItem = result.querySelector('included-item');
       assert.ok(includedItem, 'Included template with higher priority should be used');
       assert.strictEqual(includedItem.textContent, 'Test');
+    });
+
+    it('should detect circular imports', () => {
+      engine.setStylesheetLoader((href) => {
+        if (href === 'circular.xsl') {
+          return parseXML(`<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:import href="circular.xsl"/>
+              <xsl:template match="/"><out/></xsl:template>
+            </xsl:stylesheet>
+          `);
+        }
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="circular.xsl"/>
+          <xsl:template match="/"><out/></xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      assert.throws(() => {
+        engine.importStylesheet(xslt);
+      }, /Circular stylesheet reference/);
+    });
+
+    it('should import stylesheet returned as XML string', () => {
+      engine.setStylesheetLoader((href) => {
+        if (href === 'string-import.xsl') {
+          return `<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:template match="item">
+                <imported><xsl:value-of select="."/></imported>
+              </xsl:template>
+            </xsl:stylesheet>
+          `;
+        }
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="string-import.xsl"/>
+          <xsl:template match="/">
+            <result><xsl:apply-templates select="//item"/></result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root><item>Test</item></root>');
+
+      engine.importStylesheet(xslt);
+      const result = engine.transform(xml, document);
+
+      assert.ok(result.querySelector('imported'));
+    });
+
+    it('should throw error when import fails', () => {
+      engine.setStylesheetLoader(() => {
+        throw new Error('Network error');
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="failing.xsl"/>
+          <xsl:template match="/"><out/></xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      assert.throws(() => {
+        engine.importStylesheet(xslt);
+      }, /Failed to import stylesheet/);
+    });
+
+    it('should throw error for invalid included stylesheet', () => {
+      engine.setStylesheetLoader((href) => {
+        if (href === 'invalid.xsl') {
+          return parseXML(`<?xml version="1.0"?><not-a-stylesheet/>`);
+        }
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="invalid.xsl"/>
+          <xsl:template match="/"><out/></xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      assert.throws(() => {
+        engine.importStylesheet(xslt);
+      }, /not a valid XSLT stylesheet/);
+    });
+
+    it('should process various elements in imported stylesheet', () => {
+      engine.setStylesheetLoader((href) => {
+        if (href === 'full-features.xsl') {
+          return parseXML(`<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:output method="html" indent="yes"/>
+              <xsl:param name="importedParam" select="'param-value'"/>
+              <xsl:key name="importedKey" match="item" use="@id"/>
+              <xsl:decimal-format name="importedFormat" decimal-separator=","/>
+              <xsl:namespace-alias stylesheet-prefix="ns1" result-prefix="ns2"/>
+              <xsl:attribute-set name="importedAttrs">
+                <xsl:attribute name="class">imported</xsl:attribute>
+              </xsl:attribute-set>
+              <xsl:strip-space elements="pre"/>
+              <xsl:preserve-space elements="code"/>
+              <xsl:template match="item">
+                <imported-item><xsl:value-of select="."/></imported-item>
+              </xsl:template>
+            </xsl:stylesheet>
+          `);
+        }
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="full-features.xsl"/>
+          <xsl:template match="/">
+            <result><xsl:apply-templates select="//item"/></result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root><item>Test</item></root>');
+
+      engine.importStylesheet(xslt);
+
+      assert.ok('importedParam' in engine.globalParameters);
+      assert.ok('importedKey' in engine.keys);
+      assert.ok('importedFormat' in engine.decimalFormats);
+      assert.strictEqual(engine.namespaceAliases.ns1, 'ns2');
+      assert.ok('importedAttrs' in engine.attributeSets);
+      assert.ok(engine.stripSpace.includes('pre'));
+      assert.ok(engine.preserveSpace.includes('code'));
+
+      const result = engine.transform(xml, document);
+      assert.ok(result.querySelector('imported-item'));
+    });
+
+    it('should process include in imported stylesheet', () => {
+      engine.setStylesheetLoader((href) => {
+        if (href === 'parent.xsl') {
+          return parseXML(`<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:include href="child.xsl"/>
+            </xsl:stylesheet>
+          `);
+        }
+        if (href === 'child.xsl') {
+          return parseXML(`<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:template match="item">
+                <child-item><xsl:value-of select="."/></child-item>
+              </xsl:template>
+            </xsl:stylesheet>
+          `);
+        }
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="parent.xsl"/>
+          <xsl:template match="/">
+            <result><xsl:apply-templates select="//item"/></result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root><item>Test</item></root>');
+
+      engine.importStylesheet(xslt);
+      const result = engine.transform(xml, document);
+
+      assert.ok(result.querySelector('child-item'));
+    });
+  });
+
+  describe('parseXmlString', () => {
+    it('should throw error for invalid XML with parsererror', () => {
+      assert.throws(() => {
+        engine.parseXmlString('<invalid><unclosed>');
+      }, /XML parse error/);
+    });
+
+    it('should throw error when DOMParser is not available', () => {
+      const originalDOMParser = global.DOMParser;
+      global.DOMParser = undefined;
+
+      const testEngine = new XsltEngine();
+
+      assert.throws(() => {
+        testEngine.parseXmlString('<valid/>');
+      }, /XML parsing not available/);
+
+      global.DOMParser = originalDOMParser;
+    });
+
+    it('should parse valid XML string', () => {
+      const result = engine.parseXmlString('<root><item>test</item></root>');
+      assert.ok(result.documentElement);
+      assert.strictEqual(result.documentElement.tagName, 'root');
     });
   });
 });

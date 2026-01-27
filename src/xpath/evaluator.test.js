@@ -1577,7 +1577,7 @@ describe('XPath Evaluator', () => {
     });
 
     it('should parse namespace prefix', () => {
-      const nsDoc = createDOM(`<root xmlns:ns="http://example.com"><ns:item>Test</ns:item></root>`);
+      const _nsDoc = createDOM(`<root xmlns:ns="http://example.com"><ns:item>Test</ns:item></root>`);
       // Even without namespace resolver, parsing should work
       assert.doesNotThrow(() => {
         parse('//ns:item');

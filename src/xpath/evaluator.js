@@ -640,7 +640,7 @@ export class XPathEvaluator {
     switch (node.nodeType) {
       case 1: // Element
       case 9: // Document
-      case 11: // Document Fragment
+      case 11: { // Document Fragment
         let text = '';
         const walker = (n) => {
           if (n.nodeType === 3) {
@@ -653,6 +653,7 @@ export class XPathEvaluator {
         };
         walker(node);
         return text;
+      }
 
       case 2: // Attribute
       case 3: // Text

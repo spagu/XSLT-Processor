@@ -213,7 +213,6 @@ export class XPathParser {
 
     // Check for path continuation
     if (this.check(TokenType.SLASH) || this.check(TokenType.DOUBLE_SLASH)) {
-      const absolute = false;
       const steps = [];
 
       while (this.check(TokenType.SLASH) || this.check(TokenType.DOUBLE_SLASH)) {
