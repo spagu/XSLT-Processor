@@ -3,8 +3,8 @@
 [![CI](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml)
 [![Release](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml)
 [![npm version](https://img.shields.io/npm/v/@tradik/xslt-processor.svg)](https://www.npmjs.com/package/@tradik/xslt-processor)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D25.0.0-brightgreen.svg)](https://nodejs.org/)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/spagu/XSLT-Processor)
 
 JavaScript implementation of XSLTProcessor for browser environments and Node.js CLI. This package provides a complete implementation of the W3C XSLTProcessor API that can be used as a drop-in replacement for the native browser implementation.
@@ -660,7 +660,7 @@ All colors meet WCAG 2.2 AA contrast requirements for accessibility.
 
 ## License
 
-MIT License - see [LICENSE](../../LICENSE) for details.
+BSD-3-Clause License - see [LICENSE.md](LICENSE.md) for details.
 
 ## Related
 

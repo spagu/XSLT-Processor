@@ -1,6 +1,6 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "main": "dist/xslt-processor.cjs",
@@ -47,7 +47,7 @@
     "javascript"
   ],
   "author": "tradik",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/spagu/XSLT-Processor.git"
@@ -57,7 +57,7 @@
   },
   "homepage": "https://github.com/spagu/XSLT-Processor#readme",
   "engines": {
-    "node": ">=25.0.0"
+    "node": ">=18.0.0"
   },
   "devDependencies": {
     "eslint": "^9.0.0",

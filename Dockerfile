@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # xslt-processor - Development and Test Environment
-# Uses Node.js 25+ for modern JavaScript features and native test runner
+# Uses Node.js 25 as primary, with backward compatibility to Node.js 18+
 
 FROM node:25-alpine AS base
 

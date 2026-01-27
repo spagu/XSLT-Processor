@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-01-27
+
+### Changed
+
+- **License**: Corrected license to BSD-3-Clause (was incorrectly marked as MIT in documentation)
+- **Node.js compatibility**: Primary Node.js 25, with backward compatibility to Node.js 18+
+  - Library runtime works with Node.js 14+
+  - Tests require Node.js 18+ (native test runner)
+  - CI now tests on Node.js 25, 22, 20, 18
+- Dockerfile uses Node.js 25 as primary
+- Updated GitHub Actions workflows for multi-version testing
+
+### Fixed
+
+- Fixed license badge in README (BSD-3-Clause, not MIT)
+- Fixed license reference link in README
+
 ## [1.0.2] - 2026-01-27
 
 ### Fixed
@@ -322,5 +339,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Native test runner (Node.js 25+)
 - esbuild for bundling
 
+[1.0.3]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.3
+[1.0.2]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.2
 [1.0.1]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.1
 [1.0.0]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.0
