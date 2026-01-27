@@ -67,7 +67,7 @@ export class XsltContext {
  * XSLT Engine
  */
 export class XsltEngine {
-  constructor() {
+  constructor(options = {}) {
     this.xpathEvaluator = new XPathEvaluator();
     this.templates = [];
     this.keys = {};
@@ -90,13 +90,85 @@ export class XsltEngine {
     this.namespaceAliases = {};
     this.stripSpace = [];
     this.preserveSpace = [];
+
+    // Import/Include support
+    this.stylesheetLoader = options.stylesheetLoader || null;
+    this.currentImportPrecedence = 0;
+    this.processedStylesheets = new Set();
+    this.baseUri = options.baseUri || '';
+  }
+
+  /**
+   * Set the stylesheet loader function for xsl:import and xsl:include
+   * @param {Function} loader - Function(href, baseUri) => Document or string (XML)
+   */
+  setStylesheetLoader(loader) {
+    this.stylesheetLoader = loader;
+  }
+
+  /**
+   * Resolve a relative URI against a base URI
+   */
+  resolveUri(href, baseUri) {
+    if (!baseUri || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('/')) {
+      return href;
+    }
+
+    // Remove filename from baseUri to get directory
+    const lastSlash = baseUri.lastIndexOf('/');
+    const baseDir = lastSlash >= 0 ? baseUri.substring(0, lastSlash + 1) : '';
+
+    return baseDir + href;
+  }
+
+  /**
+   * Load an external stylesheet document
+   */
+  loadStylesheet(href, baseUri) {
+    if (!this.stylesheetLoader) {
+      throw new Error(`Cannot load stylesheet "${href}": no stylesheetLoader configured. ` +
+        'Use engine.setStylesheetLoader(fn) to provide a loader function.');
+    }
+
+    const resolvedUri = this.resolveUri(href, baseUri);
+    const result = this.stylesheetLoader(resolvedUri, baseUri);
+
+    // If result is a string, it needs to be parsed (caller should handle this)
+    return { document: result, uri: resolvedUri };
+  }
+
+  /**
+   * Parse XML string to document (helper for stylesheet loading)
+   */
+  parseXmlString(xmlString) {
+    if (typeof DOMParser !== 'undefined') {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlString, 'application/xml');
+      const parseError = doc.querySelector('parsererror');
+      if (parseError) {
+        throw new Error(`XML parse error: ${parseError.textContent}`);
+      }
+      return doc;
+    }
+    throw new Error('XML parsing not available in this environment');
   }
 
   /**
    * Import and compile an XSLT stylesheet
+   * @param {Document|Element} stylesheetNode - The stylesheet document or root element
+   * @param {string} [stylesheetUri] - Optional URI of the stylesheet for resolving imports
    */
-  importStylesheet(stylesheetNode) {
-    this.stylesheetDoc = stylesheetNode.ownerDocument || stylesheetNode;
+  importStylesheet(stylesheetNode, stylesheetUri) {
+    const isMainStylesheet = this.stylesheetDoc === null;
+
+    if (isMainStylesheet) {
+      this.stylesheetDoc = stylesheetNode.ownerDocument || stylesheetNode;
+      if (stylesheetUri) {
+        this.baseUri = stylesheetUri;
+        this.processedStylesheets.add(stylesheetUri);
+      }
+    }
+
     const root = stylesheetNode.documentElement || stylesheetNode;
 
     // Validate stylesheet
@@ -112,10 +184,28 @@ export class XsltEngine {
     // Collect namespaces from root
     this.collectNamespaces(root);
 
-    // Process top-level elements
+    // XSLT 1.0: xsl:import elements MUST come first and are processed with lower precedence
+    // Process imports first (they have lower precedence than the importing stylesheet)
+    const imports = [];
+    const otherElements = [];
+
     for (const child of root.childNodes) {
       if (child.nodeType !== 1) continue;
 
+      if (this.isXsltElement(child, 'import')) {
+        imports.push(child);
+      } else {
+        otherElements.push(child);
+      }
+    }
+
+    // Process imports (lower precedence - process before current stylesheet)
+    for (const importNode of imports) {
+      this.processImport(importNode, stylesheetUri || this.baseUri);
+    }
+
+    // Process other top-level elements (including includes)
+    for (const child of otherElements) {
       if (this.isXsltElement(child, 'template')) {
         this.registerTemplate(child);
       } else if (this.isXsltElement(child, 'output')) {
@@ -137,11 +227,149 @@ export class XsltEngine {
       } else if (this.isXsltElement(child, 'preserve-space')) {
         this.processPreserveSpace(child);
       } else if (this.isXsltElement(child, 'include')) {
-        // Would need to load and process included stylesheet
-        console.warn('xsl:include is not fully supported');
-      } else if (this.isXsltElement(child, 'import')) {
-        // Would need to load and process imported stylesheet
-        console.warn('xsl:import is not fully supported');
+        this.processInclude(child, stylesheetUri || this.baseUri);
+      }
+    }
+
+    // Increment import precedence after processing this stylesheet
+    if (isMainStylesheet) {
+      this.currentImportPrecedence++;
+    }
+  }
+
+  /**
+   * Process xsl:include element
+   * Includes are merged at the same import precedence level
+   */
+  processInclude(node, baseUri) {
+    const href = node.getAttribute('href');
+    if (!href) {
+      throw new Error('xsl:include requires an href attribute');
+    }
+
+    const resolvedUri = this.resolveUri(href, baseUri);
+
+    // Check for circular includes
+    if (this.processedStylesheets.has(resolvedUri)) {
+      throw new Error(`Circular stylesheet reference detected: ${resolvedUri}`);
+    }
+
+    this.processedStylesheets.add(resolvedUri);
+
+    try {
+      const { document: stylesheetDoc } = this.loadStylesheet(href, baseUri);
+
+      // Parse if string
+      let doc = stylesheetDoc;
+      if (typeof stylesheetDoc === 'string') {
+        doc = this.parseXmlString(stylesheetDoc);
+      }
+
+      // Process the included stylesheet at the same import precedence
+      const savedPrecedence = this.currentImportPrecedence;
+      this.processIncludedStylesheet(doc, resolvedUri);
+      this.currentImportPrecedence = savedPrecedence;
+    } catch (error) {
+      throw new Error(`Failed to include stylesheet "${href}": ${error.message}`);
+    }
+  }
+
+  /**
+   * Process xsl:import element
+   * Imports have lower precedence than the importing stylesheet
+   */
+  processImport(node, baseUri) {
+    const href = node.getAttribute('href');
+    if (!href) {
+      throw new Error('xsl:import requires an href attribute');
+    }
+
+    const resolvedUri = this.resolveUri(href, baseUri);
+
+    // Check for circular imports
+    if (this.processedStylesheets.has(resolvedUri)) {
+      throw new Error(`Circular stylesheet reference detected: ${resolvedUri}`);
+    }
+
+    this.processedStylesheets.add(resolvedUri);
+
+    try {
+      const { document: stylesheetDoc } = this.loadStylesheet(href, baseUri);
+
+      // Parse if string
+      let doc = stylesheetDoc;
+      if (typeof stylesheetDoc === 'string') {
+        doc = this.parseXmlString(stylesheetDoc);
+      }
+
+      // Process the imported stylesheet (imports have lower precedence)
+      // Don't increment precedence yet - imported templates get current (lower) precedence
+      this.processIncludedStylesheet(doc, resolvedUri);
+
+      // After processing import, increment precedence for next imports and main stylesheet
+      this.currentImportPrecedence++;
+    } catch (error) {
+      throw new Error(`Failed to import stylesheet "${href}": ${error.message}`);
+    }
+  }
+
+  /**
+   * Process an included/imported stylesheet document
+   */
+  processIncludedStylesheet(stylesheetDoc, stylesheetUri) {
+    const root = stylesheetDoc.documentElement || stylesheetDoc;
+
+    // Validate stylesheet
+    if (!this.isXsltElement(root, 'stylesheet') && !this.isXsltElement(root, 'transform')) {
+      throw new Error('Included/imported document is not a valid XSLT stylesheet');
+    }
+
+    // Collect namespaces
+    this.collectNamespaces(root);
+
+    // Process imports first (they have lower precedence)
+    const imports = [];
+    const otherElements = [];
+
+    for (const child of root.childNodes) {
+      if (child.nodeType !== 1) continue;
+
+      if (this.isXsltElement(child, 'import')) {
+        imports.push(child);
+      } else {
+        otherElements.push(child);
+      }
+    }
+
+    // Process nested imports
+    for (const importNode of imports) {
+      this.processImport(importNode, stylesheetUri);
+    }
+
+    // Process other elements
+    for (const child of otherElements) {
+      if (this.isXsltElement(child, 'template')) {
+        this.registerTemplate(child);
+      } else if (this.isXsltElement(child, 'output')) {
+        this.processOutput(child);
+      } else if (this.isXsltElement(child, 'variable')) {
+        this.processGlobalVariable(child);
+      } else if (this.isXsltElement(child, 'param')) {
+        this.processGlobalParam(child);
+      } else if (this.isXsltElement(child, 'key')) {
+        this.processKey(child);
+      } else if (this.isXsltElement(child, 'decimal-format')) {
+        this.processDecimalFormat(child);
+      } else if (this.isXsltElement(child, 'namespace-alias')) {
+        this.processNamespaceAlias(child);
+      } else if (this.isXsltElement(child, 'attribute-set')) {
+        this.processAttributeSet(child);
+      } else if (this.isXsltElement(child, 'strip-space')) {
+        this.processStripSpace(child);
+      } else if (this.isXsltElement(child, 'preserve-space')) {
+        this.processPreserveSpace(child);
+      } else if (this.isXsltElement(child, 'include')) {
+        this.processInclude(child, stylesheetUri);
       }
     }
   }
@@ -184,6 +412,7 @@ export class XsltEngine {
       name,
       mode,
       priority,
+      importPrecedence: this.currentImportPrecedence,
       node
     });
   }

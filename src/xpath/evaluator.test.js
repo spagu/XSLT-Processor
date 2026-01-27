@@ -1760,3 +1760,38 @@ describe('XPath Evaluator', () => {
     });
   });
 });
+
+describe('XPathParser edge cases', () => {
+  it('should return last token when advance() called at end', async () => {
+    const { XPathParser } = await import('./parser.js');
+    const tokens = tokenize('foo');
+    const parser = new XPathParser(tokens);
+
+    // Parse the expression which consumes all tokens
+    parser.parse();
+
+    // Now at end, advance() should return the last token (EOF)
+    const result = parser.advance();
+    assert.strictEqual(result.type, TokenType.EOF);
+  });
+
+  it('should handle advance() at end of tokens gracefully', async () => {
+    const { XPathParser } = await import('./parser.js');
+    // Single element expression
+    const tokens = tokenize('a');
+    const parser = new XPathParser(tokens);
+
+    // Consume all tokens
+    while (!parser.isAtEnd()) {
+      parser.advance();
+    }
+
+    // Call advance when already at end - should return last token
+    const token1 = parser.advance();
+    const token2 = parser.advance();
+
+    // Both should return the EOF token
+    assert.strictEqual(token1.type, TokenType.EOF);
+    assert.strictEqual(token2.type, TokenType.EOF);
+  });
+});

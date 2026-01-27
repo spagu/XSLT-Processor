@@ -2432,4 +2432,393 @@ describe('XsltEngine', () => {
       assert.ok(hasText);
     });
   });
+
+  describe('xsl:include and xsl:import', () => {
+    it('should throw error when no stylesheet loader is configured', () => {
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:include href="other.xsl"/>
+          <xsl:template match="/">
+            <result/>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      assert.throws(() => {
+        engine.importStylesheet(xslt);
+      }, /no stylesheetLoader configured/);
+    });
+
+    it('should throw error for xsl:include without href', () => {
+      const stylesheets = {};
+      engine.setStylesheetLoader((href) => stylesheets[href]);
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:include/>
+          <xsl:template match="/">
+            <result/>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      assert.throws(() => {
+        engine.importStylesheet(xslt);
+      }, /xsl:include requires an href attribute/);
+    });
+
+    it('should throw error for xsl:import without href', () => {
+      const stylesheets = {};
+      engine.setStylesheetLoader((href) => stylesheets[href]);
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import/>
+          <xsl:template match="/">
+            <result/>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      assert.throws(() => {
+        engine.importStylesheet(xslt);
+      }, /xsl:import requires an href attribute/);
+    });
+
+    it('should include templates from external stylesheet', () => {
+      const includedXslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template name="greeting">
+            <hello>World</hello>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      engine.setStylesheetLoader((href) => {
+        if (href === 'greeting.xsl') return includedXslt;
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:include href="greeting.xsl"/>
+          <xsl:template match="/">
+            <result>
+              <xsl:call-template name="greeting"/>
+            </result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root/>');
+
+      engine.importStylesheet(xslt);
+      const result = engine.transform(xml, document);
+
+      const hello = result.querySelector('hello');
+      assert.ok(hello);
+      assert.strictEqual(hello.textContent, 'World');
+    });
+
+    it('should import templates with lower precedence', () => {
+      const importedXslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="item">
+            <imported-item><xsl:value-of select="."/></imported-item>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      engine.setStylesheetLoader((href) => {
+        if (href === 'base.xsl') return importedXslt;
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      // Main stylesheet overrides the imported template
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="base.xsl"/>
+          <xsl:template match="item">
+            <main-item><xsl:value-of select="."/></main-item>
+          </xsl:template>
+          <xsl:template match="/">
+            <result>
+              <xsl:apply-templates select="//item"/>
+            </result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root><item>Test</item></root>');
+
+      engine.importStylesheet(xslt);
+      const result = engine.transform(xml, document);
+
+      // Main template should win due to higher import precedence
+      const mainItem = result.querySelector('main-item');
+      assert.ok(mainItem, 'Main template should override imported template');
+      assert.strictEqual(mainItem.textContent, 'Test');
+
+      const importedItem = result.querySelector('imported-item');
+      assert.strictEqual(importedItem, null, 'Imported template should not be used');
+    });
+
+    it('should use imported template when main stylesheet has no matching template', () => {
+      const importedXslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="special">
+            <special-item><xsl:value-of select="."/></special-item>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      engine.setStylesheetLoader((href) => {
+        if (href === 'base.xsl') return importedXslt;
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="base.xsl"/>
+          <xsl:template match="/">
+            <result>
+              <xsl:apply-templates select="//special"/>
+            </result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root><special>Content</special></root>');
+
+      engine.importStylesheet(xslt);
+      const result = engine.transform(xml, document);
+
+      const specialItem = result.querySelector('special-item');
+      assert.ok(specialItem, 'Imported template should be used when no override exists');
+      assert.strictEqual(specialItem.textContent, 'Content');
+    });
+
+    it('should detect circular includes', () => {
+      engine.setStylesheetLoader((href) => {
+        // Both stylesheets include each other
+        if (href === 'a.xsl') {
+          return parseXML(`<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:include href="b.xsl"/>
+            </xsl:stylesheet>
+          `);
+        }
+        if (href === 'b.xsl') {
+          return parseXML(`<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:include href="a.xsl"/>
+            </xsl:stylesheet>
+          `);
+        }
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:include href="a.xsl"/>
+          <xsl:template match="/">
+            <result/>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      assert.throws(() => {
+        engine.importStylesheet(xslt);
+      }, /Circular stylesheet reference/);
+    });
+
+    it('should resolve relative URIs correctly', () => {
+      engine.setStylesheetLoader((href) => {
+        if (href === '/styles/common/utils.xsl') {
+          return parseXML(`<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:template name="util">
+                <util>OK</util>
+              </xsl:template>
+            </xsl:stylesheet>
+          `);
+        }
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:include href="common/utils.xsl"/>
+          <xsl:template match="/">
+            <result>
+              <xsl:call-template name="util"/>
+            </result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root/>');
+
+      engine.importStylesheet(xslt, '/styles/main.xsl');
+      const result = engine.transform(xml, document);
+
+      const util = result.querySelector('util');
+      assert.ok(util);
+      assert.strictEqual(util.textContent, 'OK');
+    });
+
+    it('should support stylesheet loader returning XML string', () => {
+      engine.setStylesheetLoader((href) => {
+        if (href === 'string.xsl') {
+          return `<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:template name="fromString">
+                <string-template>Success</string-template>
+              </xsl:template>
+            </xsl:stylesheet>
+          `;
+        }
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:include href="string.xsl"/>
+          <xsl:template match="/">
+            <result>
+              <xsl:call-template name="fromString"/>
+            </result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root/>');
+
+      engine.importStylesheet(xslt);
+      const result = engine.transform(xml, document);
+
+      const stringTemplate = result.querySelector('string-template');
+      assert.ok(stringTemplate);
+      assert.strictEqual(stringTemplate.textContent, 'Success');
+    });
+
+    it('should merge global variables from imported stylesheets', () => {
+      const importedXslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:variable name="importedVar" select="'imported-value'"/>
+        </xsl:stylesheet>
+      `);
+
+      engine.setStylesheetLoader((href) => {
+        if (href === 'vars.xsl') return importedXslt;
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="vars.xsl"/>
+          <xsl:template match="/">
+            <result>
+              <xsl:value-of select="$importedVar"/>
+            </result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root/>');
+
+      engine.importStylesheet(xslt);
+      const result = engine.transform(xml, document);
+
+      assert.strictEqual(result.querySelector('result').textContent, 'imported-value');
+    });
+
+    it('should handle nested imports with correct precedence', () => {
+      // base.xsl is imported by middle.xsl, which is imported by main.xsl
+      // Precedence: base < middle < main
+      engine.setStylesheetLoader((href) => {
+        if (href === 'base.xsl') {
+          return parseXML(`<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:template match="item">
+                <base-item><xsl:value-of select="."/></base-item>
+              </xsl:template>
+            </xsl:stylesheet>
+          `);
+        }
+        if (href === 'middle.xsl') {
+          return parseXML(`<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+              <xsl:import href="base.xsl"/>
+              <xsl:template match="item">
+                <middle-item><xsl:value-of select="."/></middle-item>
+              </xsl:template>
+            </xsl:stylesheet>
+          `);
+        }
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="middle.xsl"/>
+          <xsl:template match="/">
+            <result>
+              <xsl:apply-templates select="//item"/>
+            </result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root><item>Test</item></root>');
+
+      engine.importStylesheet(xslt);
+      const result = engine.transform(xml, document);
+
+      // middle.xsl template should win over base.xsl
+      const middleItem = result.querySelector('middle-item');
+      assert.ok(middleItem, 'Middle template should override base template');
+      assert.strictEqual(middleItem.textContent, 'Test');
+    });
+
+    it('should include templates at same precedence level', () => {
+      const includedXslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="item" priority="1">
+            <included-item><xsl:value-of select="."/></included-item>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      engine.setStylesheetLoader((href) => {
+        if (href === 'included.xsl') return includedXslt;
+        throw new Error(`Unknown stylesheet: ${href}`);
+      });
+
+      // With include, templates are at the same precedence, so priority decides
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:include href="included.xsl"/>
+          <xsl:template match="item" priority="0.5">
+            <main-item><xsl:value-of select="."/></main-item>
+          </xsl:template>
+          <xsl:template match="/">
+            <result>
+              <xsl:apply-templates select="//item"/>
+            </result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      const xml = parseXML('<root><item>Test</item></root>');
+
+      engine.importStylesheet(xslt);
+      const result = engine.transform(xml, document);
+
+      // Included template has higher priority (1 > 0.5), so it should win
+      const includedItem = result.querySelector('included-item');
+      assert.ok(includedItem, 'Included template with higher priority should be used');
+      assert.strictEqual(includedItem.textContent, 'Test');
+    });
+  });
 });

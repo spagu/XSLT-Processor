@@ -1,6 +1,7 @@
 # xslt-processor
 
 [![CI](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml)
+[![Release](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml)
 [![npm version](https://img.shields.io/npm/v/xslt-processor.svg)](https://www.npmjs.com/package/xslt-processor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D25.0.0-brightgreen.svg)](https://nodejs.org/)
@@ -151,6 +152,51 @@ const sortOrder = processor.getParameter(null, 'sortOrder');
 
 // Clear parameters
 processor.clearParameters();
+```
+
+### Using xsl:import and xsl:include
+
+To use `xsl:import` and `xsl:include` elements in your stylesheets, you need to configure a stylesheet loader that tells the processor how to fetch external stylesheets:
+
+```javascript
+import { XSLTProcessor } from 'xslt-processor';
+
+const processor = new XSLTProcessor();
+
+// Configure stylesheet loader
+processor.engine.setStylesheetLoader((href, baseUri) => {
+  // href: the href attribute from xsl:import/xsl:include
+  // baseUri: the URI of the importing stylesheet
+
+  // Option 1: Return a parsed Document
+  const response = await fetch(href);
+  const text = await response.text();
+  const parser = new DOMParser();
+  return parser.parseFromString(text, 'application/xml');
+
+  // Option 2: Return XML string (will be parsed automatically)
+  return await fetch(href).then(r => r.text());
+});
+
+// Now xsl:import and xsl:include will work
+processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
+```
+
+#### Import vs Include Behavior
+
+- **xsl:include**: Merges templates at the same precedence level. If multiple templates match, priority attribute decides.
+- **xsl:import**: Imported templates have lower precedence than importing stylesheet. The importing stylesheet's templates always win over imported ones with the same match pattern.
+
+```xml
+<!-- main.xsl -->
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:import href="base.xsl"/>  <!-- imported templates have lower precedence -->
+  <xsl:include href="utils.xsl"/> <!-- included templates have same precedence -->
+
+  <xsl:template match="item">
+    <!-- This template overrides the one from base.xsl -->
+  </xsl:template>
+</xsl:stylesheet>
 ```
 
 ### Utility Functions
@@ -310,8 +356,8 @@ const result = evaluator.evaluate(ast, context);
 | `xsl:value-of` | Supported |
 | `xsl:variable` | Supported |
 | `xsl:with-param` | Supported |
-| `xsl:import` | Partial |
-| `xsl:include` | Partial |
+| `xsl:import` | Supported |
+| `xsl:include` | Supported |
 
 ## XPath Functions Supported
 
@@ -372,6 +418,33 @@ docker-compose run dev
 # Build bundles
 docker-compose run build
 ```
+
+### Publishing to npm
+
+The package is automatically published to npm when a GitHub release is created or a version tag is pushed.
+
+**Prerequisites:**
+1. Set up `NPM_TOKEN` secret in GitHub repository settings
+2. Ensure version in `package.json` matches the release tag
+
+**Release Process:**
+
+```bash
+# 1. Update version in package.json
+npm version patch  # or minor, major
+
+# 2. Push the tag
+git push origin --tags
+
+# 3. Create a GitHub release (or push triggers automatically)
+```
+
+**Automated Workflow:**
+1. Runs all tests and linting checks
+2. Performs security audit with `npm audit`
+3. Builds distribution bundles
+4. Publishes to npm with provenance (supply chain security)
+5. Uploads build artifacts to GitHub
 
 ## Browser Compatibility
 
