@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-01-27
+
+### Fixed
+
+- **XPath context bug** - Fixed initial context node in XSLT transformation
+  - Previously used `documentElement` as initial context, breaking paths like `RootElement/child`
+  - Now correctly uses document node as initial context for `/` template matching
+  - XPath expressions like `Schema_Resume_v1.1.0/basics/name` now work correctly
+  - This fix ensures XSLT templates that match `/` and use relative paths work as expected
+
 ## [1.0.1] - 2026-01-27
 
 ### Added

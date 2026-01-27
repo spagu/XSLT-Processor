@@ -588,10 +588,11 @@ export class XsltEngine {
       throw new Error("No output document available");
     }
 
-    // Create context
+    // Create context - use document node as initial context for "/" template matching
+    // XPath paths like "RootElement/child" expect to start from document node
     const context = new XsltContext({
-      currentNode: sourceNode.documentElement || sourceNode,
-      currentNodeList: [sourceNode.documentElement || sourceNode],
+      currentNode: sourceNode,
+      currentNodeList: [sourceNode],
       position: 1,
       outputDocument: doc,
       stylesheet: this.stylesheetDoc,
