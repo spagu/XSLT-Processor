@@ -357,10 +357,6 @@ export function isNativeXSLTSupported() {
  * @returns {boolean} True if installed as global
  */
 export function installGlobal(force = false) {
-  if (typeof globalThis === "undefined") {
-    return false;
-  }
-
   if (!force && isNativeXSLTSupported()) {
     return false;
   }

@@ -12,10 +12,10 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/xslt-processor.js",
-      "require": "./dist/xslt-processor.cjs",
+      "types": "./dist/xslt-processor.d.ts",
       "browser": "./dist/xslt-processor.browser.js",
-      "types": "./dist/xslt-processor.d.ts"
+      "import": "./dist/xslt-processor.js",
+      "require": "./dist/xslt-processor.cjs"
     }
   },
   "files": [

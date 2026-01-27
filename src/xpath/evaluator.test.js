@@ -333,6 +333,16 @@ describe("XPath Evaluator", () => {
       assert.strictEqual(result, true);
     });
 
+    it("should evaluate or with false left side (cover right side evaluation)", () => {
+      const result = evaluate("false() or true()", doc);
+      assert.strictEqual(result, true);
+    });
+
+    it("should evaluate or with both sides false", () => {
+      const result = evaluate("false() or false()", doc);
+      assert.strictEqual(result, false);
+    });
+
     it("should evaluate union |", () => {
       const result = select("/root/item | /root/nested", doc);
       assert.strictEqual(result.length, 4);
