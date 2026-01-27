@@ -35,9 +35,43 @@ npm install @tradik/xslt-processor
 
 ## Usage
 
-### Browser (Auto-Install)
+### Browser via CDN (Recommended)
 
-Include the browser bundle in your HTML - it automatically installs as global XSLTProcessor if native support is unavailable:
+Use a CDN for the easiest browser integration - no build step required:
+
+```html
+<!-- jsDelivr (recommended) -->
+<script src="https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js"></script>
+
+<!-- or unpkg -->
+<script src="https://unpkg.com/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js"></script>
+
+<script>
+  // XSLTProcessor is now available globally
+  const processor = new XSLTProcessor();
+
+  // Load and transform XML
+  const parser = new DOMParser();
+  const xslt = parser.parseFromString(xsltString, 'application/xml');
+  const xml = parser.parseFromString(xmlString, 'application/xml');
+
+  processor.importStylesheet(xslt);
+  const result = processor.transformToFragment(xml, document);
+  document.getElementById('output').appendChild(result);
+</script>
+```
+
+**CDN URLs:**
+| CDN | URL |
+|-----|-----|
+| jsDelivr | `https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js` |
+| unpkg | `https://unpkg.com/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js` |
+
+> **Tip:** Use `@1` for latest 1.x version, or `@1.0.0` for exact version pinning.
+
+### Browser (Local Install)
+
+If you prefer local installation:
 
 ```html
 <script src="node_modules/@tradik/xslt-processor/dist/xslt-processor.browser.min.js"></script>
