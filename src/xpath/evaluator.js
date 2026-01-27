@@ -5,9 +5,9 @@
  * Evaluates XPath AST against DOM nodes.
  */
 
-'use strict';
+"use strict";
 
-import { NodeType } from './parser.js';
+import { NodeType } from "./parser.js";
 
 /**
  * XPath result types matching W3C spec
@@ -22,7 +22,7 @@ export const XPathResultType = {
   UNORDERED_NODE_SNAPSHOT_TYPE: 6,
   ORDERED_NODE_SNAPSHOT_TYPE: 7,
   ANY_UNORDERED_NODE_TYPE: 8,
-  FIRST_ORDERED_NODE_TYPE: 9
+  FIRST_ORDERED_NODE_TYPE: 9,
 };
 
 /**
@@ -31,20 +31,20 @@ export const XPathResultType = {
 export const XPathLimits = {
   MAX_RECURSION_DEPTH: 100,
   MAX_RESULT_SIZE: 10000,
-  MAX_STRING_LENGTH: 1000000
+  MAX_STRING_LENGTH: 1000000,
 };
 
 /**
  * Forbidden variable names to prevent prototype pollution
  */
 const FORBIDDEN_VARIABLE_NAMES = Object.freeze([
-  '__proto__',
-  'constructor',
-  'prototype',
-  '__defineGetter__',
-  '__defineSetter__',
-  '__lookupGetter__',
-  '__lookupSetter__'
+  "__proto__",
+  "constructor",
+  "prototype",
+  "__defineGetter__",
+  "__defineSetter__",
+  "__lookupGetter__",
+  "__lookupSetter__",
 ]);
 
 /**
@@ -65,7 +65,7 @@ export class XPathContext {
       overrides.position ?? this.position,
       overrides.size ?? this.size,
       overrides.variables ?? this.variables,
-      overrides.namespaces ?? this.namespaces
+      overrides.namespaces ?? this.namespaces,
     );
   }
 }
@@ -76,9 +76,11 @@ export class XPathContext {
 export class XPathEvaluator {
   constructor(options = {}) {
     this.functions = this.initCoreFunctions();
-    this.maxRecursionDepth = options.maxRecursionDepth ?? XPathLimits.MAX_RECURSION_DEPTH;
+    this.maxRecursionDepth =
+      options.maxRecursionDepth ?? XPathLimits.MAX_RECURSION_DEPTH;
     this.maxResultSize = options.maxResultSize ?? XPathLimits.MAX_RESULT_SIZE;
-    this.maxStringLength = options.maxStringLength ?? XPathLimits.MAX_STRING_LENGTH;
+    this.maxStringLength =
+      options.maxStringLength ?? XPathLimits.MAX_STRING_LENGTH;
     this.recursionDepth = 0;
   }
 
@@ -88,18 +90,20 @@ export class XPathEvaluator {
    * @throws {Error} If AST is invalid
    */
   evaluate(ast, context) {
-    if (!ast || typeof ast !== 'object') {
-      throw new Error('Invalid AST: expected object');
+    if (!ast || typeof ast !== "object") {
+      throw new Error("Invalid AST: expected object");
     }
 
     if (!ast.type) {
-      throw new Error('Invalid AST: missing type property');
+      throw new Error("Invalid AST: missing type property");
     }
 
     this.recursionDepth++;
     if (this.recursionDepth > this.maxRecursionDepth) {
       this.recursionDepth = 0;
-      throw new Error(`Maximum recursion depth exceeded (${this.maxRecursionDepth})`);
+      throw new Error(
+        `Maximum recursion depth exceeded (${this.maxRecursionDepth})`,
+      );
     }
 
     try {
@@ -151,8 +155,10 @@ export class XPathEvaluator {
    * Validate and limit string length
    */
   validateString(str) {
-    if (typeof str === 'string' && str.length > this.maxStringLength) {
-      throw new Error(`String exceeds maximum length (${this.maxStringLength})`);
+    if (typeof str === "string" && str.length > this.maxStringLength) {
+      throw new Error(
+        `String exceeds maximum length (${this.maxStringLength})`,
+      );
     }
     return str;
   }
@@ -162,26 +168,32 @@ export class XPathEvaluator {
    */
   validateResultSize(nodes) {
     if (Array.isArray(nodes) && nodes.length > this.maxResultSize) {
-      throw new Error(`Result set exceeds maximum size (${this.maxResultSize})`);
+      throw new Error(
+        `Result set exceeds maximum size (${this.maxResultSize})`,
+      );
     }
     return nodes;
   }
 
   evalOrExpr(ast, context) {
-    return this.toBoolean(this.evaluate(ast.left, context)) ||
-      this.toBoolean(this.evaluate(ast.right, context));
+    return (
+      this.toBoolean(this.evaluate(ast.left, context)) ||
+      this.toBoolean(this.evaluate(ast.right, context))
+    );
   }
 
   evalAndExpr(ast, context) {
-    return this.toBoolean(this.evaluate(ast.left, context)) &&
-      this.toBoolean(this.evaluate(ast.right, context));
+    return (
+      this.toBoolean(this.evaluate(ast.left, context)) &&
+      this.toBoolean(this.evaluate(ast.right, context))
+    );
   }
 
   evalEqualityExpr(ast, context) {
     const left = this.evaluate(ast.left, context);
     const right = this.evaluate(ast.right, context);
-    const isEqual = this.compareValues(left, right, '=');
-    return ast.operator === '=' ? isEqual : !isEqual;
+    const isEqual = this.compareValues(left, right, "=");
+    return ast.operator === "=" ? isEqual : !isEqual;
   }
 
   evalRelationalExpr(ast, context) {
@@ -193,7 +205,7 @@ export class XPathEvaluator {
   evalAdditiveExpr(ast, context) {
     const left = this.toNumber(this.evaluate(ast.left, context));
     const right = this.toNumber(this.evaluate(ast.right, context));
-    return ast.operator === '+' ? left + right : left - right;
+    return ast.operator === "+" ? left + right : left - right;
   }
 
   evalMultiplicativeExpr(ast, context) {
@@ -201,11 +213,11 @@ export class XPathEvaluator {
     const right = this.toNumber(this.evaluate(ast.right, context));
 
     switch (ast.operator) {
-      case '*':
+      case "*":
         return left * right;
-      case 'div':
+      case "div":
         return left / right;
-      case 'mod':
+      case "mod":
         return left % right;
       default:
         throw new Error(`Unknown multiplicative operator: ${ast.operator}`);
@@ -318,46 +330,46 @@ export class XPathEvaluator {
 
   getAxisNodes(axis, node) {
     switch (axis) {
-      case 'child':
+      case "child":
         return Array.from(node.childNodes || []);
 
-      case 'parent':
+      case "parent":
         return node.parentNode ? [node.parentNode] : [];
 
-      case 'self':
+      case "self":
         return [node];
 
-      case 'descendant':
+      case "descendant":
         return this.getDescendants(node, false);
 
-      case 'descendant-or-self':
+      case "descendant-or-self":
         return this.getDescendants(node, true);
 
-      case 'ancestor':
+      case "ancestor":
         return this.getAncestors(node, false);
 
-      case 'ancestor-or-self':
+      case "ancestor-or-self":
         return this.getAncestors(node, true);
 
-      case 'following-sibling':
+      case "following-sibling":
         return this.getFollowingSiblings(node);
 
-      case 'preceding-sibling':
+      case "preceding-sibling":
         return this.getPrecedingSiblings(node);
 
-      case 'following':
+      case "following":
         return this.getFollowing(node);
 
-      case 'preceding':
+      case "preceding":
         return this.getPreceding(node);
 
-      case 'attribute':
+      case "attribute":
         if (node.attributes) {
           return Array.from(node.attributes);
         }
         return [];
 
-      case 'namespace':
+      case "namespace":
         // Namespace axis - not commonly used
         return [];
 
@@ -489,7 +501,7 @@ export class XPathEvaluator {
     const prefix = nodeTest.prefix;
 
     // Wildcard
-    if (name === '*' && !prefix) {
+    if (name === "*" && !prefix) {
       return true;
     }
 
@@ -498,7 +510,7 @@ export class XPathEvaluator {
     const nodeNs = node.namespaceURI || null;
 
     // Prefix:* matches all nodes in namespace
-    if (name === '*' && prefix) {
+    if (name === "*" && prefix) {
       const ns = context.namespaces[prefix];
       return nodeNs === ns;
     }
@@ -507,7 +519,7 @@ export class XPathEvaluator {
     if (!prefix) {
       // For elements, match local name (case-insensitive for HTML)
       const doc = node.ownerDocument;
-      if (doc && doc.contentType === 'text/html' && node.nodeType === 1) {
+      if (doc && doc.contentType === "text/html" && node.nodeType === 1) {
         return nodeName.toLowerCase() === name.toLowerCase();
       }
       return nodeName === name;
@@ -520,13 +532,13 @@ export class XPathEvaluator {
 
   matchNodeTypeTest(nodeType, node) {
     switch (nodeType) {
-      case 'node':
+      case "node":
         return true;
-      case 'text':
+      case "text":
         return node.nodeType === 3;
-      case 'comment':
+      case "comment":
         return node.nodeType === 8;
-      case 'processing-instruction':
+      case "processing-instruction":
         return node.nodeType === 7;
       default:
         return false;
@@ -543,13 +555,13 @@ export class XPathEvaluator {
       const predicateContext = context.clone({
         node,
         position: i + 1,
-        size
+        size,
       });
 
       const value = this.evaluate(predicate.expr, predicateContext);
 
       // If predicate evaluates to a number, it's a position test
-      if (typeof value === 'number') {
+      if (typeof value === "number") {
         if (value === i + 1) {
           result.push(node);
         }
@@ -565,7 +577,10 @@ export class XPathEvaluator {
     const name = ast.prefix ? `${ast.prefix}:${ast.name}` : ast.name;
 
     // Security: Prevent prototype pollution
-    if (FORBIDDEN_VARIABLE_NAMES.includes(name) || FORBIDDEN_VARIABLE_NAMES.includes(ast.name)) {
+    if (
+      FORBIDDEN_VARIABLE_NAMES.includes(name) ||
+      FORBIDDEN_VARIABLE_NAMES.includes(ast.name)
+    ) {
       throw new Error(`Forbidden variable name: $${name}`);
     }
 
@@ -588,20 +603,20 @@ export class XPathEvaluator {
 
   // Type conversion functions
   toBoolean(value) {
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'number') return value !== 0 && !isNaN(value);
-    if (typeof value === 'string') return value.length > 0;
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0 && !isNaN(value);
+    if (typeof value === "string") return value.length > 0;
     if (Array.isArray(value)) return value.length > 0;
     if (value && value.nodeType) return true;
     return Boolean(value);
   }
 
   toNumber(value) {
-    if (typeof value === 'number') return value;
-    if (typeof value === 'boolean') return value ? 1 : 0;
-    if (typeof value === 'string') {
+    if (typeof value === "number") return value;
+    if (typeof value === "boolean") return value ? 1 : 0;
+    if (typeof value === "string") {
       const trimmed = value.trim();
-      if (trimmed === '') return NaN;
+      if (trimmed === "") return NaN;
       const num = Number(trimmed);
       return num;
     }
@@ -615,17 +630,17 @@ export class XPathEvaluator {
   }
 
   toString(value) {
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number') {
-      if (isNaN(value)) return 'NaN';
-      if (value === Infinity) return 'Infinity';
-      if (value === -Infinity) return '-Infinity';
-      if (value === 0) return '0';
+    if (typeof value === "string") return value;
+    if (typeof value === "number") {
+      if (isNaN(value)) return "NaN";
+      if (value === Infinity) return "Infinity";
+      if (value === -Infinity) return "-Infinity";
+      if (value === 0) return "0";
       return String(value);
     }
-    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    if (typeof value === "boolean") return value ? "true" : "false";
     if (Array.isArray(value)) {
-      if (value.length === 0) return '';
+      if (value.length === 0) return "";
       return this.getStringValue(value[0]);
     }
     if (value && value.nodeType) {
@@ -635,16 +650,17 @@ export class XPathEvaluator {
   }
 
   getStringValue(node) {
-    if (!node) return '';
+    if (!node) return "";
 
     switch (node.nodeType) {
       case 1: // Element
       case 9: // Document
-      case 11: { // Document Fragment
-        let text = '';
+      case 11: {
+        // Document Fragment
+        let text = "";
         const walker = (n) => {
           if (n.nodeType === 3) {
-            text += n.nodeValue || '';
+            text += n.nodeValue || "";
           } else if (n.childNodes) {
             for (const child of n.childNodes) {
               walker(child);
@@ -660,10 +676,10 @@ export class XPathEvaluator {
       case 4: // CDATA
       case 7: // Processing Instruction
       case 8: // Comment
-        return node.nodeValue || '';
+        return node.nodeValue || "";
 
       default:
-        return '';
+        return "";
     }
   }
 
@@ -676,7 +692,13 @@ export class XPathEvaluator {
     if (leftIsNodeSet && rightIsNodeSet) {
       for (const l of left) {
         for (const r of right) {
-          if (this.comparePrimitive(this.getStringValue(l), this.getStringValue(r), operator)) {
+          if (
+            this.comparePrimitive(
+              this.getStringValue(l),
+              this.getStringValue(r),
+              operator,
+            )
+          ) {
             return true;
           }
         }
@@ -707,20 +729,20 @@ export class XPathEvaluator {
 
   comparePrimitive(left, right, operator) {
     // If comparing for equality with different types
-    if (operator === '=' || operator === '!=') {
+    if (operator === "=" || operator === "!=") {
       // If one is boolean, convert both to boolean
-      if (typeof left === 'boolean' || typeof right === 'boolean') {
+      if (typeof left === "boolean" || typeof right === "boolean") {
         const result = this.toBoolean(left) === this.toBoolean(right);
-        return operator === '=' ? result : !result;
+        return operator === "=" ? result : !result;
       }
       // If one is number, convert both to number
-      if (typeof left === 'number' || typeof right === 'number') {
+      if (typeof left === "number" || typeof right === "number") {
         const result = this.toNumber(left) === this.toNumber(right);
-        return operator === '=' ? result : !result;
+        return operator === "=" ? result : !result;
       }
       // Otherwise compare as strings
       const result = this.toString(left) === this.toString(right);
-      return operator === '=' ? result : !result;
+      return operator === "=" ? result : !result;
     }
 
     // Relational operators always compare as numbers
@@ -728,13 +750,13 @@ export class XPathEvaluator {
     const rightNum = this.toNumber(right);
 
     switch (operator) {
-      case '<':
+      case "<":
         return leftNum < rightNum;
-      case '<=':
+      case "<=":
         return leftNum <= rightNum;
-      case '>':
+      case ">":
         return leftNum > rightNum;
-      case '>=':
+      case ">=":
         return leftNum >= rightNum;
       default:
         throw new Error(`Unknown comparison operator: ${operator}`);
@@ -806,7 +828,7 @@ export class XPathEvaluator {
         }
         return result;
       },
-      'local-name': (args, ctx) => {
+      "local-name": (args, ctx) => {
         let node;
         if (args.length === 0) {
           node = ctx.node;
@@ -814,10 +836,10 @@ export class XPathEvaluator {
           const nodeSet = this.evaluate(args[0], ctx);
           node = Array.isArray(nodeSet) ? nodeSet[0] : nodeSet;
         }
-        if (!node) return '';
-        return node.localName || node.nodeName || '';
+        if (!node) return "";
+        return node.localName || node.nodeName || "";
       },
-      'namespace-uri': (args, ctx) => {
+      "namespace-uri": (args, ctx) => {
         let node;
         if (args.length === 0) {
           node = ctx.node;
@@ -825,8 +847,8 @@ export class XPathEvaluator {
           const nodeSet = this.evaluate(args[0], ctx);
           node = Array.isArray(nodeSet) ? nodeSet[0] : nodeSet;
         }
-        if (!node) return '';
-        return node.namespaceURI || '';
+        if (!node) return "";
+        return node.namespaceURI || "";
       },
       name: (args, ctx) => {
         let node;
@@ -836,8 +858,8 @@ export class XPathEvaluator {
           const nodeSet = this.evaluate(args[0], ctx);
           node = Array.isArray(nodeSet) ? nodeSet[0] : nodeSet;
         }
-        if (!node) return '';
-        return node.nodeName || '';
+        if (!node) return "";
+        return node.nodeName || "";
       },
 
       // String functions
@@ -848,9 +870,11 @@ export class XPathEvaluator {
         return this.toString(this.evaluate(args[0], ctx));
       },
       concat: (args, ctx) => {
-        return args.map((arg) => this.toString(this.evaluate(arg, ctx))).join('');
+        return args
+          .map((arg) => this.toString(this.evaluate(arg, ctx)))
+          .join("");
       },
-      'starts-with': (args, ctx) => {
+      "starts-with": (args, ctx) => {
         const str = this.toString(this.evaluate(args[0], ctx));
         const prefix = this.toString(this.evaluate(args[1], ctx));
         return str.startsWith(prefix);
@@ -860,17 +884,17 @@ export class XPathEvaluator {
         const substr = this.toString(this.evaluate(args[1], ctx));
         return str.includes(substr);
       },
-      'substring-before': (args, ctx) => {
+      "substring-before": (args, ctx) => {
         const str = this.toString(this.evaluate(args[0], ctx));
         const substr = this.toString(this.evaluate(args[1], ctx));
         const idx = str.indexOf(substr);
-        return idx === -1 ? '' : str.substring(0, idx);
+        return idx === -1 ? "" : str.substring(0, idx);
       },
-      'substring-after': (args, ctx) => {
+      "substring-after": (args, ctx) => {
         const str = this.toString(this.evaluate(args[0], ctx));
         const substr = this.toString(this.evaluate(args[1], ctx));
         const idx = str.indexOf(substr);
-        return idx === -1 ? '' : str.substring(idx + substr.length);
+        return idx === -1 ? "" : str.substring(idx + substr.length);
       },
       substring: (args, ctx) => {
         const str = this.toString(this.evaluate(args[0], ctx));
@@ -884,7 +908,7 @@ export class XPathEvaluator {
         // XPath uses 1-based indexing
         start = start - 1;
 
-        if (isNaN(start)) return '';
+        if (isNaN(start)) return "";
         if (start < 0) {
           if (length !== undefined) {
             length = length + start;
@@ -893,32 +917,32 @@ export class XPathEvaluator {
         }
 
         if (length !== undefined) {
-          if (isNaN(length) || length <= 0) return '';
+          if (isNaN(length) || length <= 0) return "";
           return str.substring(start, start + length);
         }
 
         return str.substring(start);
       },
-      'string-length': (args, ctx) => {
+      "string-length": (args, ctx) => {
         const str =
           args.length === 0
             ? this.toString([ctx.node])
             : this.toString(this.evaluate(args[0], ctx));
         return str.length;
       },
-      'normalize-space': (args, ctx) => {
+      "normalize-space": (args, ctx) => {
         const str =
           args.length === 0
             ? this.toString([ctx.node])
             : this.toString(this.evaluate(args[0], ctx));
-        return str.trim().replace(/\s+/g, ' ');
+        return str.trim().replace(/\s+/g, " ");
       },
       translate: (args, ctx) => {
         const str = this.toString(this.evaluate(args[0], ctx));
         const from = this.toString(this.evaluate(args[1], ctx));
         const to = this.toString(this.evaluate(args[2], ctx));
 
-        let result = '';
+        let result = "";
         for (const char of str) {
           const idx = from.indexOf(char);
           if (idx === -1) {
@@ -946,10 +970,10 @@ export class XPathEvaluator {
 
         while (node && node.nodeType === 1) {
           const xmlLang =
-            node.getAttribute('xml:lang') || node.getAttribute('lang');
+            node.getAttribute("xml:lang") || node.getAttribute("lang");
           if (xmlLang) {
             const nodeLang = xmlLang.toLowerCase();
-            return nodeLang === lang || nodeLang.startsWith(lang + '-');
+            return nodeLang === lang || nodeLang.startsWith(lang + "-");
           }
           node = node.parentNode;
         }
@@ -968,7 +992,7 @@ export class XPathEvaluator {
         if (!Array.isArray(nodeSet)) return NaN;
         return nodeSet.reduce(
           (sum, node) => sum + this.toNumber(this.getStringValue(node)),
-          0
+          0,
         );
       },
       floor: (args, ctx) => {
@@ -982,7 +1006,7 @@ export class XPathEvaluator {
         if (isNaN(num)) return NaN;
         if (num === -0.5) return -0;
         return Math.round(num);
-      }
+      },
     };
   }
 }

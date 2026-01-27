@@ -5,37 +5,37 @@
  * Converts token stream into an Abstract Syntax Tree (AST).
  */
 
-'use strict';
+"use strict";
 
-import { TokenType, tokenize } from './tokenizer.js';
+import { TokenType, tokenize } from "./tokenizer.js";
 
 export const NodeType = {
   // Expression types
-  OR_EXPR: 'OrExpr',
-  AND_EXPR: 'AndExpr',
-  EQUALITY_EXPR: 'EqualityExpr',
-  RELATIONAL_EXPR: 'RelationalExpr',
-  ADDITIVE_EXPR: 'AdditiveExpr',
-  MULTIPLICATIVE_EXPR: 'MultiplicativeExpr',
-  UNARY_EXPR: 'UnaryExpr',
-  UNION_EXPR: 'UnionExpr',
+  OR_EXPR: "OrExpr",
+  AND_EXPR: "AndExpr",
+  EQUALITY_EXPR: "EqualityExpr",
+  RELATIONAL_EXPR: "RelationalExpr",
+  ADDITIVE_EXPR: "AdditiveExpr",
+  MULTIPLICATIVE_EXPR: "MultiplicativeExpr",
+  UNARY_EXPR: "UnaryExpr",
+  UNION_EXPR: "UnionExpr",
 
   // Path expressions
-  PATH_EXPR: 'PathExpr',
-  LOCATION_PATH: 'LocationPath',
-  STEP: 'Step',
-  PREDICATE: 'Predicate',
+  PATH_EXPR: "PathExpr",
+  LOCATION_PATH: "LocationPath",
+  STEP: "Step",
+  PREDICATE: "Predicate",
 
   // Primaries
-  VARIABLE_REF: 'VariableRef',
-  LITERAL: 'Literal',
-  NUMBER: 'Number',
-  FUNCTION_CALL: 'FunctionCall',
+  VARIABLE_REF: "VariableRef",
+  LITERAL: "Literal",
+  NUMBER: "Number",
+  FUNCTION_CALL: "FunctionCall",
 
   // Node tests
-  NAME_TEST: 'NameTest',
-  NODE_TYPE_TEST: 'NodeTypeTest',
-  PI_TEST: 'ProcessingInstructionTest'
+  NAME_TEST: "NameTest",
+  NODE_TYPE_TEST: "NodeTypeTest",
+  PI_TEST: "ProcessingInstructionTest",
 };
 
 export class ASTNode {
@@ -55,7 +55,7 @@ export class XPathParser {
     const expr = this.parseExpr();
     if (!this.isAtEnd()) {
       throw new Error(
-        `Unexpected token ${this.peek().type} at position ${this.peek().position}`
+        `Unexpected token ${this.peek().type} at position ${this.peek().position}`,
       );
     }
     return expr;
@@ -97,10 +97,18 @@ export class XPathParser {
     while (true) {
       if (this.match(TokenType.EQUALS)) {
         const right = this.parseRelationalExpr();
-        left = new ASTNode(NodeType.EQUALITY_EXPR, { operator: '=', left, right });
+        left = new ASTNode(NodeType.EQUALITY_EXPR, {
+          operator: "=",
+          left,
+          right,
+        });
       } else if (this.match(TokenType.NOT_EQUALS)) {
         const right = this.parseRelationalExpr();
-        left = new ASTNode(NodeType.EQUALITY_EXPR, { operator: '!=', left, right });
+        left = new ASTNode(NodeType.EQUALITY_EXPR, {
+          operator: "!=",
+          left,
+          right,
+        });
       } else {
         break;
       }
@@ -116,16 +124,32 @@ export class XPathParser {
     while (true) {
       if (this.match(TokenType.LT)) {
         const right = this.parseAdditiveExpr();
-        left = new ASTNode(NodeType.RELATIONAL_EXPR, { operator: '<', left, right });
+        left = new ASTNode(NodeType.RELATIONAL_EXPR, {
+          operator: "<",
+          left,
+          right,
+        });
       } else if (this.match(TokenType.LTE)) {
         const right = this.parseAdditiveExpr();
-        left = new ASTNode(NodeType.RELATIONAL_EXPR, { operator: '<=', left, right });
+        left = new ASTNode(NodeType.RELATIONAL_EXPR, {
+          operator: "<=",
+          left,
+          right,
+        });
       } else if (this.match(TokenType.GT)) {
         const right = this.parseAdditiveExpr();
-        left = new ASTNode(NodeType.RELATIONAL_EXPR, { operator: '>', left, right });
+        left = new ASTNode(NodeType.RELATIONAL_EXPR, {
+          operator: ">",
+          left,
+          right,
+        });
       } else if (this.match(TokenType.GTE)) {
         const right = this.parseAdditiveExpr();
-        left = new ASTNode(NodeType.RELATIONAL_EXPR, { operator: '>=', left, right });
+        left = new ASTNode(NodeType.RELATIONAL_EXPR, {
+          operator: ">=",
+          left,
+          right,
+        });
       } else {
         break;
       }
@@ -141,10 +165,18 @@ export class XPathParser {
     while (true) {
       if (this.match(TokenType.PLUS)) {
         const right = this.parseMultiplicativeExpr();
-        left = new ASTNode(NodeType.ADDITIVE_EXPR, { operator: '+', left, right });
+        left = new ASTNode(NodeType.ADDITIVE_EXPR, {
+          operator: "+",
+          left,
+          right,
+        });
       } else if (this.match(TokenType.MINUS)) {
         const right = this.parseMultiplicativeExpr();
-        left = new ASTNode(NodeType.ADDITIVE_EXPR, { operator: '-', left, right });
+        left = new ASTNode(NodeType.ADDITIVE_EXPR, {
+          operator: "-",
+          left,
+          right,
+        });
       } else {
         break;
       }
@@ -160,13 +192,25 @@ export class XPathParser {
     while (true) {
       if (this.match(TokenType.STAR)) {
         const right = this.parseUnaryExpr();
-        left = new ASTNode(NodeType.MULTIPLICATIVE_EXPR, { operator: '*', left, right });
+        left = new ASTNode(NodeType.MULTIPLICATIVE_EXPR, {
+          operator: "*",
+          left,
+          right,
+        });
       } else if (this.match(TokenType.DIV)) {
         const right = this.parseUnaryExpr();
-        left = new ASTNode(NodeType.MULTIPLICATIVE_EXPR, { operator: 'div', left, right });
+        left = new ASTNode(NodeType.MULTIPLICATIVE_EXPR, {
+          operator: "div",
+          left,
+          right,
+        });
       } else if (this.match(TokenType.MOD)) {
         const right = this.parseUnaryExpr();
-        left = new ASTNode(NodeType.MULTIPLICATIVE_EXPR, { operator: 'mod', left, right });
+        left = new ASTNode(NodeType.MULTIPLICATIVE_EXPR, {
+          operator: "mod",
+          left,
+          right,
+        });
       } else {
         break;
       }
@@ -179,7 +223,7 @@ export class XPathParser {
   parseUnaryExpr() {
     if (this.match(TokenType.MINUS)) {
       const operand = this.parseUnaryExpr();
-      return new ASTNode(NodeType.UNARY_EXPR, { operator: '-', operand });
+      return new ASTNode(NodeType.UNARY_EXPR, { operator: "-", operand });
     }
     return this.parseUnionExpr();
   }
@@ -215,17 +259,22 @@ export class XPathParser {
     if (this.check(TokenType.SLASH) || this.check(TokenType.DOUBLE_SLASH)) {
       const steps = [];
 
-      while (this.check(TokenType.SLASH) || this.check(TokenType.DOUBLE_SLASH)) {
+      while (
+        this.check(TokenType.SLASH) ||
+        this.check(TokenType.DOUBLE_SLASH)
+      ) {
         const isDescendant = this.match(TokenType.DOUBLE_SLASH);
         if (!isDescendant) this.advance(); // consume /
 
         if (isDescendant) {
           steps.push(
             new ASTNode(NodeType.STEP, {
-              axis: 'descendant-or-self',
-              nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, { nodeType: 'node' }),
-              predicates: []
-            })
+              axis: "descendant-or-self",
+              nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, {
+                nodeType: "node",
+              }),
+              predicates: [],
+            }),
           );
         }
 
@@ -248,10 +297,10 @@ export class XPathParser {
       // //foo is equivalent to /descendant-or-self::node()/foo
       steps.push(
         new ASTNode(NodeType.STEP, {
-          axis: 'descendant-or-self',
-          nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, { nodeType: 'node' }),
-          predicates: []
-        })
+          axis: "descendant-or-self",
+          nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, { nodeType: "node" }),
+          predicates: [],
+        }),
       );
       if (!this.isAtEnd() && !this.check(TokenType.EOF)) {
         steps.push(this.parseStep());
@@ -272,10 +321,12 @@ export class XPathParser {
       if (isDescendant) {
         steps.push(
           new ASTNode(NodeType.STEP, {
-            axis: 'descendant-or-self',
-            nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, { nodeType: 'node' }),
-            predicates: []
-          })
+            axis: "descendant-or-self",
+            nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, {
+              nodeType: "node",
+            }),
+            predicates: [],
+          }),
         );
       }
 
@@ -290,25 +341,25 @@ export class XPathParser {
     // Handle abbreviated steps
     if (this.match(TokenType.DOT)) {
       return new ASTNode(NodeType.STEP, {
-        axis: 'self',
-        nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, { nodeType: 'node' }),
-        predicates: []
+        axis: "self",
+        nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, { nodeType: "node" }),
+        predicates: [],
       });
     }
 
     if (this.match(TokenType.DOUBLE_DOT)) {
       return new ASTNode(NodeType.STEP, {
-        axis: 'parent',
-        nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, { nodeType: 'node' }),
-        predicates: []
+        axis: "parent",
+        nodeTest: new ASTNode(NodeType.NODE_TYPE_TEST, { nodeType: "node" }),
+        predicates: [],
       });
     }
 
     // Parse axis
-    let axis = 'child'; // default axis
+    let axis = "child"; // default axis
 
     if (this.match(TokenType.AT)) {
-      axis = 'attribute';
+      axis = "attribute";
     } else if (this.check(TokenType.AXIS)) {
       axis = this.advance().value;
       this.expect(TokenType.DOUBLE_COLON);
@@ -332,7 +383,10 @@ export class XPathParser {
       const nodeType = this.advance().value;
       this.expect(TokenType.LPAREN);
 
-      if (nodeType === 'processing-instruction' && this.check(TokenType.LITERAL)) {
+      if (
+        nodeType === "processing-instruction" &&
+        this.check(TokenType.LITERAL)
+      ) {
         const name = this.advance().value;
         this.expect(TokenType.RPAREN);
         return new ASTNode(NodeType.PI_TEST, { name });
@@ -349,7 +403,7 @@ export class XPathParser {
   // NameTest ::= '*' | NCName ':' '*' | QName
   parseNameTest() {
     if (this.match(TokenType.STAR)) {
-      return new ASTNode(NodeType.NAME_TEST, { name: '*', prefix: null });
+      return new ASTNode(NodeType.NAME_TEST, { name: "*", prefix: null });
     }
 
     if (!this.check(TokenType.NAME)) {
@@ -361,15 +415,20 @@ export class XPathParser {
     // Check for prefix:*
     if (this.match(TokenType.COLON)) {
       if (this.match(TokenType.STAR)) {
-        return new ASTNode(NodeType.NAME_TEST, { name: '*', prefix: name });
+        return new ASTNode(NodeType.NAME_TEST, { name: "*", prefix: name });
       }
 
       if (this.check(TokenType.NAME)) {
         const localName = this.advance().value;
-        return new ASTNode(NodeType.NAME_TEST, { name: localName, prefix: name });
+        return new ASTNode(NodeType.NAME_TEST, {
+          name: localName,
+          prefix: name,
+        });
       }
 
-      throw new Error(`Expected name or * after : at position ${this.peek().position}`);
+      throw new Error(
+        `Expected name or * after : at position ${this.peek().position}`,
+      );
     }
 
     return new ASTNode(NodeType.NAME_TEST, { name, prefix: null });
@@ -391,7 +450,7 @@ export class XPathParser {
       const predicate = this.parsePredicate();
       primary = new ASTNode(NodeType.PATH_EXPR, {
         filter: primary,
-        predicates: [predicate]
+        predicates: [predicate],
       });
     }
 
@@ -403,7 +462,9 @@ export class XPathParser {
     // Variable reference
     if (this.match(TokenType.DOLLAR)) {
       if (!this.check(TokenType.NAME)) {
-        throw new Error(`Expected variable name at position ${this.peek().position}`);
+        throw new Error(
+          `Expected variable name at position ${this.peek().position}`,
+        );
       }
       const name = this.advance().value;
       let prefix = null;
@@ -411,7 +472,9 @@ export class XPathParser {
       if (this.match(TokenType.COLON)) {
         prefix = name;
         if (!this.check(TokenType.NAME)) {
-          throw new Error(`Expected local name at position ${this.peek().position}`);
+          throw new Error(
+            `Expected local name at position ${this.peek().position}`,
+          );
         }
         const localName = this.advance().value;
         return new ASTNode(NodeType.VARIABLE_REF, { name: localName, prefix });
@@ -443,7 +506,7 @@ export class XPathParser {
     }
 
     throw new Error(
-      `Unexpected token ${this.peek().type} at position ${this.peek().position}`
+      `Unexpected token ${this.peek().type} at position ${this.peek().position}`,
     );
   }
 
@@ -514,7 +577,7 @@ export class XPathParser {
   expect(type) {
     if (!this.check(type)) {
       throw new Error(
-        `Expected ${type} but got ${this.peek().type} at position ${this.peek().position}`
+        `Expected ${type} but got ${this.peek().type} at position ${this.peek().position}`,
       );
     }
     return this.advance();

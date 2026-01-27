@@ -29,8 +29,8 @@ export {
   XSLTProcessor,
   isNativeXSLTSupported,
   installGlobal,
-  default as default
-} from './XSLTProcessor.js';
+  default as default,
+} from "./XSLTProcessor.js";
 
 // XPath module (for advanced users)
 export {
@@ -40,25 +40,27 @@ export {
   XPathEvaluator,
   XPathContext,
   XPathResultType,
-  parse as parseXPath
-} from './xpath/index.js';
+  parse as parseXPath,
+} from "./xpath/index.js";
 
 // XSLT engine (for advanced users)
-export { XsltEngine, XsltContext } from './xslt/index.js';
+export { XsltEngine, XsltContext } from "./xslt/index.js";
 
 /**
  * Version information
  */
-export const VERSION = '1.0.0';
+export const VERSION = "1.0.0";
 
 /**
  * Check if we're running in a browser environment
  */
-export const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
+export const isBrowser =
+  typeof window !== "undefined" && typeof document !== "undefined";
 
 /**
  * Check if we're running in Node.js
  */
-export const isNode = typeof process !== 'undefined' &&
+export const isNode =
+  typeof process !== "undefined" &&
   process.versions != null &&
   process.versions.node != null;

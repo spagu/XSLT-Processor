@@ -13,7 +13,7 @@
  * XSLT support is deprecated or unavailable.
  */
 
-import { XsltEngine } from './xslt/engine.js';
+import { XsltEngine } from "./xslt/engine.js";
 
 /**
  * XSLTProcessor
@@ -49,18 +49,24 @@ export class XSLTProcessor {
    */
   importStylesheet(style) {
     if (!style) {
-      throw new TypeError("Failed to execute 'importStylesheet' on 'XSLTProcessor': 1 argument required, but only 0 present.");
+      throw new TypeError(
+        "Failed to execute 'importStylesheet' on 'XSLTProcessor': 1 argument required, but only 0 present.",
+      );
     }
 
     // Validate node type
     if (style.nodeType !== 1 && style.nodeType !== 9) {
-      throw new TypeError("Failed to execute 'importStylesheet' on 'XSLTProcessor': The node provided is not a Document or Element.");
+      throw new TypeError(
+        "Failed to execute 'importStylesheet' on 'XSLTProcessor': The node provided is not a Document or Element.",
+      );
     }
 
     // Check for parser errors
-    const errorNode = style.querySelector ? style.querySelector('parsererror') : null;
+    const errorNode = style.querySelector
+      ? style.querySelector("parsererror")
+      : null;
     if (errorNode) {
-      throw new Error('XSLT stylesheet contains parse errors');
+      throw new Error("XSLT stylesheet contains parse errors");
     }
 
     this._stylesheet = style;
@@ -88,32 +94,46 @@ export class XSLTProcessor {
    */
   transformToFragment(source, output) {
     if (!source) {
-      throw new TypeError("Failed to execute 'transformToFragment' on 'XSLTProcessor': 2 arguments required, but only 0 present.");
+      throw new TypeError(
+        "Failed to execute 'transformToFragment' on 'XSLTProcessor': 2 arguments required, but only 0 present.",
+      );
     }
 
     if (!output) {
-      throw new TypeError("Failed to execute 'transformToFragment' on 'XSLTProcessor': 2 arguments required, but only 1 present.");
+      throw new TypeError(
+        "Failed to execute 'transformToFragment' on 'XSLTProcessor': 2 arguments required, but only 1 present.",
+      );
     }
 
     if (!this._engine || !this._stylesheet) {
-      throw new Error("Failed to execute 'transformToFragment' on 'XSLTProcessor': No stylesheet has been imported.");
+      throw new Error(
+        "Failed to execute 'transformToFragment' on 'XSLTProcessor': No stylesheet has been imported.",
+      );
     }
 
     // Validate source node
-    if (source.nodeType !== 1 && source.nodeType !== 9 && source.nodeType !== 11) {
-      throw new TypeError("Failed to execute 'transformToFragment' on 'XSLTProcessor': The source is not a valid node type.");
+    if (
+      source.nodeType !== 1 &&
+      source.nodeType !== 9 &&
+      source.nodeType !== 11
+    ) {
+      throw new TypeError(
+        "Failed to execute 'transformToFragment' on 'XSLTProcessor': The source is not a valid node type.",
+      );
     }
 
     // Validate output document
     if (output.nodeType !== 9) {
-      throw new TypeError("Failed to execute 'transformToFragment' on 'XSLTProcessor': The output is not a Document.");
+      throw new TypeError(
+        "Failed to execute 'transformToFragment' on 'XSLTProcessor': The output is not a Document.",
+      );
     }
 
     try {
       return this._engine.transform(source, output);
     } catch (error) {
       // Match native behavior - return null on error
-      console.error('XSLT transformation error:', error);
+      console.error("XSLT transformation error:", error);
       return null;
     }
   }
@@ -131,23 +151,33 @@ export class XSLTProcessor {
    */
   transformToDocument(source) {
     if (!source) {
-      throw new TypeError("Failed to execute 'transformToDocument' on 'XSLTProcessor': 1 argument required, but only 0 present.");
+      throw new TypeError(
+        "Failed to execute 'transformToDocument' on 'XSLTProcessor': 1 argument required, but only 0 present.",
+      );
     }
 
     if (!this._engine || !this._stylesheet) {
-      throw new Error("Failed to execute 'transformToDocument' on 'XSLTProcessor': No stylesheet has been imported.");
+      throw new Error(
+        "Failed to execute 'transformToDocument' on 'XSLTProcessor': No stylesheet has been imported.",
+      );
     }
 
     // Validate source node
-    if (source.nodeType !== 1 && source.nodeType !== 9 && source.nodeType !== 11) {
-      throw new TypeError("Failed to execute 'transformToDocument' on 'XSLTProcessor': The source is not a valid node type.");
+    if (
+      source.nodeType !== 1 &&
+      source.nodeType !== 9 &&
+      source.nodeType !== 11
+    ) {
+      throw new TypeError(
+        "Failed to execute 'transformToDocument' on 'XSLTProcessor': The source is not a valid node type.",
+      );
     }
 
     try {
       return this._engine.transformToDocument(source);
     } catch (error) {
       // Match native behavior - return null on error
-      console.error('XSLT transformation error:', error);
+      console.error("XSLT transformation error:", error);
       return null;
     }
   }
@@ -166,11 +196,15 @@ export class XSLTProcessor {
    */
   setParameter(namespaceURI, localName, value) {
     if (arguments.length < 3) {
-      throw new TypeError(`Failed to execute 'setParameter' on 'XSLTProcessor': 3 arguments required, but only ${arguments.length} present.`);
+      throw new TypeError(
+        `Failed to execute 'setParameter' on 'XSLTProcessor': 3 arguments required, but only ${arguments.length} present.`,
+      );
     }
 
-    if (typeof localName !== 'string' || localName === '') {
-      throw new TypeError("Failed to execute 'setParameter' on 'XSLTProcessor': The localName argument must be a non-empty string.");
+    if (typeof localName !== "string" || localName === "") {
+      throw new TypeError(
+        "Failed to execute 'setParameter' on 'XSLTProcessor': The localName argument must be a non-empty string.",
+      );
     }
 
     const key = namespaceURI ? `{${namespaceURI}}${localName}` : localName;
@@ -194,11 +228,15 @@ export class XSLTProcessor {
    */
   getParameter(namespaceURI, localName) {
     if (arguments.length < 2) {
-      throw new TypeError(`Failed to execute 'getParameter' on 'XSLTProcessor': 2 arguments required, but only ${arguments.length} present.`);
+      throw new TypeError(
+        `Failed to execute 'getParameter' on 'XSLTProcessor': 2 arguments required, but only ${arguments.length} present.`,
+      );
     }
 
-    if (typeof localName !== 'string') {
-      throw new TypeError("Failed to execute 'getParameter' on 'XSLTProcessor': The localName argument must be a string.");
+    if (typeof localName !== "string") {
+      throw new TypeError(
+        "Failed to execute 'getParameter' on 'XSLTProcessor': The localName argument must be a string.",
+      );
     }
 
     const key = namespaceURI ? `{${namespaceURI}}${localName}` : localName;
@@ -208,7 +246,7 @@ export class XSLTProcessor {
     }
 
     // Return empty string for unset parameters (matches native behavior)
-    return '';
+    return "";
   }
 
   /**
@@ -226,11 +264,15 @@ export class XSLTProcessor {
    */
   removeParameter(namespaceURI, localName) {
     if (arguments.length < 2) {
-      throw new TypeError(`Failed to execute 'removeParameter' on 'XSLTProcessor': 2 arguments required, but only ${arguments.length} present.`);
+      throw new TypeError(
+        `Failed to execute 'removeParameter' on 'XSLTProcessor': 2 arguments required, but only ${arguments.length} present.`,
+      );
     }
 
-    if (typeof localName !== 'string') {
-      throw new TypeError("Failed to execute 'removeParameter' on 'XSLTProcessor': The localName argument must be a string.");
+    if (typeof localName !== "string") {
+      throw new TypeError(
+        "Failed to execute 'removeParameter' on 'XSLTProcessor': The localName argument must be a string.",
+      );
     }
 
     const key = namespaceURI ? `{${namespaceURI}}${localName}` : localName;
@@ -281,7 +323,7 @@ export class XSLTProcessor {
  * @returns {boolean} True if native XSLTProcessor works correctly
  */
 export function isNativeXSLTSupported() {
-  if (typeof globalThis.XSLTProcessor === 'undefined') {
+  if (typeof globalThis.XSLTProcessor === "undefined") {
     return false;
   }
 
@@ -289,14 +331,17 @@ export function isNativeXSLTSupported() {
     const processor = new globalThis.XSLTProcessor();
     const parser = new DOMParser();
 
-    const xslt = parser.parseFromString(`<?xml version="1.0"?>
+    const xslt = parser.parseFromString(
+      `<?xml version="1.0"?>
       <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <xsl:template match="/"><test/></xsl:template>
-      </xsl:stylesheet>`, 'application/xml');
+      </xsl:stylesheet>`,
+      "application/xml",
+    );
 
     processor.importStylesheet(xslt);
 
-    const xml = parser.parseFromString('<root/>', 'application/xml');
+    const xml = parser.parseFromString("<root/>", "application/xml");
     const result = processor.transformToFragment(xml, document);
 
     return result !== null && result.childNodes.length > 0;
@@ -312,7 +357,7 @@ export function isNativeXSLTSupported() {
  * @returns {boolean} True if installed as global
  */
 export function installGlobal(force = false) {
-  if (typeof globalThis === 'undefined') {
+  if (typeof globalThis === "undefined") {
     return false;
   }
 

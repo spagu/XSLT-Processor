@@ -4,14 +4,14 @@
  * Tests for XSLT 1.0 Processing Engine.
  */
 
-import { describe, it, beforeEach } from 'node:test';
-import assert from 'node:assert';
-import { JSDOM } from 'jsdom';
-import { XsltContext, XsltEngine } from './engine.js';
+import { describe, it, beforeEach } from "node:test";
+import assert from "node:assert";
+import { JSDOM } from "jsdom";
+import { XsltContext, XsltEngine } from "./engine.js";
 
 function setupDOM() {
-  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-    contentType: 'text/html'
+  const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
+    contentType: "text/html",
   });
 
   global.document = dom.window.document;
@@ -23,53 +23,53 @@ function setupDOM() {
 
 function parseXML(xmlString) {
   const parser = new DOMParser();
-  return parser.parseFromString(xmlString, 'application/xml');
+  return parser.parseFromString(xmlString, "application/xml");
 }
 
-describe('XsltContext', () => {
+describe("XsltContext", () => {
   beforeEach(() => {
     setupDOM();
   });
 
-  describe('constructor', () => {
-    it('should create context with default values', () => {
+  describe("constructor", () => {
+    it("should create context with default values", () => {
       const context = new XsltContext();
       assert.strictEqual(context.position, 1);
       assert.deepStrictEqual(context.variables, {});
       assert.deepStrictEqual(context.parameters, {});
-      assert.strictEqual(context.outputMethod, 'xml');
+      assert.strictEqual(context.outputMethod, "xml");
     });
 
-    it('should create context with provided options', () => {
-      const node = parseXML('<root/>').documentElement;
+    it("should create context with provided options", () => {
+      const node = parseXML("<root/>").documentElement;
       const context = new XsltContext({
         currentNode: node,
         currentNodeList: [node],
         position: 3,
-        variables: { foo: 'bar' },
-        parameters: { param1: 'value1' },
-        outputMethod: 'html'
+        variables: { foo: "bar" },
+        parameters: { param1: "value1" },
+        outputMethod: "html",
       });
 
       assert.strictEqual(context.currentNode, node);
       assert.strictEqual(context.position, 3);
-      assert.strictEqual(context.variables.foo, 'bar');
-      assert.strictEqual(context.parameters.param1, 'value1');
-      assert.strictEqual(context.outputMethod, 'html');
+      assert.strictEqual(context.variables.foo, "bar");
+      assert.strictEqual(context.parameters.param1, "value1");
+      assert.strictEqual(context.outputMethod, "html");
     });
   });
 
-  describe('clone', () => {
-    it('should clone context with overrides', () => {
+  describe("clone", () => {
+    it("should clone context with overrides", () => {
       const context = new XsltContext({
         position: 1,
         variables: { a: 1 },
-        parameters: { b: 2 }
+        parameters: { b: 2 },
       });
 
       const cloned = context.clone({
         position: 5,
-        variables: { c: 3 }
+        variables: { c: 3 },
       });
 
       assert.strictEqual(cloned.position, 5);
@@ -78,10 +78,10 @@ describe('XsltContext', () => {
       assert.strictEqual(cloned.parameters.b, 2);
     });
 
-    it('should preserve original context', () => {
+    it("should preserve original context", () => {
       const context = new XsltContext({
         position: 1,
-        variables: { a: 1 }
+        variables: { a: 1 },
       });
 
       context.clone({ variables: { b: 2 } });
@@ -91,43 +91,43 @@ describe('XsltContext', () => {
     });
   });
 
-  describe('getVariable', () => {
-    it('should return variable value', () => {
+  describe("getVariable", () => {
+    it("should return variable value", () => {
       const context = new XsltContext({
-        variables: { myVar: 'value' }
+        variables: { myVar: "value" },
       });
 
-      assert.strictEqual(context.getVariable('myVar'), 'value');
+      assert.strictEqual(context.getVariable("myVar"), "value");
     });
 
-    it('should return parameter if variable not found', () => {
+    it("should return parameter if variable not found", () => {
       const context = new XsltContext({
-        parameters: { myParam: 'paramValue' }
+        parameters: { myParam: "paramValue" },
       });
 
-      assert.strictEqual(context.getVariable('myParam'), 'paramValue');
+      assert.strictEqual(context.getVariable("myParam"), "paramValue");
     });
 
-    it('should throw for undefined variable', () => {
+    it("should throw for undefined variable", () => {
       const context = new XsltContext();
 
       assert.throws(() => {
-        context.getVariable('nonexistent');
+        context.getVariable("nonexistent");
       }, /Undefined variable/);
     });
   });
 
-  describe('setVariable', () => {
-    it('should set variable value', () => {
+  describe("setVariable", () => {
+    it("should set variable value", () => {
       const context = new XsltContext();
-      context.setVariable('test', 'value');
+      context.setVariable("test", "value");
 
-      assert.strictEqual(context.variables.test, 'value');
+      assert.strictEqual(context.variables.test, "value");
     });
   });
 });
 
-describe('XsltEngine', () => {
+describe("XsltEngine", () => {
   let engine;
 
   beforeEach(() => {
@@ -135,18 +135,18 @@ describe('XsltEngine', () => {
     engine = new XsltEngine();
   });
 
-  describe('constructor', () => {
-    it('should initialize with default settings', () => {
-      assert.strictEqual(engine.outputSettings.method, 'xml');
-      assert.strictEqual(engine.outputSettings.encoding, 'UTF-8');
-      assert.strictEqual(engine.outputSettings.indent, 'no');
+  describe("constructor", () => {
+    it("should initialize with default settings", () => {
+      assert.strictEqual(engine.outputSettings.method, "xml");
+      assert.strictEqual(engine.outputSettings.encoding, "UTF-8");
+      assert.strictEqual(engine.outputSettings.indent, "no");
       assert.deepStrictEqual(engine.templates, []);
       assert.deepStrictEqual(engine.keys, {});
     });
   });
 
-  describe('importStylesheet', () => {
-    it('should import valid stylesheet', () => {
+  describe("importStylesheet", () => {
+    it("should import valid stylesheet", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -161,15 +161,15 @@ describe('XsltEngine', () => {
       assert.strictEqual(engine.templates.length, 1);
     });
 
-    it('should throw for invalid stylesheet', () => {
-      const invalid = parseXML('<invalid/>');
+    it("should throw for invalid stylesheet", () => {
+      const invalid = parseXML("<invalid/>");
 
       assert.throws(() => {
         engine.importStylesheet(invalid);
       }, /Invalid XSLT stylesheet/);
     });
 
-    it('should handle literal result element stylesheet', () => {
+    it("should handle literal result element stylesheet", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <html xsl:version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <body>Content</body>
@@ -180,10 +180,10 @@ describe('XsltEngine', () => {
         engine.importStylesheet(xslt);
       });
       assert.strictEqual(engine.templates.length, 1);
-      assert.strictEqual(engine.templates[0].match, '/');
+      assert.strictEqual(engine.templates[0].match, "/");
     });
 
-    it('should process xsl:output element', () => {
+    it("should process xsl:output element", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:output method="html" encoding="ISO-8859-1" indent="yes"/>
@@ -193,12 +193,12 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.strictEqual(engine.outputSettings.method, 'html');
-      assert.strictEqual(engine.outputSettings.encoding, 'ISO-8859-1');
-      assert.strictEqual(engine.outputSettings.indent, 'yes');
+      assert.strictEqual(engine.outputSettings.method, "html");
+      assert.strictEqual(engine.outputSettings.encoding, "ISO-8859-1");
+      assert.strictEqual(engine.outputSettings.indent, "yes");
     });
 
-    it('should process global variables', () => {
+    it("should process global variables", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:variable name="globalVar" select="'test'"/>
@@ -208,10 +208,10 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.ok('globalVar' in engine.globalVariables);
+      assert.ok("globalVar" in engine.globalVariables);
     });
 
-    it('should process global parameters', () => {
+    it("should process global parameters", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:param name="globalParam" select="'default'"/>
@@ -221,10 +221,10 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.ok('globalParam' in engine.globalParameters);
+      assert.ok("globalParam" in engine.globalParameters);
     });
 
-    it('should process xsl:key', () => {
+    it("should process xsl:key", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:key name="itemById" match="item" use="@id"/>
@@ -234,12 +234,12 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.ok('itemById' in engine.keys);
-      assert.strictEqual(engine.keys.itemById.match, 'item');
-      assert.strictEqual(engine.keys.itemById.use, '@id');
+      assert.ok("itemById" in engine.keys);
+      assert.strictEqual(engine.keys.itemById.match, "item");
+      assert.strictEqual(engine.keys.itemById.use, "@id");
     });
 
-    it('should process xsl:decimal-format', () => {
+    it("should process xsl:decimal-format", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:decimal-format name="euro" decimal-separator="," grouping-separator="."/>
@@ -249,12 +249,12 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.ok('euro' in engine.decimalFormats);
-      assert.strictEqual(engine.decimalFormats.euro.decimalSeparator, ',');
-      assert.strictEqual(engine.decimalFormats.euro.groupingSeparator, '.');
+      assert.ok("euro" in engine.decimalFormats);
+      assert.strictEqual(engine.decimalFormats.euro.decimalSeparator, ",");
+      assert.strictEqual(engine.decimalFormats.euro.groupingSeparator, ".");
     });
 
-    it('should process xsl:namespace-alias', () => {
+    it("should process xsl:namespace-alias", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:namespace-alias stylesheet-prefix="myns" result-prefix="output"/>
@@ -264,10 +264,10 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.strictEqual(engine.namespaceAliases.myns, 'output');
+      assert.strictEqual(engine.namespaceAliases.myns, "output");
     });
 
-    it('should process xsl:attribute-set', () => {
+    it("should process xsl:attribute-set", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:attribute-set name="common">
@@ -279,10 +279,10 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.ok('common' in engine.attributeSets);
+      assert.ok("common" in engine.attributeSets);
     });
 
-    it('should process xsl:strip-space', () => {
+    it("should process xsl:strip-space", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:strip-space elements="p div span"/>
@@ -292,10 +292,10 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.deepStrictEqual(engine.stripSpace, ['p', 'div', 'span']);
+      assert.deepStrictEqual(engine.stripSpace, ["p", "div", "span"]);
     });
 
-    it('should process xsl:preserve-space', () => {
+    it("should process xsl:preserve-space", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:preserve-space elements="pre code"/>
@@ -305,40 +305,43 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.deepStrictEqual(engine.preserveSpace, ['pre', 'code']);
+      assert.deepStrictEqual(engine.preserveSpace, ["pre", "code"]);
     });
   });
 
-  describe('calculatePriority', () => {
-    it('should return -0.5 for wildcard patterns', () => {
-      assert.strictEqual(engine.calculatePriority('*'), -0.5);
-      assert.strictEqual(engine.calculatePriority('node()'), -0.5);
-      assert.strictEqual(engine.calculatePriority('text()'), -0.5);
-      assert.strictEqual(engine.calculatePriority('comment()'), -0.5);
-      assert.strictEqual(engine.calculatePriority('processing-instruction()'), -0.5);
+  describe("calculatePriority", () => {
+    it("should return -0.5 for wildcard patterns", () => {
+      assert.strictEqual(engine.calculatePriority("*"), -0.5);
+      assert.strictEqual(engine.calculatePriority("node()"), -0.5);
+      assert.strictEqual(engine.calculatePriority("text()"), -0.5);
+      assert.strictEqual(engine.calculatePriority("comment()"), -0.5);
+      assert.strictEqual(
+        engine.calculatePriority("processing-instruction()"),
+        -0.5,
+      );
     });
 
-    it('should return -0.25 for NCName:* patterns', () => {
-      assert.strictEqual(engine.calculatePriority('foo:*'), -0.25);
+    it("should return -0.25 for NCName:* patterns", () => {
+      assert.strictEqual(engine.calculatePriority("foo:*"), -0.25);
     });
 
-    it('should return 0 for simple QName patterns', () => {
-      assert.strictEqual(engine.calculatePriority('item'), 0);
-      assert.strictEqual(engine.calculatePriority('my-element'), 0);
+    it("should return 0 for simple QName patterns", () => {
+      assert.strictEqual(engine.calculatePriority("item"), 0);
+      assert.strictEqual(engine.calculatePriority("my-element"), 0);
     });
 
-    it('should return 0.5 for complex patterns', () => {
-      assert.strictEqual(engine.calculatePriority('/root/item'), 0.5);
-      assert.strictEqual(engine.calculatePriority('item[@id]'), 0.5);
+    it("should return 0.5 for complex patterns", () => {
+      assert.strictEqual(engine.calculatePriority("/root/item"), 0.5);
+      assert.strictEqual(engine.calculatePriority("item[@id]"), 0.5);
     });
 
-    it('should return 0.5 for null pattern', () => {
+    it("should return 0.5 for null pattern", () => {
       assert.strictEqual(engine.calculatePriority(null), 0.5);
     });
   });
 
-  describe('transform', () => {
-    it('should transform simple XML', () => {
+  describe("transform", () => {
+    it("should transform simple XML", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -347,7 +350,7 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Hello</item></root>');
+      const xml = parseXML("<root><item>Hello</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
@@ -356,14 +359,14 @@ describe('XsltEngine', () => {
       assert.ok(result.nodeType === 11);
     });
 
-    it('should throw when no document available', () => {
+    it("should throw when no document available", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/"><out/></xsl:template>
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
 
@@ -377,7 +380,7 @@ describe('XsltEngine', () => {
       global.document = originalDoc;
     });
 
-    it('should evaluate global variables during transform', () => {
+    it("should evaluate global variables during transform", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:variable name="prefix" select="'Item: '"/>
@@ -387,19 +390,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Test</item></root>');
+      const xml = parseXML("<root><item>Test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const resultEl = result.querySelector('result');
-      assert.ok(resultEl.textContent.includes('Item:'));
-      assert.ok(resultEl.textContent.includes('Test'));
+      const resultEl = result.querySelector("result");
+      assert.ok(resultEl.textContent.includes("Item:"));
+      assert.ok(resultEl.textContent.includes("Test"));
     });
   });
 
-  describe('xsl:apply-templates', () => {
-    it('should apply templates with mode', () => {
+  describe("xsl:apply-templates", () => {
+    it("should apply templates with mode", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -414,17 +417,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Test</item></root>');
+      const xml = parseXML("<root><item>Test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const span = result.querySelector('span.special');
+      const span = result.querySelector("span.special");
       assert.ok(span);
-      assert.strictEqual(span.textContent, 'Test');
+      assert.strictEqual(span.textContent, "Test");
     });
 
-    it('should apply templates with sorting', () => {
+    it("should apply templates with sorting", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -440,18 +443,20 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>A</item><item>C</item><item>B</item></root>');
+      const xml = parseXML(
+        "<root><item>A</item><item>C</item><item>B</item></root>",
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const items = result.querySelectorAll('li');
-      assert.strictEqual(items[0].textContent, 'C');
-      assert.strictEqual(items[1].textContent, 'B');
-      assert.strictEqual(items[2].textContent, 'A');
+      const items = result.querySelectorAll("li");
+      assert.strictEqual(items[0].textContent, "C");
+      assert.strictEqual(items[1].textContent, "B");
+      assert.strictEqual(items[2].textContent, "A");
     });
 
-    it('should apply templates with with-param', () => {
+    it("should apply templates with with-param", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -466,19 +471,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Test</item></root>');
+      const xml = parseXML("<root><item>Test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const p = result.querySelector('p');
-      assert.ok(p.textContent.includes('>>'));
-      assert.ok(p.textContent.includes('Test'));
+      const p = result.querySelector("p");
+      assert.ok(p.textContent.includes(">>"));
+      assert.ok(p.textContent.includes("Test"));
     });
   });
 
-  describe('xsl:call-template', () => {
-    it('should throw for non-existent template', () => {
+  describe("xsl:call-template", () => {
+    it("should throw for non-existent template", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -487,7 +492,7 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
 
@@ -496,7 +501,7 @@ describe('XsltEngine', () => {
       }, /Template not found/);
     });
 
-    it('should call template with with-param content', () => {
+    it("should call template with with-param content", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -511,18 +516,18 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const div = result.querySelector('div');
+      const div = result.querySelector("div");
       assert.ok(div);
     });
   });
 
-  describe('xsl:value-of', () => {
-    it('should output value with disable-output-escaping', () => {
+  describe("xsl:value-of", () => {
+    it("should output value with disable-output-escaping", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -531,17 +536,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><content>&lt;p&gt;text&lt;/p&gt;</content></root>');
+      const xml = parseXML(
+        "<root><content>&lt;p&gt;text&lt;/p&gt;</content></root>",
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('div'));
+      assert.ok(result.querySelector("div"));
     });
   });
 
-  describe('xsl:text', () => {
-    it('should output text content', () => {
+  describe("xsl:text", () => {
+    it("should output text content", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -550,16 +557,16 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const p = result.querySelector('p');
-      assert.strictEqual(p.textContent, 'Hello, World!');
+      const p = result.querySelector("p");
+      assert.strictEqual(p.textContent, "Hello, World!");
     });
 
-    it('should preserve whitespace in xsl:text', () => {
+    it("should preserve whitespace in xsl:text", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -568,18 +575,18 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const pre = result.querySelector('pre');
-      assert.strictEqual(pre.textContent, '  indented  ');
+      const pre = result.querySelector("pre");
+      assert.strictEqual(pre.textContent, "  indented  ");
     });
   });
 
-  describe('xsl:element', () => {
-    it('should create element with dynamic name', () => {
+  describe("xsl:element", () => {
+    it("should create element with dynamic name", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -590,17 +597,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><tagName>custom</tagName><content>value</content></root>');
+      const xml = parseXML(
+        "<root><tagName>custom</tagName><content>value</content></root>",
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const custom = result.querySelector('custom');
+      const custom = result.querySelector("custom");
       assert.ok(custom);
-      assert.strictEqual(custom.textContent, 'value');
+      assert.strictEqual(custom.textContent, "value");
     });
 
-    it('should create element with namespace', () => {
+    it("should create element with namespace", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -609,16 +618,16 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const item = result.querySelector('item');
+      const item = result.querySelector("item");
       assert.ok(item);
     });
 
-    it('should apply use-attribute-sets', () => {
+    it("should apply use-attribute-sets", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:attribute-set name="common">
@@ -630,18 +639,18 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const div = result.querySelector('div');
-      assert.strictEqual(div.getAttribute('class'), 'styled');
+      const div = result.querySelector("div");
+      assert.strictEqual(div.getAttribute("class"), "styled");
     });
   });
 
-  describe('xsl:attribute', () => {
-    it('should create attribute with dynamic name', () => {
+  describe("xsl:attribute", () => {
+    it("should create attribute with dynamic name", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -654,16 +663,18 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><attrName>data-id</attrName><attrValue>123</attrValue></root>');
+      const xml = parseXML(
+        "<root><attrName>data-id</attrName><attrValue>123</attrValue></root>",
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const div = result.querySelector('div');
-      assert.strictEqual(div.getAttribute('data-id'), '123');
+      const div = result.querySelector("div");
+      assert.strictEqual(div.getAttribute("data-id"), "123");
     });
 
-    it('should create attribute with namespace', () => {
+    it("should create attribute with namespace", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -674,17 +685,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('div'));
+      assert.ok(result.querySelector("div"));
     });
   });
 
-  describe('xsl:copy', () => {
-    it('should copy element with children', () => {
+  describe("xsl:copy", () => {
+    it("should copy element with children", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="item">
@@ -705,11 +716,11 @@ describe('XsltEngine', () => {
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const item = result.querySelector('item');
+      const item = result.querySelector("item");
       assert.ok(item);
     });
 
-    it('should copy text node', () => {
+    it("should copy text node", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="text()">
@@ -718,15 +729,15 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root>Hello</root>');
+      const xml = parseXML("<root>Hello</root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.textContent.includes('Hello'));
+      assert.ok(result.textContent.includes("Hello"));
     });
 
-    it('should copy with use-attribute-sets', () => {
+    it("should copy with use-attribute-sets", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:attribute-set name="extra">
@@ -743,19 +754,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>test</item></root>');
+      const xml = parseXML("<root><item>test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const item = result.querySelector('item');
+      const item = result.querySelector("item");
       assert.ok(item);
-      assert.strictEqual(item.getAttribute('data-copied'), 'true');
+      assert.strictEqual(item.getAttribute("data-copied"), "true");
     });
   });
 
-  describe('xsl:copy-of', () => {
-    it('should deep copy nodes', () => {
+  describe("xsl:copy-of", () => {
+    it("should deep copy nodes", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -766,18 +777,20 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><nested><child attr="val">text</child></nested></root>');
+      const xml = parseXML(
+        '<root><nested><child attr="val">text</child></nested></root>',
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const child = result.querySelector('child');
+      const child = result.querySelector("child");
       assert.ok(child);
-      assert.strictEqual(child.getAttribute('attr'), 'val');
-      assert.strictEqual(child.textContent, 'text');
+      assert.strictEqual(child.getAttribute("attr"), "val");
+      assert.strictEqual(child.textContent, "text");
     });
 
-    it('should copy primitive values as text', () => {
+    it("should copy primitive values as text", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -786,17 +799,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.textContent.includes('3'));
+      assert.ok(result.textContent.includes("3"));
     });
   });
 
-  describe('xsl:comment', () => {
-    it('should create comment node', () => {
+  describe("xsl:comment", () => {
+    it("should create comment node", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -805,24 +818,24 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
       let hasComment = false;
-      for (const node of result.querySelector('div').childNodes) {
+      for (const node of result.querySelector("div").childNodes) {
         if (node.nodeType === 8) {
           hasComment = true;
-          assert.strictEqual(node.nodeValue, 'This is a comment');
+          assert.strictEqual(node.nodeValue, "This is a comment");
         }
       }
       assert.ok(hasComment);
     });
   });
 
-  describe('xsl:processing-instruction', () => {
-    it('should create processing instruction', () => {
+  describe("xsl:processing-instruction", () => {
+    it("should create processing instruction", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -833,24 +846,24 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
       let hasPI = false;
-      for (const node of result.querySelector('result').childNodes) {
+      for (const node of result.querySelector("result").childNodes) {
         if (node.nodeType === 7) {
           hasPI = true;
-          assert.strictEqual(node.target, 'xml-stylesheet');
+          assert.strictEqual(node.target, "xml-stylesheet");
         }
       }
       assert.ok(hasPI);
     });
   });
 
-  describe('xsl:number', () => {
-    it('should format number with padding', () => {
+  describe("xsl:number", () => {
+    it("should format number with padding", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -859,15 +872,15 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.strictEqual(result.querySelector('p').textContent, '005');
+      assert.strictEqual(result.querySelector("p").textContent, "005");
     });
 
-    it('should format number as lowercase letter', () => {
+    it("should format number as lowercase letter", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -876,15 +889,15 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.strictEqual(result.querySelector('p').textContent, 'c');
+      assert.strictEqual(result.querySelector("p").textContent, "c");
     });
 
-    it('should format number as uppercase letter', () => {
+    it("should format number as uppercase letter", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -893,15 +906,15 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.strictEqual(result.querySelector('p').textContent, 'A');
+      assert.strictEqual(result.querySelector("p").textContent, "A");
     });
 
-    it('should format number as lowercase roman numeral', () => {
+    it("should format number as lowercase roman numeral", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -910,15 +923,15 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.strictEqual(result.querySelector('p').textContent, 'iv');
+      assert.strictEqual(result.querySelector("p").textContent, "iv");
     });
 
-    it('should format number as uppercase roman numeral', () => {
+    it("should format number as uppercase roman numeral", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -927,15 +940,15 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.strictEqual(result.querySelector('p').textContent, 'IX');
+      assert.strictEqual(result.querySelector("p").textContent, "IX");
     });
 
-    it('should count position without value attribute', () => {
+    it("should count position without value attribute", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -947,20 +960,22 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>A</item><item>B</item><item>C</item></root>');
+      const xml = parseXML(
+        "<root><item>A</item><item>B</item><item>C</item></root>",
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const items = result.querySelectorAll('li');
-      assert.ok(items[0].textContent.includes('1'));
-      assert.ok(items[1].textContent.includes('2'));
-      assert.ok(items[2].textContent.includes('3'));
+      const items = result.querySelectorAll("li");
+      assert.ok(items[0].textContent.includes("1"));
+      assert.ok(items[1].textContent.includes("2"));
+      assert.ok(items[2].textContent.includes("3"));
     });
   });
 
-  describe('xsl:message', () => {
-    it('should output message without terminating', () => {
+  describe("xsl:message", () => {
+    it("should output message without terminating", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -970,15 +985,15 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result'));
+      assert.ok(result.querySelector("result"));
     });
 
-    it('should terminate when terminate=yes', () => {
+    it("should terminate when terminate=yes", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -988,7 +1003,7 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
 
@@ -998,8 +1013,8 @@ describe('XsltEngine', () => {
     });
   });
 
-  describe('xsl:variable', () => {
-    it('should create variable with select', () => {
+  describe("xsl:variable", () => {
+    it("should create variable with select", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1009,15 +1024,15 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item/><item/><item/></root>');
+      const xml = parseXML("<root><item/><item/><item/></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('p').textContent.includes('3'));
+      assert.ok(result.querySelector("p").textContent.includes("3"));
     });
 
-    it('should create variable with content', () => {
+    it("should create variable with content", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1027,19 +1042,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const div = result.querySelector('div');
+      const div = result.querySelector("div");
       assert.ok(div);
-      assert.ok(div.textContent.includes('emphasized'));
+      assert.ok(div.textContent.includes("emphasized"));
     });
   });
 
-  describe('sortNodes', () => {
-    it('should sort nodes by number', () => {
+  describe("sortNodes", () => {
+    it("should sort nodes by number", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1053,18 +1068,20 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item value="10"/><item value="2"/><item value="5"/></root>');
+      const xml = parseXML(
+        '<root><item value="10"/><item value="2"/><item value="5"/></root>',
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const items = result.querySelectorAll('li');
-      assert.strictEqual(items[0].textContent, '2');
-      assert.strictEqual(items[1].textContent, '5');
-      assert.strictEqual(items[2].textContent, '10');
+      const items = result.querySelectorAll("li");
+      assert.strictEqual(items[0].textContent, "2");
+      assert.strictEqual(items[1].textContent, "5");
+      assert.strictEqual(items[2].textContent, "10");
     });
 
-    it('should sort with case-order lower-first', () => {
+    it("should sort with case-order lower-first", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1078,87 +1095,101 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>B</item><item>a</item><item>A</item></root>');
+      const xml = parseXML(
+        "<root><item>B</item><item>a</item><item>A</item></root>",
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const items = result.querySelectorAll('li');
+      const items = result.querySelectorAll("li");
       assert.strictEqual(items.length, 3);
     });
   });
 
-  describe('splitUnionPattern', () => {
-    it('should split union patterns', () => {
-      const parts = engine.splitUnionPattern('a|b|c');
-      assert.deepStrictEqual(parts, ['a', 'b', 'c']);
+  describe("splitUnionPattern", () => {
+    it("should split union patterns", () => {
+      const parts = engine.splitUnionPattern("a|b|c");
+      assert.deepStrictEqual(parts, ["a", "b", "c"]);
     });
 
-    it('should handle patterns with predicates', () => {
+    it("should handle patterns with predicates", () => {
       const parts = engine.splitUnionPattern('a[@x]|b[contains(., "|")]');
       assert.strictEqual(parts.length, 2);
-      assert.strictEqual(parts[0], 'a[@x]');
+      assert.strictEqual(parts[0], "a[@x]");
       assert.strictEqual(parts[1], 'b[contains(., "|")]');
     });
 
-    it('should handle patterns with strings', () => {
+    it("should handle patterns with strings", () => {
       const parts = engine.splitUnionPattern("a|'string|with|pipes'|b");
       assert.strictEqual(parts.length, 3);
     });
   });
 
-  describe('processAttributeValueTemplate', () => {
-    it('should process simple template', () => {
+  describe("processAttributeValueTemplate", () => {
+    it("should process simple template", () => {
       const context = new XsltContext({
-        currentNode: parseXML('<root><id>123</id></root>').documentElement,
-        namespaces: {}
+        currentNode: parseXML("<root><id>123</id></root>").documentElement,
+        namespaces: {},
       });
 
-      const result = engine.processAttributeValueTemplate('/item/{/root/id}', context);
-      assert.strictEqual(result, '/item/123');
+      const result = engine.processAttributeValueTemplate(
+        "/item/{/root/id}",
+        context,
+      );
+      assert.strictEqual(result, "/item/123");
     });
 
-    it('should handle escaped braces', () => {
+    it("should handle escaped braces", () => {
       const context = new XsltContext({
-        currentNode: parseXML('<root/>').documentElement,
-        namespaces: {}
+        currentNode: parseXML("<root/>").documentElement,
+        namespaces: {},
       });
 
-      const result = engine.processAttributeValueTemplate('{{literal}}', context);
-      assert.strictEqual(result, '{literal}');
+      const result = engine.processAttributeValueTemplate(
+        "{{literal}}",
+        context,
+      );
+      assert.strictEqual(result, "{literal}");
     });
 
-    it('should return unchanged string without braces', () => {
+    it("should return unchanged string without braces", () => {
       const context = new XsltContext({
-        currentNode: parseXML('<root/>').documentElement,
-        namespaces: {}
+        currentNode: parseXML("<root/>").documentElement,
+        namespaces: {},
       });
 
-      const result = engine.processAttributeValueTemplate('plain text', context);
-      assert.strictEqual(result, 'plain text');
+      const result = engine.processAttributeValueTemplate(
+        "plain text",
+        context,
+      );
+      assert.strictEqual(result, "plain text");
     });
 
-    it('should handle unmatched closing brace gracefully', () => {
+    it("should handle unmatched closing brace gracefully", () => {
       const context = new XsltContext({
-        currentNode: parseXML('<root/>').documentElement,
-        namespaces: {}
+        currentNode: parseXML("<root/>").documentElement,
+        namespaces: {},
       });
 
       // The engine handles single } by either throwing or passing through
       // depending on implementation - test the actual behavior
       try {
-        const result = engine.processAttributeValueTemplate('text}more', context);
+        const result = engine.processAttributeValueTemplate(
+          "text}more",
+          context,
+        );
         // If it doesn't throw, it should preserve the text somehow
-        assert.ok(typeof result === 'string');
+        assert.ok(typeof result === "string");
       } catch (e) {
         // If it throws, it should be about unmatched brace
-        assert.ok(e.message.includes('}') || e.message.includes('brace'));
+        assert.ok(e.message.includes("}") || e.message.includes("brace"));
       }
     });
   });
 
-  describe('built-in templates', () => {
-    it('should apply built-in template for elements', () => {
+  describe("built-in templates", () => {
+    it("should apply built-in template for elements", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="target">
@@ -1167,80 +1198,84 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><wrapper><target>value</target></wrapper></root>');
+      const xml = parseXML(
+        "<root><wrapper><target>value</target></wrapper></root>",
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const found = result.querySelector('found');
+      const found = result.querySelector("found");
       assert.ok(found);
-      assert.strictEqual(found.textContent, 'value');
+      assert.strictEqual(found.textContent, "value");
     });
 
-    it('should apply built-in template for text nodes', () => {
+    it("should apply built-in template for text nodes", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root>plain text</root>');
+      const xml = parseXML("<root>plain text</root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.textContent.includes('plain text'));
+      assert.ok(result.textContent.includes("plain text"));
     });
   });
 
-  describe('toRoman', () => {
-    it('should convert numbers to roman numerals', () => {
-      assert.strictEqual(engine.toRoman(1), 'I');
-      assert.strictEqual(engine.toRoman(4), 'IV');
-      assert.strictEqual(engine.toRoman(9), 'IX');
-      assert.strictEqual(engine.toRoman(10), 'X');
-      assert.strictEqual(engine.toRoman(40), 'XL');
-      assert.strictEqual(engine.toRoman(50), 'L');
-      assert.strictEqual(engine.toRoman(90), 'XC');
-      assert.strictEqual(engine.toRoman(100), 'C');
-      assert.strictEqual(engine.toRoman(400), 'CD');
-      assert.strictEqual(engine.toRoman(500), 'D');
-      assert.strictEqual(engine.toRoman(900), 'CM');
-      assert.strictEqual(engine.toRoman(1000), 'M');
-      assert.strictEqual(engine.toRoman(1999), 'MCMXCIX');
-      assert.strictEqual(engine.toRoman(2024), 'MMXXIV');
+  describe("toRoman", () => {
+    it("should convert numbers to roman numerals", () => {
+      assert.strictEqual(engine.toRoman(1), "I");
+      assert.strictEqual(engine.toRoman(4), "IV");
+      assert.strictEqual(engine.toRoman(9), "IX");
+      assert.strictEqual(engine.toRoman(10), "X");
+      assert.strictEqual(engine.toRoman(40), "XL");
+      assert.strictEqual(engine.toRoman(50), "L");
+      assert.strictEqual(engine.toRoman(90), "XC");
+      assert.strictEqual(engine.toRoman(100), "C");
+      assert.strictEqual(engine.toRoman(400), "CD");
+      assert.strictEqual(engine.toRoman(500), "D");
+      assert.strictEqual(engine.toRoman(900), "CM");
+      assert.strictEqual(engine.toRoman(1000), "M");
+      assert.strictEqual(engine.toRoman(1999), "MCMXCIX");
+      assert.strictEqual(engine.toRoman(2024), "MMXXIV");
     });
   });
 
-  describe('deepCloneNode', () => {
-    it('should clone element with attributes and children', () => {
-      const source = parseXML('<root attr="value"><child>text</child></root>').documentElement;
+  describe("deepCloneNode", () => {
+    it("should clone element with attributes and children", () => {
+      const source = parseXML(
+        '<root attr="value"><child>text</child></root>',
+      ).documentElement;
       const clone = engine.deepCloneNode(source, document);
 
-      assert.strictEqual(clone.nodeName.toLowerCase(), 'root');
-      assert.strictEqual(clone.getAttribute('attr'), 'value');
-      assert.ok(clone.querySelector('child'));
+      assert.strictEqual(clone.nodeName.toLowerCase(), "root");
+      assert.strictEqual(clone.getAttribute("attr"), "value");
+      assert.ok(clone.querySelector("child"));
     });
 
-    it('should clone text node', () => {
-      const textNode = document.createTextNode('hello');
+    it("should clone text node", () => {
+      const textNode = document.createTextNode("hello");
       const clone = engine.deepCloneNode(textNode, document);
 
       assert.strictEqual(clone.nodeType, 3);
-      assert.strictEqual(clone.nodeValue, 'hello');
+      assert.strictEqual(clone.nodeValue, "hello");
     });
 
-    it('should clone comment node', () => {
-      const comment = document.createComment('comment text');
+    it("should clone comment node", () => {
+      const comment = document.createComment("comment text");
       const clone = engine.deepCloneNode(comment, document);
 
       assert.strictEqual(clone.nodeType, 8);
-      assert.strictEqual(clone.nodeValue, 'comment text');
+      assert.strictEqual(clone.nodeValue, "comment text");
     });
 
-    it('should clone document fragment', () => {
+    it("should clone document fragment", () => {
       const frag = document.createDocumentFragment();
-      frag.appendChild(document.createElement('div'));
-      frag.appendChild(document.createElement('span'));
+      frag.appendChild(document.createElement("div"));
+      frag.appendChild(document.createElement("span"));
 
       const clone = engine.deepCloneNode(frag, document);
 
@@ -1249,41 +1284,49 @@ describe('XsltEngine', () => {
     });
   });
 
-  describe('shouldPreserveSpace', () => {
-    it('should return true when xml:space is preserve', () => {
-      const xml = parseXML('<root xml:space="preserve"><child>  text  </child></root>');
-      const textNode = xml.querySelector('child').firstChild;
+  describe("shouldPreserveSpace", () => {
+    it("should return true when xml:space is preserve", () => {
+      const xml = parseXML(
+        '<root xml:space="preserve"><child>  text  </child></root>',
+      );
+      const textNode = xml.querySelector("child").firstChild;
 
       assert.strictEqual(engine.shouldPreserveSpace(textNode), true);
     });
 
-    it('should return false when xml:space is default', () => {
-      const xml = parseXML('<root xml:space="default"><child>  text  </child></root>');
-      const textNode = xml.querySelector('child').firstChild;
+    it("should return false when xml:space is default", () => {
+      const xml = parseXML(
+        '<root xml:space="default"><child>  text  </child></root>',
+      );
+      const textNode = xml.querySelector("child").firstChild;
 
       assert.strictEqual(engine.shouldPreserveSpace(textNode), false);
     });
 
-    it('should return false when no xml:space attribute', () => {
-      const xml = parseXML('<root><child>  text  </child></root>');
-      const textNode = xml.querySelector('child').firstChild;
+    it("should return false when no xml:space attribute", () => {
+      const xml = parseXML("<root><child>  text  </child></root>");
+      const textNode = xml.querySelector("child").firstChild;
 
       assert.strictEqual(engine.shouldPreserveSpace(textNode), false);
     });
   });
 
-  describe('collectNamespaces', () => {
-    it('should collect namespace declarations', () => {
-      const xml = parseXML('<root xmlns:foo="http://foo.com" xmlns:bar="http://bar.com"/>');
+  describe("collectNamespaces", () => {
+    it("should collect namespace declarations", () => {
+      const xml = parseXML(
+        '<root xmlns:foo="http://foo.com" xmlns:bar="http://bar.com"/>',
+      );
 
       engine.collectNamespaces(xml.documentElement);
 
-      assert.strictEqual(engine.namespaces.foo, 'http://foo.com');
-      assert.strictEqual(engine.namespaces.bar, 'http://bar.com');
+      assert.strictEqual(engine.namespaces.foo, "http://foo.com");
+      assert.strictEqual(engine.namespaces.bar, "http://bar.com");
     });
 
-    it('should ignore XSLT namespace', () => {
-      const xml = parseXML('<root xmlns:xsl="http://www.w3.org/1999/XSL/Transform"/>');
+    it("should ignore XSLT namespace", () => {
+      const xml = parseXML(
+        '<root xmlns:xsl="http://www.w3.org/1999/XSL/Transform"/>',
+      );
 
       engine.collectNamespaces(xml.documentElement);
 
@@ -1291,8 +1334,8 @@ describe('XsltEngine', () => {
     });
   });
 
-  describe('applyAttributeSets', () => {
-    it('should apply nested attribute sets via xsl:element', () => {
+  describe("applyAttributeSets", () => {
+    it("should apply nested attribute sets via xsl:element", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:attribute-set name="base">
@@ -1307,17 +1350,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const div = result.querySelector('div');
-      assert.strictEqual(div.getAttribute('class'), 'base-class');
-      assert.strictEqual(div.getAttribute('id'), 'extended-id');
+      const div = result.querySelector("div");
+      assert.strictEqual(div.getAttribute("class"), "base-class");
+      assert.strictEqual(div.getAttribute("id"), "extended-id");
     });
 
-    it('should apply attribute sets directly', () => {
+    it("should apply attribute sets directly", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:attribute-set name="common">
@@ -1330,29 +1373,29 @@ describe('XsltEngine', () => {
       engine.importStylesheet(xslt);
 
       const context = new XsltContext({
-        currentNode: parseXML('<root/>').documentElement,
-        outputDocument: document
+        currentNode: parseXML("<root/>").documentElement,
+        outputDocument: document,
       });
 
-      const element = document.createElement('div');
-      engine.applyAttributeSets('common', context, element);
+      const element = document.createElement("div");
+      engine.applyAttributeSets("common", context, element);
 
-      assert.strictEqual(element.getAttribute('data-test'), 'value');
+      assert.strictEqual(element.getAttribute("data-test"), "value");
     });
   });
 
-  describe('collectNamespaces - default namespace', () => {
-    it('should collect default xmlns namespace', () => {
+  describe("collectNamespaces - default namespace", () => {
+    it("should collect default xmlns namespace", () => {
       const xml = parseXML('<root xmlns="http://example.com/default"/>');
 
       engine.collectNamespaces(xml.documentElement);
 
-      assert.strictEqual(engine.namespaces[''], 'http://example.com/default');
+      assert.strictEqual(engine.namespaces[""], "http://example.com/default");
     });
   });
 
-  describe('xsl:output cdata-section-elements', () => {
-    it('should process cdata-section-elements attribute', () => {
+  describe("xsl:output cdata-section-elements", () => {
+    it("should process cdata-section-elements attribute", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:output method="xml" cdata-section-elements="script style"/>
@@ -1362,12 +1405,15 @@ describe('XsltEngine', () => {
 
       engine.importStylesheet(xslt);
 
-      assert.deepStrictEqual(engine.outputSettings.cdataSectionElements, ['script', 'style']);
+      assert.deepStrictEqual(engine.outputSettings.cdataSectionElements, [
+        "script",
+        "style",
+      ]);
     });
   });
 
-  describe('global parameters evaluation', () => {
-    it('should evaluate global parameters without preset values', () => {
+  describe("global parameters evaluation", () => {
+    it("should evaluate global parameters without preset values", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:param name="testParam" select="'defaultValue'"/>
@@ -1377,17 +1423,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result').textContent.includes('defaultValue'));
+      assert.ok(
+        result.querySelector("result").textContent.includes("defaultValue"),
+      );
     });
   });
 
-  describe('evaluateVariable with content', () => {
-    it('should evaluate variable with tree fragment content', () => {
+  describe("evaluateVariable with content", () => {
+    it("should evaluate variable with tree fragment content", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:variable name="frag"><item>content</item></xsl:variable>
@@ -1397,17 +1445,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result'));
+      assert.ok(result.querySelector("result"));
     });
   });
 
-  describe('matchesSinglePattern with absolute path', () => {
-    it('should match pattern starting with /', () => {
+  describe("matchesSinglePattern with absolute path", () => {
+    it("should match pattern starting with /", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/root/item">
@@ -1416,37 +1464,37 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>test</item></root>');
+      const xml = parseXML("<root><item>test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('matched'));
+      assert.ok(result.querySelector("matched"));
     });
   });
 
-  describe('matchesSinglePattern catch block', () => {
-    it('should return false on pattern matching error', () => {
+  describe("matchesSinglePattern catch block", () => {
+    it("should return false on pattern matching error", () => {
       const context = new XsltContext({
-        currentNode: parseXML('<root/>').documentElement,
+        currentNode: parseXML("<root/>").documentElement,
         variables: {},
         parameters: {},
-        namespaces: {}
+        namespaces: {},
       });
 
       // Invalid pattern should not throw, just return false
       const result = engine.matchesPattern(
-        parseXML('<root/>').documentElement,
-        '[[[invalid',
-        context
+        parseXML("<root/>").documentElement,
+        "[[[invalid",
+        context,
       );
 
       assert.strictEqual(result, false);
     });
   });
 
-  describe('template param processing', () => {
-    it('should process template params with default values', () => {
+  describe("template param processing", () => {
+    it("should process template params with default values", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1459,17 +1507,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result').textContent.includes('default'));
+      assert.ok(result.querySelector("result").textContent.includes("default"));
     });
   });
 
-  describe('unknown XSLT element', () => {
-    it('should warn on unknown XSLT element', () => {
+  describe("unknown XSLT element", () => {
+    it("should warn on unknown XSLT element", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1479,17 +1527,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result'));
+      assert.ok(result.querySelector("result"));
     });
   });
 
-  describe('xsl:text with disable-output-escaping', () => {
-    it('should handle disable-output-escaping in xsl:text', () => {
+  describe("xsl:text with disable-output-escaping", () => {
+    it("should handle disable-output-escaping in xsl:text", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1498,17 +1546,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('div'));
+      assert.ok(result.querySelector("div"));
     });
   });
 
-  describe('xsl:choose with otherwise', () => {
-    it('should execute otherwise when no when matches', () => {
+  describe("xsl:choose with otherwise", () => {
+    it("should execute otherwise when no when matches", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1524,18 +1572,18 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('correct'));
-      assert.ok(!result.querySelector('wrong'));
+      assert.ok(result.querySelector("correct"));
+      assert.ok(!result.querySelector("wrong"));
     });
   });
 
-  describe('xsl:for-each with single node result', () => {
-    it('should handle single node as select result', () => {
+  describe("xsl:for-each with single node result", () => {
+    it("should handle single node as select result", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1546,19 +1594,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const item = result.querySelector('item');
+      const item = result.querySelector("item");
       assert.ok(item);
-      assert.strictEqual(item.textContent, 'root');
+      assert.strictEqual(item.textContent, "root");
     });
   });
 
-  describe('xsl:copy for various node types', () => {
-    it('should copy element with namespace', () => {
+  describe("xsl:copy for various node types", () => {
+    it("should copy element with namespace", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:ns="http://example.com">
           <xsl:template match="ns:item">
@@ -1570,15 +1618,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root xmlns:ns="http://example.com"><ns:item/></root>');
+      const xml = parseXML(
+        '<root xmlns:ns="http://example.com"><ns:item/></root>',
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.textContent.includes('copied'));
+      assert.ok(result.textContent.includes("copied"));
     });
 
-    it('should copy processing instruction node', () => {
+    it("should copy processing instruction node", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="processing-instruction()">
@@ -1590,7 +1640,7 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><?target data?></root>');
+      const xml = parseXML("<root><?target data?></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
@@ -1601,10 +1651,10 @@ describe('XsltEngine', () => {
         _hasPI = true;
       }
       // PI may or may not be created depending on DOM impl
-      assert.ok(result.querySelector('result'));
+      assert.ok(result.querySelector("result"));
     });
 
-    it('should copy comment node', () => {
+    it("should copy comment node", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="comment()">
@@ -1616,15 +1666,15 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><!-- test comment --></root>');
+      const xml = parseXML("<root><!-- test comment --></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result'));
+      assert.ok(result.querySelector("result"));
     });
 
-    it('should copy document fragment children', () => {
+    it("should copy document fragment children", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1635,39 +1685,39 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('item'));
+      assert.ok(result.querySelector("item"));
     });
   });
 
-  describe('deepCloneNode for processing instruction', () => {
-    it('should clone processing instruction node', () => {
-      const pi = document.createProcessingInstruction('target', 'data');
+  describe("deepCloneNode for processing instruction", () => {
+    it("should clone processing instruction node", () => {
+      const pi = document.createProcessingInstruction("target", "data");
       const clone = engine.deepCloneNode(pi, document);
 
       assert.strictEqual(clone.nodeType, 7);
-      assert.strictEqual(clone.target, 'target');
-      assert.strictEqual(clone.data, 'data');
+      assert.strictEqual(clone.target, "target");
+      assert.strictEqual(clone.data, "data");
     });
   });
 
-  describe('deepCloneNode default case', () => {
-    it('should return empty text for unknown node types', () => {
+  describe("deepCloneNode default case", () => {
+    it("should return empty text for unknown node types", () => {
       // Create a mock node with unusual nodeType
       const mockNode = { nodeType: 99 };
       const clone = engine.deepCloneNode(mockNode, document);
 
       assert.strictEqual(clone.nodeType, 3);
-      assert.strictEqual(clone.nodeValue, '');
+      assert.strictEqual(clone.nodeValue, "");
     });
   });
 
-  describe('countNumber without count pattern', () => {
-    it('should count siblings without count attribute', () => {
+  describe("countNumber without count pattern", () => {
+    it("should count siblings without count attribute", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="item">
@@ -1679,16 +1729,16 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>A</item><item>B</item></root>');
+      const xml = parseXML("<root><item>A</item><item>B</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const items = result.querySelectorAll('li');
+      const items = result.querySelectorAll("li");
       assert.ok(items.length >= 2);
     });
 
-    it('should return 1 for non-single level', () => {
+    it("should return 1 for non-single level", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="item">
@@ -1700,17 +1750,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>A</item></root>');
+      const xml = parseXML("<root><item>A</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('li').textContent.includes('1'));
+      assert.ok(result.querySelector("li").textContent.includes("1"));
     });
   });
 
-  describe('formatNumber default format', () => {
-    it('should use default format for unrecognized pattern', () => {
+  describe("formatNumber default format", () => {
+    it("should use default format for unrecognized pattern", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1719,17 +1769,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.strictEqual(result.querySelector('p').textContent, '42');
+      assert.strictEqual(result.querySelector("p").textContent, "42");
     });
   });
 
-  describe('xsl:apply-templates with single node result', () => {
-    it('should handle single node select result', () => {
+  describe("xsl:apply-templates with single node result", () => {
+    it("should handle single node select result", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="item">
@@ -1741,17 +1791,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>first</item><item>second</item></root>');
+      const xml = parseXML(
+        "<root><item>first</item><item>second</item></root>",
+      );
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const found = result.querySelector('found');
+      const found = result.querySelector("found");
       assert.ok(found);
-      assert.strictEqual(found.textContent, 'first');
+      assert.strictEqual(found.textContent, "first");
     });
 
-    it('should handle empty node result', () => {
+    it("should handle empty node result", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1760,24 +1812,24 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result'));
+      assert.ok(result.querySelector("result"));
     });
   });
 
-  describe('createDocument without global document', () => {
-    it('should throw when document is not available', () => {
+  describe("createDocument without global document", () => {
+    it("should throw when document is not available", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/"><out/></xsl:template>
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
 
@@ -1792,8 +1844,8 @@ describe('XsltEngine', () => {
     });
   });
 
-  describe('namespace aliases in literal result elements', () => {
-    it('should apply namespace aliases', () => {
+  describe("namespace aliases in literal result elements", () => {
+    it("should apply namespace aliases", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0"
           xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -1806,7 +1858,7 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
@@ -1815,8 +1867,8 @@ describe('XsltEngine', () => {
     });
   });
 
-  describe('xsl:for-each with empty result', () => {
-    it('should handle empty node set', () => {
+  describe("xsl:for-each with empty result", () => {
+    it("should handle empty node set", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1830,18 +1882,18 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result'));
-      assert.ok(!result.querySelector('item'));
+      assert.ok(result.querySelector("result"));
+      assert.ok(!result.querySelector("item"));
     });
   });
 
-  describe('xsl:copy for attribute nodes', () => {
-    it('should copy attribute to element output', () => {
+  describe("xsl:copy for attribute nodes", () => {
+    it("should copy attribute to element output", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="@*">
@@ -1860,11 +1912,11 @@ describe('XsltEngine', () => {
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const resultEl = result.querySelector('result');
+      const resultEl = result.querySelector("result");
       assert.ok(resultEl);
     });
 
-    it('should copy attribute directly to output element', () => {
+    it("should copy attribute directly to output element", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="@id">
@@ -1886,8 +1938,8 @@ describe('XsltEngine', () => {
     });
   });
 
-  describe('literal result element with namespace', () => {
-    it('should create namespaced element', () => {
+  describe("literal result element with namespace", () => {
+    it("should create namespaced element", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0"
           xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -1900,7 +1952,7 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
@@ -1909,8 +1961,8 @@ describe('XsltEngine', () => {
     });
   });
 
-  describe('xsl:copy with document node', () => {
-    it('should copy document/fragment by processing children', () => {
+  describe("xsl:copy with document node", () => {
+    it("should copy document/fragment by processing children", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1921,17 +1973,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root>content</root>');
+      const xml = parseXML("<root>content</root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('wrapper'));
+      assert.ok(result.querySelector("wrapper"));
     });
   });
 
-  describe('xslApplyTemplates with non-array result', () => {
-    it('should handle string result from select', () => {
+  describe("xslApplyTemplates with non-array result", () => {
+    it("should handle string result from select", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1942,17 +1994,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>text</item></root>');
+      const xml = parseXML("<root><item>text</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result'));
+      assert.ok(result.querySelector("result"));
     });
   });
 
-  describe('xslForEach with non-array result', () => {
-    it('should handle string result from select', () => {
+  describe("xslForEach with non-array result", () => {
+    it("should handle string result from select", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1965,17 +2017,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>text</item></root>');
+      const xml = parseXML("<root><item>text</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result'));
+      assert.ok(result.querySelector("result"));
     });
   });
 
-  describe('xsl:fallback element', () => {
-    it('should ignore xsl:fallback in supported elements', () => {
+  describe("xsl:fallback element", () => {
+    it("should ignore xsl:fallback in supported elements", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -1987,17 +2039,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>value</item></root>');
+      const xml = parseXML("<root><item>value</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('result'));
+      assert.ok(result.querySelector("result"));
     });
   });
 
-  describe('xsl:with-param standalone', () => {
-    it('should ignore xsl:with-param outside call-template/apply-templates', () => {
+  describe("xsl:with-param standalone", () => {
+    it("should ignore xsl:with-param outside call-template/apply-templates", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -2009,17 +2061,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('done'));
+      assert.ok(result.querySelector("done"));
     });
   });
 
-  describe('xsl:copy direct method call', () => {
-    it('should copy attribute node directly', () => {
+  describe("xsl:copy direct method call", () => {
+    it("should copy attribute node directly", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/"><out/></xsl:template>
@@ -2030,7 +2082,7 @@ describe('XsltEngine', () => {
 
       // Create attribute node context
       const sourceDoc = parseXML('<root id="test-value"/>');
-      const attrNode = sourceDoc.documentElement.getAttributeNode('id');
+      const attrNode = sourceDoc.documentElement.getAttributeNode("id");
 
       const context = new XsltContext({
         currentNode: attrNode,
@@ -2039,22 +2091,24 @@ describe('XsltEngine', () => {
         outputDocument: document,
         variables: {},
         parameters: {},
-        namespaces: {}
+        namespaces: {},
       });
 
       // Create output element
-      const outputElement = document.createElement('target');
+      const outputElement = document.createElement("target");
 
       // Create xsl:copy node
-      const copyNode = parseXML('<xsl:copy xmlns:xsl="http://www.w3.org/1999/XSL/Transform"/>').documentElement;
+      const copyNode = parseXML(
+        '<xsl:copy xmlns:xsl="http://www.w3.org/1999/XSL/Transform"/>',
+      ).documentElement;
 
       // Call xslCopy directly
       engine.xslCopy(copyNode, context, outputElement);
 
-      assert.strictEqual(outputElement.getAttribute('id'), 'test-value');
+      assert.strictEqual(outputElement.getAttribute("id"), "test-value");
     });
 
-    it('should copy document node directly', () => {
+    it("should copy document node directly", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/"><out/></xsl:template>
@@ -2064,7 +2118,7 @@ describe('XsltEngine', () => {
       engine.importStylesheet(xslt);
 
       // Create document context
-      const sourceDoc = parseXML('<root/>');
+      const sourceDoc = parseXML("<root/>");
 
       const context = new XsltContext({
         currentNode: sourceDoc,
@@ -2073,14 +2127,16 @@ describe('XsltEngine', () => {
         outputDocument: document,
         variables: {},
         parameters: {},
-        namespaces: {}
+        namespaces: {},
       });
 
       // Create output fragment
       const outputFragment = document.createDocumentFragment();
 
       // Create xsl:copy node with children
-      const copyNode = parseXML('<xsl:copy xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><child>content</child></xsl:copy>').documentElement;
+      const copyNode = parseXML(
+        '<xsl:copy xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><child>content</child></xsl:copy>',
+      ).documentElement;
 
       // Call xslCopy directly
       engine.xslCopy(copyNode, context, outputFragment);
@@ -2089,9 +2145,9 @@ describe('XsltEngine', () => {
     });
   });
 
-  describe('W3C XSLT 1.0 Specification Compliance', () => {
-    describe('Section 5: Template Rules', () => {
-      it('should match templates by priority (5.5)', () => {
+  describe("W3C XSLT 1.0 Specification Compliance", () => {
+    describe("Section 5: Template Rules", () => {
+      it("should match templates by priority (5.5)", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="item" priority="1">
@@ -2103,18 +2159,18 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root><item>test</item></root>');
+        const xml = parseXML("<root><item>test</item></root>");
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        assert.ok(result.querySelector('high'));
-        assert.ok(!result.querySelector('low'));
+        assert.ok(result.querySelector("high"));
+        assert.ok(!result.querySelector("low"));
       });
     });
 
-    describe('Section 7: Repetition', () => {
-      it('should process xsl:for-each with position() (7.7)', () => {
+    describe("Section 7: Repetition", () => {
+      it("should process xsl:for-each with position() (7.7)", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="/">
@@ -2127,19 +2183,19 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root><item>A</item><item>B</item></root>');
+        const xml = parseXML("<root><item>A</item><item>B</item></root>");
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        const items = result.querySelectorAll('li');
-        assert.ok(items[0].textContent.includes('1'));
-        assert.ok(items[1].textContent.includes('2'));
+        const items = result.querySelectorAll("li");
+        assert.ok(items[0].textContent.includes("1"));
+        assert.ok(items[1].textContent.includes("2"));
       });
     });
 
-    describe('Section 9: Conditional Processing', () => {
-      it('should handle nested xsl:choose (9.2)', () => {
+    describe("Section 9: Conditional Processing", () => {
+      it("should handle nested xsl:choose (9.2)", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="/">
@@ -2156,17 +2212,20 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root><level>high</level><type>A</type></root>');
+        const xml = parseXML("<root><level>high</level><type>A</type></root>");
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        assert.strictEqual(result.querySelector('result').textContent, 'high-A');
+        assert.strictEqual(
+          result.querySelector("result").textContent,
+          "high-A",
+        );
       });
     });
 
-    describe('Section 10: Sorting', () => {
-      it('should support multiple sort keys (10)', () => {
+    describe("Section 10: Sorting", () => {
+      it("should support multiple sort keys (10)", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="/">
@@ -2181,20 +2240,22 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root><item group="B" name="Z"/><item group="A" name="Y"/><item group="A" name="X"/></root>');
+        const xml = parseXML(
+          '<root><item group="B" name="Z"/><item group="A" name="Y"/><item group="A" name="X"/></root>',
+        );
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        const items = result.querySelectorAll('li');
-        assert.strictEqual(items[0].textContent, 'A-X');
-        assert.strictEqual(items[1].textContent, 'A-Y');
-        assert.strictEqual(items[2].textContent, 'B-Z');
+        const items = result.querySelectorAll("li");
+        assert.strictEqual(items[0].textContent, "A-X");
+        assert.strictEqual(items[1].textContent, "A-Y");
+        assert.strictEqual(items[2].textContent, "B-Z");
       });
     });
 
-    describe('Section 11: Variables and Parameters', () => {
-      it('should support variable scoping (11.2)', () => {
+    describe("Section 11: Variables and Parameters", () => {
+      it("should support variable scoping (11.2)", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:variable name="global" select="'outer'"/>
@@ -2208,18 +2269,18 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root/>');
+        const xml = parseXML("<root/>");
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        assert.strictEqual(result.querySelector('global').textContent, 'outer');
-        assert.strictEqual(result.querySelector('local').textContent, 'inner');
+        assert.strictEqual(result.querySelector("global").textContent, "outer");
+        assert.strictEqual(result.querySelector("local").textContent, "inner");
       });
     });
 
-    describe('Section 12.4: Number Formatting', () => {
-      it('should format numbers correctly', () => {
+    describe("Section 12.4: Number Formatting", () => {
+      it("should format numbers correctly", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="/">
@@ -2232,19 +2293,19 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root/>');
+        const xml = parseXML("<root/>");
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        assert.strictEqual(result.querySelector('decimal').textContent, '07');
-        assert.strictEqual(result.querySelector('alpha').textContent, 'c');
-        assert.strictEqual(result.querySelector('roman').textContent, 'xiv');
+        assert.strictEqual(result.querySelector("decimal").textContent, "07");
+        assert.strictEqual(result.querySelector("alpha").textContent, "c");
+        assert.strictEqual(result.querySelector("roman").textContent, "xiv");
       });
     });
 
-    describe('Section 16: Output', () => {
-      it('should respect xsl:output settings', () => {
+    describe("Section 16: Output", () => {
+      it("should respect xsl:output settings", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:output method="html" indent="yes" encoding="UTF-8"
@@ -2257,19 +2318,25 @@ describe('XsltEngine', () => {
 
         engine.importStylesheet(xslt);
 
-        assert.strictEqual(engine.outputSettings.method, 'html');
-        assert.strictEqual(engine.outputSettings.indent, 'yes');
-        assert.strictEqual(engine.outputSettings.encoding, 'UTF-8');
-        assert.strictEqual(engine.outputSettings.doctypePublic, '-//W3C//DTD HTML 4.01//EN');
-        assert.strictEqual(engine.outputSettings.doctypeSystem, 'http://www.w3.org/TR/html4/strict.dtd');
-        assert.strictEqual(engine.outputSettings.mediaType, 'text/html');
+        assert.strictEqual(engine.outputSettings.method, "html");
+        assert.strictEqual(engine.outputSettings.indent, "yes");
+        assert.strictEqual(engine.outputSettings.encoding, "UTF-8");
+        assert.strictEqual(
+          engine.outputSettings.doctypePublic,
+          "-//W3C//DTD HTML 4.01//EN",
+        );
+        assert.strictEqual(
+          engine.outputSettings.doctypeSystem,
+          "http://www.w3.org/TR/html4/strict.dtd",
+        );
+        assert.strictEqual(engine.outputSettings.mediaType, "text/html");
       });
     });
   });
 
-  describe('W3C XPath 1.0 Specification Compliance', () => {
-    describe('Section 2: Location Paths', () => {
-      it('should support abbreviated syntax (2.5)', () => {
+  describe("W3C XPath 1.0 Specification Compliance", () => {
+    describe("Section 2: Location Paths", () => {
+      it("should support abbreviated syntax (2.5)", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="/">
@@ -2283,19 +2350,24 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root><item id="123"><nested>deep</nested></item></root>');
+        const xml = parseXML(
+          '<root><item id="123"><nested>deep</nested></item></root>',
+        );
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        assert.ok(result.querySelector('child').textContent.includes('deep'));
-        assert.strictEqual(result.querySelector('attr').textContent, '123');
-        assert.strictEqual(result.querySelector('descendant').textContent, 'deep');
+        assert.ok(result.querySelector("child").textContent.includes("deep"));
+        assert.strictEqual(result.querySelector("attr").textContent, "123");
+        assert.strictEqual(
+          result.querySelector("descendant").textContent,
+          "deep",
+        );
       });
     });
 
-    describe('Section 3: Expressions', () => {
-      it('should evaluate union expressions (3.3)', () => {
+    describe("Section 3: Expressions", () => {
+      it("should evaluate union expressions (3.3)", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="/">
@@ -2308,18 +2380,18 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root><a>A</a><b>B</b><c>C</c></root>');
+        const xml = parseXML("<root><a>A</a><b>B</b><c>C</c></root>");
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        const items = result.querySelectorAll('item');
+        const items = result.querySelectorAll("item");
         assert.strictEqual(items.length, 2);
       });
     });
 
-    describe('Section 4: Core Functions', () => {
-      it('should implement string functions (4.2)', () => {
+    describe("Section 4: Core Functions", () => {
+      it("should implement string functions (4.2)", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="/">
@@ -2335,20 +2407,26 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root/>');
+        const xml = parseXML("<root/>");
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        assert.strictEqual(result.querySelector('concat').textContent, 'abc');
-        assert.strictEqual(result.querySelector('starts').textContent, 'true');
-        assert.strictEqual(result.querySelector('contains').textContent, 'true');
-        assert.strictEqual(result.querySelector('substr').textContent, 'ell');
-        assert.strictEqual(result.querySelector('length').textContent, '5');
-        assert.strictEqual(result.querySelector('translate').textContent, 'ABC');
+        assert.strictEqual(result.querySelector("concat").textContent, "abc");
+        assert.strictEqual(result.querySelector("starts").textContent, "true");
+        assert.strictEqual(
+          result.querySelector("contains").textContent,
+          "true",
+        );
+        assert.strictEqual(result.querySelector("substr").textContent, "ell");
+        assert.strictEqual(result.querySelector("length").textContent, "5");
+        assert.strictEqual(
+          result.querySelector("translate").textContent,
+          "ABC",
+        );
       });
 
-      it('should implement number functions (4.4)', () => {
+      it("should implement number functions (4.4)", () => {
         const xslt = parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="/">
@@ -2362,21 +2440,23 @@ describe('XsltEngine', () => {
           </xsl:stylesheet>
         `);
 
-        const xml = parseXML('<root><item>10</item><item>20</item><item>30</item></root>');
+        const xml = parseXML(
+          "<root><item>10</item><item>20</item><item>30</item></root>",
+        );
 
         engine.importStylesheet(xslt);
         const result = engine.transform(xml, document);
 
-        assert.strictEqual(result.querySelector('sum').textContent, '60');
-        assert.strictEqual(result.querySelector('floor').textContent, '3');
-        assert.strictEqual(result.querySelector('ceiling').textContent, '4');
-        assert.strictEqual(result.querySelector('round').textContent, '4');
+        assert.strictEqual(result.querySelector("sum").textContent, "60");
+        assert.strictEqual(result.querySelector("floor").textContent, "3");
+        assert.strictEqual(result.querySelector("ceiling").textContent, "4");
+        assert.strictEqual(result.querySelector("round").textContent, "4");
       });
     });
   });
 
-  describe('W3C DOM Level 3 Core Compliance', () => {
-    it('should handle namespaced elements correctly', () => {
+  describe("W3C DOM Level 3 Core Compliance", () => {
+    it("should handle namespaced elements correctly", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0"
           xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -2391,7 +2471,7 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><content>Hello World</content></root>');
+      const xml = parseXML("<root><content>Hello World</content></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
@@ -2399,7 +2479,7 @@ describe('XsltEngine', () => {
       assert.ok(result.childNodes.length > 0);
     });
 
-    it('should preserve node types during transformation', () => {
+    it("should preserve node types during transformation", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/">
@@ -2412,12 +2492,12 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const resultEl = result.querySelector('result');
+      const resultEl = result.querySelector("result");
       let hasComment = false;
       let _hasPI = false;
       let hasText = false;
@@ -2425,7 +2505,8 @@ describe('XsltEngine', () => {
       for (const node of resultEl.childNodes) {
         if (node.nodeType === 8) hasComment = true;
         if (node.nodeType === 7) _hasPI = true;
-        if (node.nodeType === 3 && node.textContent.includes('Text')) hasText = true;
+        if (node.nodeType === 3 && node.textContent.includes("Text"))
+          hasText = true;
       }
 
       assert.ok(hasComment);
@@ -2433,8 +2514,8 @@ describe('XsltEngine', () => {
     });
   });
 
-  describe('xsl:include and xsl:import', () => {
-    it('should throw error when no stylesheet loader is configured', () => {
+  describe("xsl:include and xsl:import", () => {
+    it("should throw error when no stylesheet loader is configured", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:include href="other.xsl"/>
@@ -2449,7 +2530,7 @@ describe('XsltEngine', () => {
       }, /no stylesheetLoader configured/);
     });
 
-    it('should throw error for xsl:include without href', () => {
+    it("should throw error for xsl:include without href", () => {
       const stylesheets = {};
       engine.setStylesheetLoader((href) => stylesheets[href]);
 
@@ -2467,7 +2548,7 @@ describe('XsltEngine', () => {
       }, /xsl:include requires an href attribute/);
     });
 
-    it('should throw error for xsl:import without href', () => {
+    it("should throw error for xsl:import without href", () => {
       const stylesheets = {};
       engine.setStylesheetLoader((href) => stylesheets[href]);
 
@@ -2485,7 +2566,7 @@ describe('XsltEngine', () => {
       }, /xsl:import requires an href attribute/);
     });
 
-    it('should include templates from external stylesheet', () => {
+    it("should include templates from external stylesheet", () => {
       const includedXslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template name="greeting">
@@ -2495,7 +2576,7 @@ describe('XsltEngine', () => {
       `);
 
       engine.setStylesheetLoader((href) => {
-        if (href === 'greeting.xsl') return includedXslt;
+        if (href === "greeting.xsl") return includedXslt;
         throw new Error(`Unknown stylesheet: ${href}`);
       });
 
@@ -2510,17 +2591,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const hello = result.querySelector('hello');
+      const hello = result.querySelector("hello");
       assert.ok(hello);
-      assert.strictEqual(hello.textContent, 'World');
+      assert.strictEqual(hello.textContent, "World");
     });
 
-    it('should import templates with lower precedence', () => {
+    it("should import templates with lower precedence", () => {
       const importedXslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="item">
@@ -2530,7 +2611,7 @@ describe('XsltEngine', () => {
       `);
 
       engine.setStylesheetLoader((href) => {
-        if (href === 'base.xsl') return importedXslt;
+        if (href === "base.xsl") return importedXslt;
         throw new Error(`Unknown stylesheet: ${href}`);
       });
 
@@ -2549,21 +2630,25 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Test</item></root>');
+      const xml = parseXML("<root><item>Test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
       // Main template should win due to higher import precedence
-      const mainItem = result.querySelector('main-item');
-      assert.ok(mainItem, 'Main template should override imported template');
-      assert.strictEqual(mainItem.textContent, 'Test');
+      const mainItem = result.querySelector("main-item");
+      assert.ok(mainItem, "Main template should override imported template");
+      assert.strictEqual(mainItem.textContent, "Test");
 
-      const importedItem = result.querySelector('imported-item');
-      assert.strictEqual(importedItem, null, 'Imported template should not be used');
+      const importedItem = result.querySelector("imported-item");
+      assert.strictEqual(
+        importedItem,
+        null,
+        "Imported template should not be used",
+      );
     });
 
-    it('should use imported template when main stylesheet has no matching template', () => {
+    it("should use imported template when main stylesheet has no matching template", () => {
       const importedXslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="special">
@@ -2573,7 +2658,7 @@ describe('XsltEngine', () => {
       `);
 
       engine.setStylesheetLoader((href) => {
-        if (href === 'base.xsl') return importedXslt;
+        if (href === "base.xsl") return importedXslt;
         throw new Error(`Unknown stylesheet: ${href}`);
       });
 
@@ -2588,27 +2673,30 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><special>Content</special></root>');
+      const xml = parseXML("<root><special>Content</special></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const specialItem = result.querySelector('special-item');
-      assert.ok(specialItem, 'Imported template should be used when no override exists');
-      assert.strictEqual(specialItem.textContent, 'Content');
+      const specialItem = result.querySelector("special-item");
+      assert.ok(
+        specialItem,
+        "Imported template should be used when no override exists",
+      );
+      assert.strictEqual(specialItem.textContent, "Content");
     });
 
-    it('should detect circular includes', () => {
+    it("should detect circular includes", () => {
       engine.setStylesheetLoader((href) => {
         // Both stylesheets include each other
-        if (href === 'a.xsl') {
+        if (href === "a.xsl") {
           return parseXML(`<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:include href="b.xsl"/>
             </xsl:stylesheet>
           `);
         }
-        if (href === 'b.xsl') {
+        if (href === "b.xsl") {
           return parseXML(`<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:include href="a.xsl"/>
@@ -2632,9 +2720,9 @@ describe('XsltEngine', () => {
       }, /Circular stylesheet reference/);
     });
 
-    it('should resolve relative URIs correctly', () => {
+    it("should resolve relative URIs correctly", () => {
       engine.setStylesheetLoader((href) => {
-        if (href === '/styles/common/utils.xsl') {
+        if (href === "/styles/common/utils.xsl") {
           return parseXML(`<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:template name="util">
@@ -2657,19 +2745,19 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
-      engine.importStylesheet(xslt, '/styles/main.xsl');
+      engine.importStylesheet(xslt, "/styles/main.xsl");
       const result = engine.transform(xml, document);
 
-      const util = result.querySelector('util');
+      const util = result.querySelector("util");
       assert.ok(util);
-      assert.strictEqual(util.textContent, 'OK');
+      assert.strictEqual(util.textContent, "OK");
     });
 
-    it('should support stylesheet loader returning XML string', () => {
+    it("should support stylesheet loader returning XML string", () => {
       engine.setStylesheetLoader((href) => {
-        if (href === 'string.xsl') {
+        if (href === "string.xsl") {
           return `<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:template name="fromString">
@@ -2692,17 +2780,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      const stringTemplate = result.querySelector('string-template');
+      const stringTemplate = result.querySelector("string-template");
       assert.ok(stringTemplate);
-      assert.strictEqual(stringTemplate.textContent, 'Success');
+      assert.strictEqual(stringTemplate.textContent, "Success");
     });
 
-    it('should merge global variables from imported stylesheets', () => {
+    it("should merge global variables from imported stylesheets", () => {
       const importedXslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:variable name="importedVar" select="'imported-value'"/>
@@ -2710,7 +2798,7 @@ describe('XsltEngine', () => {
       `);
 
       engine.setStylesheetLoader((href) => {
-        if (href === 'vars.xsl') return importedXslt;
+        if (href === "vars.xsl") return importedXslt;
         throw new Error(`Unknown stylesheet: ${href}`);
       });
 
@@ -2725,19 +2813,22 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.strictEqual(result.querySelector('result').textContent, 'imported-value');
+      assert.strictEqual(
+        result.querySelector("result").textContent,
+        "imported-value",
+      );
     });
 
-    it('should handle nested imports with correct precedence', () => {
+    it("should handle nested imports with correct precedence", () => {
       // base.xsl is imported by middle.xsl, which is imported by main.xsl
       // Precedence: base < middle < main
       engine.setStylesheetLoader((href) => {
-        if (href === 'base.xsl') {
+        if (href === "base.xsl") {
           return parseXML(`<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:template match="item">
@@ -2746,7 +2837,7 @@ describe('XsltEngine', () => {
             </xsl:stylesheet>
           `);
         }
-        if (href === 'middle.xsl') {
+        if (href === "middle.xsl") {
           return parseXML(`<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:import href="base.xsl"/>
@@ -2770,18 +2861,18 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Test</item></root>');
+      const xml = parseXML("<root><item>Test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
       // middle.xsl template should win over base.xsl
-      const middleItem = result.querySelector('middle-item');
-      assert.ok(middleItem, 'Middle template should override base template');
-      assert.strictEqual(middleItem.textContent, 'Test');
+      const middleItem = result.querySelector("middle-item");
+      assert.ok(middleItem, "Middle template should override base template");
+      assert.strictEqual(middleItem.textContent, "Test");
     });
 
-    it('should include templates at same precedence level', () => {
+    it("should include templates at same precedence level", () => {
       const includedXslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="item" priority="1">
@@ -2791,7 +2882,7 @@ describe('XsltEngine', () => {
       `);
 
       engine.setStylesheetLoader((href) => {
-        if (href === 'included.xsl') return includedXslt;
+        if (href === "included.xsl") return includedXslt;
         throw new Error(`Unknown stylesheet: ${href}`);
       });
 
@@ -2810,20 +2901,23 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Test</item></root>');
+      const xml = parseXML("<root><item>Test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
       // Included template has higher priority (1 > 0.5), so it should win
-      const includedItem = result.querySelector('included-item');
-      assert.ok(includedItem, 'Included template with higher priority should be used');
-      assert.strictEqual(includedItem.textContent, 'Test');
+      const includedItem = result.querySelector("included-item");
+      assert.ok(
+        includedItem,
+        "Included template with higher priority should be used",
+      );
+      assert.strictEqual(includedItem.textContent, "Test");
     });
 
-    it('should detect circular imports', () => {
+    it("should detect circular imports", () => {
       engine.setStylesheetLoader((href) => {
-        if (href === 'circular.xsl') {
+        if (href === "circular.xsl") {
           return parseXML(`<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:import href="circular.xsl"/>
@@ -2846,9 +2940,9 @@ describe('XsltEngine', () => {
       }, /Circular stylesheet reference/);
     });
 
-    it('should import stylesheet returned as XML string', () => {
+    it("should import stylesheet returned as XML string", () => {
       engine.setStylesheetLoader((href) => {
-        if (href === 'string-import.xsl') {
+        if (href === "string-import.xsl") {
           return `<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:template match="item">
@@ -2869,17 +2963,17 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Test</item></root>');
+      const xml = parseXML("<root><item>Test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('imported'));
+      assert.ok(result.querySelector("imported"));
     });
 
-    it('should throw error when import fails', () => {
+    it("should throw error when import fails", () => {
       engine.setStylesheetLoader(() => {
-        throw new Error('Network error');
+        throw new Error("Network error");
       });
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -2894,9 +2988,9 @@ describe('XsltEngine', () => {
       }, /Failed to import stylesheet/);
     });
 
-    it('should throw error for invalid included stylesheet', () => {
+    it("should throw error for invalid included stylesheet", () => {
       engine.setStylesheetLoader((href) => {
-        if (href === 'invalid.xsl') {
+        if (href === "invalid.xsl") {
           return parseXML(`<?xml version="1.0"?><not-a-stylesheet/>`);
         }
         throw new Error(`Unknown stylesheet: ${href}`);
@@ -2914,9 +3008,9 @@ describe('XsltEngine', () => {
       }, /not a valid XSLT stylesheet/);
     });
 
-    it('should process various elements in imported stylesheet', () => {
+    it("should process various elements in imported stylesheet", () => {
       engine.setStylesheetLoader((href) => {
-        if (href === 'full-features.xsl') {
+        if (href === "full-features.xsl") {
           return parseXML(`<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:output method="html" indent="yes"/>
@@ -2947,32 +3041,32 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Test</item></root>');
+      const xml = parseXML("<root><item>Test</item></root>");
 
       engine.importStylesheet(xslt);
 
-      assert.ok('importedParam' in engine.globalParameters);
-      assert.ok('importedKey' in engine.keys);
-      assert.ok('importedFormat' in engine.decimalFormats);
-      assert.strictEqual(engine.namespaceAliases.ns1, 'ns2');
-      assert.ok('importedAttrs' in engine.attributeSets);
-      assert.ok(engine.stripSpace.includes('pre'));
-      assert.ok(engine.preserveSpace.includes('code'));
+      assert.ok("importedParam" in engine.globalParameters);
+      assert.ok("importedKey" in engine.keys);
+      assert.ok("importedFormat" in engine.decimalFormats);
+      assert.strictEqual(engine.namespaceAliases.ns1, "ns2");
+      assert.ok("importedAttrs" in engine.attributeSets);
+      assert.ok(engine.stripSpace.includes("pre"));
+      assert.ok(engine.preserveSpace.includes("code"));
 
       const result = engine.transform(xml, document);
-      assert.ok(result.querySelector('imported-item'));
+      assert.ok(result.querySelector("imported-item"));
     });
 
-    it('should process include in imported stylesheet', () => {
+    it("should process include in imported stylesheet", () => {
       engine.setStylesheetLoader((href) => {
-        if (href === 'parent.xsl') {
+        if (href === "parent.xsl") {
           return parseXML(`<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:include href="child.xsl"/>
             </xsl:stylesheet>
           `);
         }
-        if (href === 'child.xsl') {
+        if (href === "child.xsl") {
           return parseXML(`<?xml version="1.0"?>
             <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:template match="item">
@@ -2993,39 +3087,39 @@ describe('XsltEngine', () => {
         </xsl:stylesheet>
       `);
 
-      const xml = parseXML('<root><item>Test</item></root>');
+      const xml = parseXML("<root><item>Test</item></root>");
 
       engine.importStylesheet(xslt);
       const result = engine.transform(xml, document);
 
-      assert.ok(result.querySelector('child-item'));
+      assert.ok(result.querySelector("child-item"));
     });
   });
 
-  describe('parseXmlString', () => {
-    it('should throw error for invalid XML with parsererror', () => {
+  describe("parseXmlString", () => {
+    it("should throw error for invalid XML with parsererror", () => {
       assert.throws(() => {
-        engine.parseXmlString('<invalid><unclosed>');
+        engine.parseXmlString("<invalid><unclosed>");
       }, /XML parse error/);
     });
 
-    it('should throw error when DOMParser is not available', () => {
+    it("should throw error when DOMParser is not available", () => {
       const originalDOMParser = global.DOMParser;
       global.DOMParser = undefined;
 
       const testEngine = new XsltEngine();
 
       assert.throws(() => {
-        testEngine.parseXmlString('<valid/>');
+        testEngine.parseXmlString("<valid/>");
       }, /XML parsing not available/);
 
       global.DOMParser = originalDOMParser;
     });
 
-    it('should parse valid XML string', () => {
-      const result = engine.parseXmlString('<root><item>test</item></root>');
+    it("should parse valid XML string", () => {
+      const result = engine.parseXmlString("<root><item>test</item></root>");
       assert.ok(result.documentElement);
-      assert.strictEqual(result.documentElement.tagName, 'root');
+      assert.strictEqual(result.documentElement.tagName, "root");
     });
   });
 });

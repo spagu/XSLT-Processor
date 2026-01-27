@@ -4,15 +4,19 @@
  * Tests for JavaScript XSLTProcessor implementation.
  */
 
-import { describe, it, beforeEach } from 'node:test';
-import assert from 'node:assert';
-import { JSDOM } from 'jsdom';
-import { XSLTProcessor, isNativeXSLTSupported, installGlobal } from './XSLTProcessor.js';
+import { describe, it, beforeEach } from "node:test";
+import assert from "node:assert";
+import { JSDOM } from "jsdom";
+import {
+  XSLTProcessor,
+  isNativeXSLTSupported,
+  installGlobal,
+} from "./XSLTProcessor.js";
 
 // Setup JSDOM environment
 function setupDOM() {
-  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-    contentType: 'text/html'
+  const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
+    contentType: "text/html",
   });
 
   global.document = dom.window.document;
@@ -24,23 +28,23 @@ function setupDOM() {
 
 function parseXML(xmlString) {
   const parser = new DOMParser();
-  return parser.parseFromString(xmlString, 'application/xml');
+  return parser.parseFromString(xmlString, "application/xml");
 }
 
-describe('XSLTProcessor', () => {
+describe("XSLTProcessor", () => {
   beforeEach(() => {
     setupDOM();
   });
 
-  describe('Constructor', () => {
-    it('should create a new XSLTProcessor instance', () => {
+  describe("Constructor", () => {
+    it("should create a new XSLTProcessor instance", () => {
       const processor = new XSLTProcessor();
       assert.ok(processor instanceof XSLTProcessor);
     });
   });
 
-  describe('importStylesheet', () => {
-    it('should import a valid XSLT stylesheet', () => {
+  describe("importStylesheet", () => {
+    it("should import a valid XSLT stylesheet", () => {
       const processor = new XSLTProcessor();
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -55,23 +59,23 @@ describe('XSLTProcessor', () => {
       });
     });
 
-    it('should throw when no argument provided', () => {
+    it("should throw when no argument provided", () => {
       const processor = new XSLTProcessor();
       assert.throws(() => {
         processor.importStylesheet();
       }, /1 argument required/);
     });
 
-    it('should throw for invalid node type', () => {
+    it("should throw for invalid node type", () => {
       const processor = new XSLTProcessor();
       assert.throws(() => {
-        processor.importStylesheet(document.createTextNode('text'));
+        processor.importStylesheet(document.createTextNode("text"));
       }, /not a Document or Element/);
     });
   });
 
-  describe('transformToFragment', () => {
-    it('should transform XML to fragment', () => {
+  describe("transformToFragment", () => {
+    it("should transform XML to fragment", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -97,16 +101,16 @@ describe('XSLTProcessor', () => {
       assert.ok(fragment.nodeType === 11); // DocumentFragment
     });
 
-    it('should throw when no stylesheet imported', () => {
+    it("should throw when no stylesheet imported", () => {
       const processor = new XSLTProcessor();
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       assert.throws(() => {
         processor.transformToFragment(xml, document);
       }, /No stylesheet/);
     });
 
-    it('should throw when missing arguments', () => {
+    it("should throw when missing arguments", () => {
       const processor = new XSLTProcessor();
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -122,8 +126,8 @@ describe('XSLTProcessor', () => {
     });
   });
 
-  describe('transformToDocument', () => {
-    it('should transform XML to document', () => {
+  describe("transformToDocument", () => {
+    it("should transform XML to document", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -148,9 +152,9 @@ describe('XSLTProcessor', () => {
       assert.ok(result);
     });
 
-    it('should throw when no stylesheet imported', () => {
+    it("should throw when no stylesheet imported", () => {
       const processor = new XSLTProcessor();
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       assert.throws(() => {
         processor.transformToDocument(xml);
@@ -158,60 +162,60 @@ describe('XSLTProcessor', () => {
     });
   });
 
-  describe('Parameters', () => {
-    it('should set and get parameter', () => {
+  describe("Parameters", () => {
+    it("should set and get parameter", () => {
       const processor = new XSLTProcessor();
 
-      processor.setParameter(null, 'myParam', 'myValue');
-      const value = processor.getParameter(null, 'myParam');
+      processor.setParameter(null, "myParam", "myValue");
+      const value = processor.getParameter(null, "myParam");
 
-      assert.strictEqual(value, 'myValue');
+      assert.strictEqual(value, "myValue");
     });
 
-    it('should set parameter with namespace', () => {
+    it("should set parameter with namespace", () => {
       const processor = new XSLTProcessor();
 
-      processor.setParameter('http://example.com', 'param', 'value');
-      const value = processor.getParameter('http://example.com', 'param');
+      processor.setParameter("http://example.com", "param", "value");
+      const value = processor.getParameter("http://example.com", "param");
 
-      assert.strictEqual(value, 'value');
+      assert.strictEqual(value, "value");
     });
 
-    it('should return empty string for unset parameter', () => {
+    it("should return empty string for unset parameter", () => {
       const processor = new XSLTProcessor();
-      const value = processor.getParameter(null, 'nonexistent');
-      assert.strictEqual(value, '');
+      const value = processor.getParameter(null, "nonexistent");
+      assert.strictEqual(value, "");
     });
 
-    it('should remove parameter', () => {
+    it("should remove parameter", () => {
       const processor = new XSLTProcessor();
 
-      processor.setParameter(null, 'param', 'value');
-      processor.removeParameter(null, 'param');
-      const value = processor.getParameter(null, 'param');
+      processor.setParameter(null, "param", "value");
+      processor.removeParameter(null, "param");
+      const value = processor.getParameter(null, "param");
 
-      assert.strictEqual(value, '');
+      assert.strictEqual(value, "");
     });
 
-    it('should clear all parameters', () => {
+    it("should clear all parameters", () => {
       const processor = new XSLTProcessor();
 
-      processor.setParameter(null, 'param1', 'value1');
-      processor.setParameter(null, 'param2', 'value2');
+      processor.setParameter(null, "param1", "value1");
+      processor.setParameter(null, "param2", "value2");
       processor.clearParameters();
 
-      assert.strictEqual(processor.getParameter(null, 'param1'), '');
-      assert.strictEqual(processor.getParameter(null, 'param2'), '');
+      assert.strictEqual(processor.getParameter(null, "param1"), "");
+      assert.strictEqual(processor.getParameter(null, "param2"), "");
     });
 
-    it('should throw when setParameter has insufficient arguments', () => {
+    it("should throw when setParameter has insufficient arguments", () => {
       const processor = new XSLTProcessor();
       assert.throws(() => {
-        processor.setParameter(null, 'param');
+        processor.setParameter(null, "param");
       }, /3 arguments required/);
     });
 
-    it('should throw when getParameter has insufficient arguments', () => {
+    it("should throw when getParameter has insufficient arguments", () => {
       const processor = new XSLTProcessor();
       assert.throws(() => {
         processor.getParameter(null);
@@ -219,8 +223,8 @@ describe('XSLTProcessor', () => {
     });
   });
 
-  describe('reset', () => {
-    it('should reset processor state', () => {
+  describe("reset", () => {
+    it("should reset processor state", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -230,20 +234,20 @@ describe('XSLTProcessor', () => {
       `);
 
       processor.importStylesheet(xslt);
-      processor.setParameter(null, 'param', 'value');
+      processor.setParameter(null, "param", "value");
       processor.reset();
 
-      assert.strictEqual(processor.getParameter(null, 'param'), '');
+      assert.strictEqual(processor.getParameter(null, "param"), "");
 
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
       assert.throws(() => {
         processor.transformToFragment(xml, document);
       }, /No stylesheet/);
     });
   });
 
-  describe('XSLT Features', () => {
-    it('should handle xsl:value-of', () => {
+  describe("XSLT Features", () => {
+    it("should handle xsl:value-of", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -260,12 +264,12 @@ describe('XSLTProcessor', () => {
       const fragment = processor.transformToFragment(xml, document);
 
       assert.ok(fragment);
-      const p = fragment.querySelector('p');
+      const p = fragment.querySelector("p");
       assert.ok(p);
-      assert.strictEqual(p.textContent, 'Hello');
+      assert.strictEqual(p.textContent, "Hello");
     });
 
-    it('should handle xsl:for-each', () => {
+    it("should handle xsl:for-each", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -291,11 +295,11 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const items = fragment.querySelectorAll('li');
+      const items = fragment.querySelectorAll("li");
       assert.strictEqual(items.length, 3);
     });
 
-    it('should handle xsl:if', () => {
+    it("should handle xsl:if", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -314,13 +318,13 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
 
       const fragment1 = processor.transformToFragment(xmlWithShow, document);
-      assert.ok(fragment1.querySelector('p'));
+      assert.ok(fragment1.querySelector("p"));
 
       const fragment2 = processor.transformToFragment(xmlWithoutShow, document);
-      assert.ok(!fragment2.querySelector('p'));
+      assert.ok(!fragment2.querySelector("p"));
     });
 
-    it('should handle xsl:choose', () => {
+    it("should handle xsl:choose", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -346,11 +350,11 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const p = fragment.querySelector('p');
-      assert.strictEqual(p.textContent, 'Type B');
+      const p = fragment.querySelector("p");
+      assert.strictEqual(p.textContent, "Type B");
     });
 
-    it('should handle xsl:apply-templates', () => {
+    it("should handle xsl:apply-templates", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -374,11 +378,11 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const spans = fragment.querySelectorAll('span');
+      const spans = fragment.querySelectorAll("span");
       assert.strictEqual(spans.length, 2);
     });
 
-    it('should handle xsl:call-template', () => {
+    it("should handle xsl:call-template", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -400,12 +404,12 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const p = fragment.querySelector('p');
-      assert.ok(p.textContent.includes('Hello'));
-      assert.ok(p.textContent.includes('World'));
+      const p = fragment.querySelector("p");
+      assert.ok(p.textContent.includes("Hello"));
+      assert.ok(p.textContent.includes("World"));
     });
 
-    it('should handle xsl:copy-of', () => {
+    it("should handle xsl:copy-of", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -430,11 +434,11 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      assert.ok(fragment.querySelector('p'));
-      assert.ok(fragment.querySelector('span'));
+      assert.ok(fragment.querySelector("p"));
+      assert.ok(fragment.querySelector("span"));
     });
 
-    it('should handle xsl:attribute', () => {
+    it("should handle xsl:attribute", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -455,11 +459,11 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const div = fragment.querySelector('div');
-      assert.strictEqual(div.getAttribute('class'), 'my-class');
+      const div = fragment.querySelector("div");
+      assert.strictEqual(div.getAttribute("class"), "my-class");
     });
 
-    it('should handle attribute value templates', () => {
+    it("should handle attribute value templates", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -475,11 +479,11 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const a = fragment.querySelector('a');
-      assert.strictEqual(a.getAttribute('href'), '/item/123');
+      const a = fragment.querySelector("a");
+      assert.strictEqual(a.getAttribute("href"), "/item/123");
     });
 
-    it('should handle xsl:sort', () => {
+    it("should handle xsl:sort", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -506,25 +510,25 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const items = fragment.querySelectorAll('li');
-      assert.strictEqual(items[0].textContent, 'Alice');
-      assert.strictEqual(items[1].textContent, 'Bob');
-      assert.strictEqual(items[2].textContent, 'Charlie');
+      const items = fragment.querySelectorAll("li");
+      assert.strictEqual(items[0].textContent, "Alice");
+      assert.strictEqual(items[1].textContent, "Bob");
+      assert.strictEqual(items[2].textContent, "Charlie");
     });
   });
 
-  describe('Utility Functions', () => {
-    it('isNativeXSLTSupported should return boolean', () => {
+  describe("Utility Functions", () => {
+    it("isNativeXSLTSupported should return boolean", () => {
       const result = isNativeXSLTSupported();
-      assert.strictEqual(typeof result, 'boolean');
+      assert.strictEqual(typeof result, "boolean");
     });
 
-    it('installGlobal with force should work', () => {
+    it("installGlobal with force should work", () => {
       const result = installGlobal(true);
-      assert.strictEqual(typeof result, 'boolean');
+      assert.strictEqual(typeof result, "boolean");
     });
 
-    it('installGlobal without force when native not supported', () => {
+    it("installGlobal without force when native not supported", () => {
       // Save original
       const original = globalThis.XSLTProcessor;
       delete globalThis.XSLTProcessor;
@@ -536,10 +540,10 @@ describe('XSLTProcessor', () => {
         globalThis.XSLTProcessor = original;
       }
 
-      assert.strictEqual(typeof result, 'boolean');
+      assert.strictEqual(typeof result, "boolean");
     });
 
-    it('isNativeXSLTSupported should return true with working mock native', () => {
+    it("isNativeXSLTSupported should return true with working mock native", () => {
       // Save original
       const original = globalThis.XSLTProcessor;
 
@@ -549,7 +553,7 @@ describe('XSLTProcessor', () => {
         transformToFragment() {
           // Return a mock fragment with childNodes
           const fragment = document.createDocumentFragment();
-          fragment.appendChild(document.createElement('test'));
+          fragment.appendChild(document.createElement("test"));
           return fragment;
         }
       }
@@ -564,14 +568,14 @@ describe('XSLTProcessor', () => {
       assert.strictEqual(result, true);
     });
 
-    it('isNativeXSLTSupported should return false when native throws', () => {
+    it("isNativeXSLTSupported should return false when native throws", () => {
       // Save original
       const original = globalThis.XSLTProcessor;
 
       // Create a mock that throws
       class MockThrowingXSLTProcessor {
         importStylesheet() {
-          throw new Error('Mock error');
+          throw new Error("Mock error");
         }
       }
 
@@ -585,7 +589,7 @@ describe('XSLTProcessor', () => {
       assert.strictEqual(result, false);
     });
 
-    it('isNativeXSLTSupported should return false when transformToFragment returns null', () => {
+    it("isNativeXSLTSupported should return false when transformToFragment returns null", () => {
       // Save original
       const original = globalThis.XSLTProcessor;
 
@@ -607,7 +611,7 @@ describe('XSLTProcessor', () => {
       assert.strictEqual(result, false);
     });
 
-    it('isNativeXSLTSupported should return false when transformToFragment returns empty fragment', () => {
+    it("isNativeXSLTSupported should return false when transformToFragment returns empty fragment", () => {
       // Save original
       const original = globalThis.XSLTProcessor;
 
@@ -629,7 +633,7 @@ describe('XSLTProcessor', () => {
       assert.strictEqual(result, false);
     });
 
-    it('installGlobal should return false when native is supported and force is false', () => {
+    it("installGlobal should return false when native is supported and force is false", () => {
       // Save original
       const original = globalThis.XSLTProcessor;
 
@@ -638,7 +642,7 @@ describe('XSLTProcessor', () => {
         importStylesheet() {}
         transformToFragment() {
           const fragment = document.createDocumentFragment();
-          fragment.appendChild(document.createElement('test'));
+          fragment.appendChild(document.createElement("test"));
           return fragment;
         }
       }
@@ -654,15 +658,15 @@ describe('XSLTProcessor', () => {
     });
   });
 
-  describe('importStylesheet error cases', () => {
-    it('should throw for stylesheet with parse errors', () => {
+  describe("importStylesheet error cases", () => {
+    it("should throw for stylesheet with parse errors", () => {
       const processor = new XSLTProcessor();
 
       // Create document with parsererror element
       const doc = document.implementation.createDocument(null, null, null);
-      const root = doc.createElement('root');
-      const parseError = doc.createElement('parsererror');
-      parseError.textContent = 'XML parsing error';
+      const root = doc.createElement("root");
+      const parseError = doc.createElement("parsererror");
+      parseError.textContent = "XML parsing error";
       root.appendChild(parseError);
       doc.appendChild(root);
 
@@ -672,8 +676,8 @@ describe('XSLTProcessor', () => {
     });
   });
 
-  describe('setParameter with existing engine', () => {
-    it('should update engine parameters after stylesheet import', () => {
+  describe("setParameter with existing engine", () => {
+    it("should update engine parameters after stylesheet import", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -686,18 +690,18 @@ describe('XSLTProcessor', () => {
       `);
 
       processor.importStylesheet(xslt);
-      processor.setParameter(null, 'myParam', 'updated');
+      processor.setParameter(null, "myParam", "updated");
 
       // Verify the parameter was set
-      const value = processor.getParameter(null, 'myParam');
-      assert.strictEqual(value, 'updated');
+      const value = processor.getParameter(null, "myParam");
+      assert.strictEqual(value, "updated");
     });
 
-    it('should apply pre-set parameters when importing stylesheet', () => {
+    it("should apply pre-set parameters when importing stylesheet", () => {
       const processor = new XSLTProcessor();
 
       // Set parameter before importing stylesheet
-      processor.setParameter(null, 'presetParam', 'presetValue');
+      processor.setParameter(null, "presetParam", "presetValue");
 
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -708,13 +712,13 @@ describe('XSLTProcessor', () => {
 
       processor.importStylesheet(xslt);
 
-      const value = processor.getParameter(null, 'presetParam');
-      assert.strictEqual(value, 'presetValue');
+      const value = processor.getParameter(null, "presetParam");
+      assert.strictEqual(value, "presetValue");
     });
   });
 
-  describe('transformToFragment error handling', () => {
-    it('should throw when output is missing', () => {
+  describe("transformToFragment error handling", () => {
+    it("should throw when output is missing", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -724,14 +728,14 @@ describe('XSLTProcessor', () => {
       `);
 
       processor.importStylesheet(xslt);
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       assert.throws(() => {
         processor.transformToFragment(xml);
       }, /2 arguments required/);
     });
 
-    it('should throw for invalid source node type', () => {
+    it("should throw for invalid source node type", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -743,14 +747,14 @@ describe('XSLTProcessor', () => {
       processor.importStylesheet(xslt);
 
       // Text node is not valid source
-      const textNode = document.createTextNode('text');
+      const textNode = document.createTextNode("text");
 
       assert.throws(() => {
         processor.transformToFragment(textNode, document);
       }, /not a valid node type/);
     });
 
-    it('should throw for invalid output document type', () => {
+    it("should throw for invalid output document type", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -760,17 +764,17 @@ describe('XSLTProcessor', () => {
       `);
 
       processor.importStylesheet(xslt);
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       // Element is not a document
-      const element = document.createElement('div');
+      const element = document.createElement("div");
 
       assert.throws(() => {
         processor.transformToFragment(xml, element);
       }, /not a Document/);
     });
 
-    it('should return null on transformation error', () => {
+    it("should return null on transformation error", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -782,15 +786,15 @@ describe('XSLTProcessor', () => {
       `);
 
       processor.importStylesheet(xslt);
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       const result = processor.transformToFragment(xml, document);
       assert.strictEqual(result, null);
     });
   });
 
-  describe('transformToDocument error handling', () => {
-    it('should throw when source is missing', () => {
+  describe("transformToDocument error handling", () => {
+    it("should throw when source is missing", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -806,7 +810,7 @@ describe('XSLTProcessor', () => {
       }, /1 argument required/);
     });
 
-    it('should throw for invalid source node type', () => {
+    it("should throw for invalid source node type", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -816,14 +820,14 @@ describe('XSLTProcessor', () => {
       `);
 
       processor.importStylesheet(xslt);
-      const textNode = document.createTextNode('text');
+      const textNode = document.createTextNode("text");
 
       assert.throws(() => {
         processor.transformToDocument(textNode);
       }, /not a valid node type/);
     });
 
-    it('should return null on transformation error', () => {
+    it("should return null on transformation error", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -835,33 +839,33 @@ describe('XSLTProcessor', () => {
       `);
 
       processor.importStylesheet(xslt);
-      const xml = parseXML('<root/>');
+      const xml = parseXML("<root/>");
 
       const result = processor.transformToDocument(xml);
       assert.strictEqual(result, null);
     });
   });
 
-  describe('setParameter validation', () => {
-    it('should throw for non-string localName', () => {
+  describe("setParameter validation", () => {
+    it("should throw for non-string localName", () => {
       const processor = new XSLTProcessor();
 
       assert.throws(() => {
-        processor.setParameter(null, 123, 'value');
+        processor.setParameter(null, 123, "value");
       }, /non-empty string/);
     });
 
-    it('should throw for empty localName', () => {
+    it("should throw for empty localName", () => {
       const processor = new XSLTProcessor();
 
       assert.throws(() => {
-        processor.setParameter(null, '', 'value');
+        processor.setParameter(null, "", "value");
       }, /non-empty string/);
     });
   });
 
-  describe('getParameter validation', () => {
-    it('should throw for non-string localName', () => {
+  describe("getParameter validation", () => {
+    it("should throw for non-string localName", () => {
       const processor = new XSLTProcessor();
 
       assert.throws(() => {
@@ -870,8 +874,8 @@ describe('XSLTProcessor', () => {
     });
   });
 
-  describe('removeParameter validation', () => {
-    it('should throw when arguments missing', () => {
+  describe("removeParameter validation", () => {
+    it("should throw when arguments missing", () => {
       const processor = new XSLTProcessor();
 
       assert.throws(() => {
@@ -879,7 +883,7 @@ describe('XSLTProcessor', () => {
       }, /2 arguments required/);
     });
 
-    it('should throw for non-string localName', () => {
+    it("should throw for non-string localName", () => {
       const processor = new XSLTProcessor();
 
       assert.throws(() => {
@@ -887,7 +891,7 @@ describe('XSLTProcessor', () => {
       }, /must be a string/);
     });
 
-    it('should remove parameter from engine', () => {
+    it("should remove parameter from engine", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -897,15 +901,15 @@ describe('XSLTProcessor', () => {
       `);
 
       processor.importStylesheet(xslt);
-      processor.setParameter(null, 'testParam', 'value');
-      processor.removeParameter(null, 'testParam');
+      processor.setParameter(null, "testParam", "value");
+      processor.removeParameter(null, "testParam");
 
-      assert.strictEqual(processor.getParameter(null, 'testParam'), '');
+      assert.strictEqual(processor.getParameter(null, "testParam"), "");
     });
   });
 
-  describe('clearParameters with engine', () => {
-    it('should clear parameters from engine', () => {
+  describe("clearParameters with engine", () => {
+    it("should clear parameters from engine", () => {
       const processor = new XSLTProcessor();
 
       const xslt = parseXML(`<?xml version="1.0"?>
@@ -915,12 +919,12 @@ describe('XSLTProcessor', () => {
       `);
 
       processor.importStylesheet(xslt);
-      processor.setParameter(null, 'param1', 'value1');
-      processor.setParameter(null, 'param2', 'value2');
+      processor.setParameter(null, "param1", "value1");
+      processor.setParameter(null, "param2", "value2");
       processor.clearParameters();
 
-      assert.strictEqual(processor.getParameter(null, 'param1'), '');
-      assert.strictEqual(processor.getParameter(null, 'param2'), '');
+      assert.strictEqual(processor.getParameter(null, "param1"), "");
+      assert.strictEqual(processor.getParameter(null, "param2"), "");
     });
   });
 });

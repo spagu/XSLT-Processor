@@ -5,77 +5,82 @@
  * Converts XPath expression strings into token streams for parsing.
  */
 
-'use strict';
+"use strict";
 
 export const TokenType = {
   // Literals
-  NUMBER: 'NUMBER',
-  LITERAL: 'LITERAL',
+  NUMBER: "NUMBER",
+  LITERAL: "LITERAL",
 
   // Operators
-  SLASH: 'SLASH',
-  DOUBLE_SLASH: 'DOUBLE_SLASH',
-  PIPE: 'PIPE',
-  PLUS: 'PLUS',
-  MINUS: 'MINUS',
-  STAR: 'STAR',
-  DIV: 'DIV',
-  MOD: 'MOD',
-  EQUALS: 'EQUALS',
-  NOT_EQUALS: 'NOT_EQUALS',
-  LT: 'LT',
-  LTE: 'LTE',
-  GT: 'GT',
-  GTE: 'GTE',
-  AND: 'AND',
-  OR: 'OR',
+  SLASH: "SLASH",
+  DOUBLE_SLASH: "DOUBLE_SLASH",
+  PIPE: "PIPE",
+  PLUS: "PLUS",
+  MINUS: "MINUS",
+  STAR: "STAR",
+  DIV: "DIV",
+  MOD: "MOD",
+  EQUALS: "EQUALS",
+  NOT_EQUALS: "NOT_EQUALS",
+  LT: "LT",
+  LTE: "LTE",
+  GT: "GT",
+  GTE: "GTE",
+  AND: "AND",
+  OR: "OR",
 
   // Brackets
-  LPAREN: 'LPAREN',
-  RPAREN: 'RPAREN',
-  LBRACKET: 'LBRACKET',
-  RBRACKET: 'RBRACKET',
+  LPAREN: "LPAREN",
+  RPAREN: "RPAREN",
+  LBRACKET: "LBRACKET",
+  RBRACKET: "RBRACKET",
 
   // Axes
-  AXIS: 'AXIS',
-  AT: 'AT',
-  DOT: 'DOT',
-  DOUBLE_DOT: 'DOUBLE_DOT',
-  DOUBLE_COLON: 'DOUBLE_COLON',
+  AXIS: "AXIS",
+  AT: "AT",
+  DOT: "DOT",
+  DOUBLE_DOT: "DOUBLE_DOT",
+  DOUBLE_COLON: "DOUBLE_COLON",
 
   // Names
-  NAME: 'NAME',
-  NCNAME: 'NCNAME',
-  PREFIX: 'PREFIX',
-  FUNCTION: 'FUNCTION',
-  NODE_TYPE: 'NODE_TYPE',
+  NAME: "NAME",
+  NCNAME: "NCNAME",
+  PREFIX: "PREFIX",
+  FUNCTION: "FUNCTION",
+  NODE_TYPE: "NODE_TYPE",
 
   // Other
-  COMMA: 'COMMA',
-  DOLLAR: 'DOLLAR',
-  COLON: 'COLON',
-  EOF: 'EOF'
+  COMMA: "COMMA",
+  DOLLAR: "DOLLAR",
+  COLON: "COLON",
+  EOF: "EOF",
 };
 
 const AXIS_NAMES = new Set([
-  'ancestor',
-  'ancestor-or-self',
-  'attribute',
-  'child',
-  'descendant',
-  'descendant-or-self',
-  'following',
-  'following-sibling',
-  'namespace',
-  'parent',
-  'preceding',
-  'preceding-sibling',
-  'self'
+  "ancestor",
+  "ancestor-or-self",
+  "attribute",
+  "child",
+  "descendant",
+  "descendant-or-self",
+  "following",
+  "following-sibling",
+  "namespace",
+  "parent",
+  "preceding",
+  "preceding-sibling",
+  "self",
 ]);
 
-const NODE_TYPES = new Set(['comment', 'text', 'processing-instruction', 'node']);
+const NODE_TYPES = new Set([
+  "comment",
+  "text",
+  "processing-instruction",
+  "node",
+]);
 
-const OPERATORS = new Set(['and', 'or', 'mod', 'div']);
+const OPERATORS = new Set(["and", "or", "mod", "div"]);
 
 export class Token {
   constructor(type, value, position) {
@@ -115,7 +120,7 @@ const OPERATOR_CONTEXT_BLOCKERS = new Set([
   TokenType.GT,
   TokenType.GTE,
   TokenType.AND,
-  TokenType.OR
+  TokenType.OR,
 ]);
 
 export class XPathTokenizer {
@@ -191,60 +196,60 @@ export class XPathTokenizer {
     }
 
     // Numbers
-    if (/[0-9]/.test(char) || (char === '.' && /[0-9]/.test(this.peek(1)))) {
+    if (/[0-9]/.test(char) || (char === "." && /[0-9]/.test(this.peek(1)))) {
       return this.readNumber();
     }
 
     // Multi-character operators
-    if (char === '/' && this.peek(1) === '/') {
+    if (char === "/" && this.peek(1) === "/") {
       this.position += 2;
-      return new Token(TokenType.DOUBLE_SLASH, '//', startPos);
+      return new Token(TokenType.DOUBLE_SLASH, "//", startPos);
     }
 
-    if (char === '.' && this.peek(1) === '.') {
+    if (char === "." && this.peek(1) === ".") {
       this.position += 2;
-      return new Token(TokenType.DOUBLE_DOT, '..', startPos);
+      return new Token(TokenType.DOUBLE_DOT, "..", startPos);
     }
 
-    if (char === ':' && this.peek(1) === ':') {
+    if (char === ":" && this.peek(1) === ":") {
       this.position += 2;
-      return new Token(TokenType.DOUBLE_COLON, '::', startPos);
+      return new Token(TokenType.DOUBLE_COLON, "::", startPos);
     }
 
-    if (char === '!' && this.peek(1) === '=') {
+    if (char === "!" && this.peek(1) === "=") {
       this.position += 2;
-      return new Token(TokenType.NOT_EQUALS, '!=', startPos);
+      return new Token(TokenType.NOT_EQUALS, "!=", startPos);
     }
 
-    if (char === '<' && this.peek(1) === '=') {
+    if (char === "<" && this.peek(1) === "=") {
       this.position += 2;
-      return new Token(TokenType.LTE, '<=', startPos);
+      return new Token(TokenType.LTE, "<=", startPos);
     }
 
-    if (char === '>' && this.peek(1) === '=') {
+    if (char === ">" && this.peek(1) === "=") {
       this.position += 2;
-      return new Token(TokenType.GTE, '>=', startPos);
+      return new Token(TokenType.GTE, ">=", startPos);
     }
 
     // Single-character tokens
     const singleCharTokens = {
-      '/': TokenType.SLASH,
-      '|': TokenType.PIPE,
-      '+': TokenType.PLUS,
-      '-': TokenType.MINUS,
-      '*': TokenType.STAR,
-      '=': TokenType.EQUALS,
-      '<': TokenType.LT,
-      '>': TokenType.GT,
-      '(': TokenType.LPAREN,
-      ')': TokenType.RPAREN,
-      '[': TokenType.LBRACKET,
-      ']': TokenType.RBRACKET,
-      '@': TokenType.AT,
-      '.': TokenType.DOT,
-      ',': TokenType.COMMA,
-      '$': TokenType.DOLLAR,
-      ':': TokenType.COLON
+      "/": TokenType.SLASH,
+      "|": TokenType.PIPE,
+      "+": TokenType.PLUS,
+      "-": TokenType.MINUS,
+      "*": TokenType.STAR,
+      "=": TokenType.EQUALS,
+      "<": TokenType.LT,
+      ">": TokenType.GT,
+      "(": TokenType.LPAREN,
+      ")": TokenType.RPAREN,
+      "[": TokenType.LBRACKET,
+      "]": TokenType.RBRACKET,
+      "@": TokenType.AT,
+      ".": TokenType.DOT,
+      ",": TokenType.COMMA,
+      $: TokenType.DOLLAR,
+      ":": TokenType.COLON,
     };
 
     if (singleCharTokens[char]) {
@@ -258,14 +263,14 @@ export class XPathTokenizer {
     }
 
     throw new Error(
-      `Unexpected character '${char}' at position ${this.position} in expression: ${this.expression}`
+      `Unexpected character '${char}' at position ${this.position} in expression: ${this.expression}`,
     );
   }
 
   readStringLiteral() {
     const startPos = this.position;
     const quote = this.consume();
-    let value = '';
+    let value = "";
 
     while (this.position < this.expression.length && this.peek() !== quote) {
       value += this.consume();
@@ -281,18 +286,24 @@ export class XPathTokenizer {
 
   readNumber() {
     const startPos = this.position;
-    let value = '';
+    let value = "";
 
     // Integer part
-    while (this.position < this.expression.length && /[0-9]/.test(this.peek())) {
+    while (
+      this.position < this.expression.length &&
+      /[0-9]/.test(this.peek())
+    ) {
       value += this.consume();
     }
 
     // Decimal part (handles both 1.5 and .5 style numbers)
     // For .5 style: entry condition ensures digit follows, so this branch handles it
-    if (this.peek() === '.' && /[0-9]/.test(this.peek(1))) {
+    if (this.peek() === "." && /[0-9]/.test(this.peek(1))) {
       value += this.consume(); // .
-      while (this.position < this.expression.length && /[0-9]/.test(this.peek())) {
+      while (
+        this.position < this.expression.length &&
+        /[0-9]/.test(this.peek())
+      ) {
         value += this.consume();
       }
     }
@@ -302,22 +313,25 @@ export class XPathTokenizer {
 
   readName() {
     const startPos = this.position;
-    let value = '';
+    let value = "";
 
-    while (this.position < this.expression.length && this.isNameChar(this.peek())) {
+    while (
+      this.position < this.expression.length &&
+      this.isNameChar(this.peek())
+    ) {
       value += this.consume();
     }
 
     // Check for axis name followed by ::
     this.skipWhitespace();
-    if (AXIS_NAMES.has(value) && this.peek() === ':' && this.peek(1) === ':') {
+    if (AXIS_NAMES.has(value) && this.peek() === ":" && this.peek(1) === ":") {
       return new Token(TokenType.AXIS, value, startPos);
     }
 
     // Check for function call (followed by '(')
     const savedPos = this.position;
     this.skipWhitespace();
-    if (this.peek() === '(') {
+    if (this.peek() === "(") {
       // Check if it's a node type test
       if (NODE_TYPES.has(value)) {
         return new Token(TokenType.NODE_TYPE, value, startPos);
@@ -332,7 +346,7 @@ export class XPathTokenizer {
         and: TokenType.AND,
         or: TokenType.OR,
         mod: TokenType.MOD,
-        div: TokenType.DIV
+        div: TokenType.DIV,
       };
       return new Token(opTokens[value], value, startPos);
     }
@@ -344,7 +358,7 @@ export class XPathTokenizer {
     if (!char) return false;
     const code = char.charCodeAt(0);
     return (
-      char === '_' ||
+      char === "_" ||
       (code >= 65 && code <= 90) || // A-Z
       (code >= 97 && code <= 122) || // a-z
       code >= 0xc0 // Unicode letters
@@ -356,8 +370,8 @@ export class XPathTokenizer {
     const code = char.charCodeAt(0);
     return (
       this.isNameStartChar(char) ||
-      char === '-' ||
-      char === '.' ||
+      char === "-" ||
+      char === "." ||
       (code >= 48 && code <= 57) // 0-9
     );
   }
