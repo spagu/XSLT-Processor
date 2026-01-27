@@ -618,13 +618,10 @@ export class XsltEngine {
     // Create result document fragment
     const fragment = doc.createDocumentFragment();
 
-    // Apply templates to root
-    this.applyTemplates(
-      [sourceNode.documentElement || sourceNode],
-      null,
-      context,
-      fragment,
-    );
+    // Apply templates to document node (not documentElement)
+    // This ensures "/" template has document as context, so paths like
+    // "RootElement/child" work correctly
+    this.applyTemplates([sourceNode], null, context, fragment);
 
     return fragment;
   }
