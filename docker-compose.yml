@@ -1,0 +1,41 @@
+services:
+  # Development environment with hot reload
+  dev:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run test:watch
+
+  # Run tests once
+  test:
+    build:
+      context: .
+      target: test
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+    command: npm test
+
+  # Build the package
+  build:
+    build:
+      context: .
+      target: builder
+    volumes:
+      - ./dist:/app/dist
+    command: npm run build
+
+  # Production-ready image
+  prod:
+    build:
+      context: .
+      target: production
+    environment:
+      - NODE_ENV=production

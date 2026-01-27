@@ -1,0 +1,66 @@
+{
+  "name": "xslt-processor",
+  "version": "1.0.5",
+  "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
+  "type": "module",
+  "main": "dist/xslt-processor.cjs",
+  "module": "dist/xslt-processor.js",
+  "browser": "dist/xslt-processor.browser.js",
+  "types": "dist/xslt-processor.d.ts",
+  "bin": {
+    "xslt": "./bin/xslt.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/xslt-processor.js",
+      "require": "./dist/xslt-processor.cjs",
+      "browser": "./dist/xslt-processor.browser.js",
+      "types": "./dist/xslt-processor.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "bin"
+  ],
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node --test --experimental-test-coverage src/*.test.js src/**/*.test.js",
+    "test:watch": "node --test --watch src/**/*.test.js",
+    "test:browser": "node tests/browser-test-runner.js",
+    "lint": "eslint src/",
+    "format": "prettier --write \"src/**/*.js\"",
+    "format:check": "prettier --check \"src/**/*.js\"",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "keywords": [
+    "xslt",
+    "xsltprocessor",
+    "xml",
+    "xpath",
+    "transform",
+    "browser",
+    "w3c",
+    "javascript"
+  ],
+  "author": "tradik",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tradik/cv-xslt.git",
+    "directory": "services/xslt-processor"
+  },
+  "bugs": {
+    "url": "https://github.com/tradik/cv-xslt/issues"
+  },
+  "homepage": "https://github.com/tradik/cv-xslt/tree/main/services/xslt-processor#readme",
+  "engines": {
+    "node": ">=25.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0",
+    "esbuild": "^0.24.0",
+    "jsdom": "^25.0.0"
+  }
+}
