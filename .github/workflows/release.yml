@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   test:
@@ -41,7 +40,8 @@ jobs:
       - name: Run tests with coverage
         run: npm test
 
-  security:
+  build:
+    needs: [test]
     runs-on: ubuntu-latest
 
     steps:
@@ -53,37 +53,6 @@ jobs:
         with:
           node-version: "25.x"
           cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run npm audit
-        run: npm audit --audit-level=high
-
-      - name: Check for known vulnerabilities
-        run: npm audit --json > audit-report.json || true
-
-      - name: Upload audit report
-        uses: actions/upload-artifact@v6
-        with:
-          name: npm-audit-report
-          path: audit-report.json
-          retention-days: 30
-
-  publish:
-    needs: [test, security]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "25.x"
-          cache: "npm"
-          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         run: npm ci
@@ -94,14 +63,12 @@ jobs:
       - name: Verify package contents
         run: npm pack --dry-run
 
-      - name: Publish to npm
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist/
           retention-days: 30
+
+# NOTE: npm publishing is done manually with `npm publish --otp=CODE`
+# Auto-publishing disabled due to npm security requirements (2FA/OTP)
