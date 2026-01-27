@@ -1,11 +1,11 @@
-# xslt-processor
+# @tradik/xslt-processor
 
 [![CI](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml)
 [![Release](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml)
-[![npm version](https://img.shields.io/npm/v/xslt-processor.svg)](https://www.npmjs.com/package/xslt-processor)
+[![npm version](https://img.shields.io/npm/v/@tradik/xslt-processor.svg)](https://www.npmjs.com/package/@tradik/xslt-processor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D25.0.0-brightgreen.svg)](https://nodejs.org/)
-[![Test Coverage](https://img.shields.io/badge/coverage-99.41%25-brightgreen.svg)](https://github.com/spagu/XSLT-Processor)
+[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/spagu/XSLT-Processor)
 
 JavaScript implementation of XSLTProcessor for browser environments and Node.js CLI. This package provides a complete implementation of the W3C XSLTProcessor API that can be used as a drop-in replacement for the native browser implementation.
 
@@ -30,7 +30,7 @@ This library ensures your XSLT-based applications continue to work regardless of
 ## Installation
 
 ```bash
-npm install xslt-processor
+npm install @tradik/xslt-processor
 ```
 
 ## Usage
@@ -40,7 +40,7 @@ npm install xslt-processor
 Include the browser bundle in your HTML - it automatically installs as global XSLTProcessor if native support is unavailable:
 
 ```html
-<script src="node_modules/xslt-processor/dist/xslt-processor.browser.min.js"></script>
+<script src="node_modules/@tradik/xslt-processor/dist/xslt-processor.browser.min.js"></script>
 <script>
   // XSLTProcessor is now available globally
   const processor = new XSLTProcessor();
@@ -51,7 +51,7 @@ Include the browser bundle in your HTML - it automatically installs as global XS
 ### ESM Module
 
 ```javascript
-import { XSLTProcessor, installGlobal } from 'xslt-processor';
+import { XSLTProcessor, installGlobal } from '@tradik/xslt-processor';
 
 // Optional: Force install as global XSLTProcessor
 installGlobal();
@@ -77,7 +77,7 @@ document.getElementById('output').appendChild(fragment);
 ### CommonJS
 
 ```javascript
-const { XSLTProcessor } = require('xslt-processor');
+const { XSLTProcessor } = require('@tradik/xslt-processor');
 
 const processor = new XSLTProcessor();
 // ...
@@ -89,7 +89,7 @@ The package includes a command-line tool for transforming XML documents:
 
 ```bash
 # Global installation
-npm install -g xslt-processor
+npm install -g @tradik/xslt-processor
 
 # Transform XML with XSLT
 xslt data.xml template.xsl
@@ -159,7 +159,7 @@ processor.clearParameters();
 To use `xsl:import` and `xsl:include` elements in your stylesheets, you need to configure a stylesheet loader that tells the processor how to fetch external stylesheets:
 
 ```javascript
-import { XSLTProcessor } from 'xslt-processor';
+import { XSLTProcessor } from '@tradik/xslt-processor';
 
 const processor = new XSLTProcessor();
 
@@ -202,7 +202,7 @@ processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
 ### Utility Functions
 
 ```javascript
-import { isNativeXSLTSupported, installGlobal } from 'xslt-processor';
+import { isNativeXSLTSupported, installGlobal } from '@tradik/xslt-processor';
 
 // Check if native XSLT is functional
 if (!isNativeXSLTSupported()) {
@@ -275,7 +275,7 @@ Here's a full example transforming a list of products into an HTML table:
 
 **JavaScript:**
 ```javascript
-import { XSLTProcessor } from 'xslt-processor';
+import { XSLTProcessor } from '@tradik/xslt-processor';
 
 const processor = new XSLTProcessor();
 processor.importStylesheet(xsltDoc);
@@ -318,7 +318,7 @@ The following variable names are blocked:
 ### Custom Security Limits
 
 ```javascript
-import { XPathEvaluator, XPathContext, parse } from 'xslt-processor';
+import { XPathEvaluator, XPathContext, parse } from '@tradik/xslt-processor';
 
 const evaluator = new XPathEvaluator({
   maxRecursionDepth: 50,    // Lower for untrusted input
@@ -473,7 +473,7 @@ This library provides a JavaScript polyfill for XSLTProcessor that works across 
 ### Feature Detection
 
 ```javascript
-import { isNativeXSLTSupported, installGlobal } from 'xslt-processor';
+import { isNativeXSLTSupported, installGlobal } from '@tradik/xslt-processor';
 
 // Check native support and auto-install polyfill
 if (!isNativeXSLTSupported()) {

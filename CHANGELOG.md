@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.8] - 2026-01-27
+## [1.0.0] - 2026-01-27
+
+### Changed
+
+- **BREAKING**: Package renamed from `xslt-processor` to `@tradik/xslt-processor`
+- Repository moved to https://github.com/spagu/XSLT-Processor
+- Version reset to 1.0.0 for the new scoped package
 
 ### Added
 
@@ -15,11 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Provenance-enabled npm publishing for supply chain security
   - Build artifact uploads
   - Triggers on GitHub releases and version tags (v*)
-
-## [1.0.7] - 2026-01-27
-
-### Added
-
 - Full support for `xsl:import` and `xsl:include` elements
   - Stylesheet loader API for loading external stylesheets
   - Proper import precedence handling (imported templates have lower precedence)
@@ -28,23 +29,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Relative URI resolution
   - Support for both Document and XML string returns from loader
   - Nested imports/includes support
-- 12 new tests for xsl:import and xsl:include functionality:
-  - Error handling when no stylesheet loader configured
-  - Error handling for missing href attribute
-  - Including templates from external stylesheets
-  - Import precedence override behavior
-  - Using imported templates when no override exists
-  - Circular reference detection
-  - Relative URI resolution
-  - XML string loader support
-  - Global variable merging from imports
-  - Nested imports with correct precedence chain
-  - Include templates at same precedence level with priority handling
+- 100% test line coverage for all source files
+- 473 comprehensive tests
 
-### Changed
+### Features (from previous development)
 
-- Updated README with xsl:import/xsl:include documentation and usage examples
-- Changed xsl:import and xsl:include status from "Partial" to "Supported" in README
+- Complete XPath 1.0 implementation
+- Complete XSLT 1.0 implementation
+- XSLTProcessor class with native-compatible API
+- CLI tool (`xslt` command) for transforming XML
+- Multiple bundle formats (ESM, CommonJS, Browser IIFE)
+- TypeScript declarations
+- Security hardening with configurable limits
+- Docker support with Node 25+
+
+---
+
+## Previous Development History (as `xslt-processor`)
 
 ## [1.0.6] - 2026-01-27
 
@@ -300,12 +301,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Native test runner (Node.js 25+)
 - esbuild for bundling
 
-[1.0.8]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.8
-[1.0.7]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.7
-[1.0.6]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.6
-[1.0.5]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.5
-[1.0.4]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.4
-[1.0.3]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.3
-[1.0.2]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.2
-[1.0.1]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.1
 [1.0.0]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.0

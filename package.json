@@ -1,6 +1,6 @@
 {
-  "name": "xslt-processor",
-  "version": "1.0.7",
+  "name": "@tradik/xslt-processor",
+  "version": "1.0.0",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "main": "dist/xslt-processor.cjs",
@@ -23,6 +23,9 @@
     "src",
     "bin"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node scripts/build.js",
     "test": "node --test --experimental-test-coverage src/*.test.js src/**/*.test.js",
@@ -47,13 +50,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tradik/cv-xslt.git",
-    "directory": "services/xslt-processor"
+    "url": "git+https://github.com/spagu/XSLT-Processor.git"
   },
   "bugs": {
-    "url": "https://github.com/tradik/cv-xslt/issues"
+    "url": "https://github.com/spagu/XSLT-Processor/issues"
   },
-  "homepage": "https://github.com/tradik/cv-xslt/tree/main/services/xslt-processor#readme",
+  "homepage": "https://github.com/spagu/XSLT-Processor#readme",
   "engines": {
     "node": ">=25.0.0"
   },
