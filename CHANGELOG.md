@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-07-15
+
+### Fixed
+
+- **Vite/Angular module resolution** - Changed `browser` targets in `package.json` to point to the ESM build (`dist/xslt-processor.js`) instead of the IIFE build (`dist/xslt-processor.browser.js`). This resolves a `SyntaxError: The requested module ... does not provide an export named 'default'` issue under bundlers like Vite (e.g. in Angular 19+).
+
+### Changed
+
+- Updated `VERSION` in `src/index.js` to `1.0.4`.
+- Updated devDependencies (`eslint`, `prettier`, `esbuild`, `jsdom`) and fully synchronized `package-lock.json` with `package.json` specifications.
+
 ## [1.0.3] - 2026-01-27
 
 ### Changed
