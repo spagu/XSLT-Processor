@@ -1,6 +1,6 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.0.4",
+  "version": "1.0.8",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "main": "dist/xslt-processor.cjs",
@@ -62,7 +62,7 @@
   "devDependencies": {
     "eslint": "^9.0.0",
     "prettier": "^3.4.0",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.28.0",
     "jsdom": "^25.0.0"
   }
 }

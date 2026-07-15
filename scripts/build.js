@@ -12,9 +12,9 @@
  */
 
 import { build } from 'esbuild';
-import { writeFileSync, mkdirSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
@@ -60,7 +60,7 @@ async function buildAll() {
     format: 'iife',
     globalName: 'XsltProcessorLib',
     platform: 'browser',
-    target: ['chrome90', 'firefox88', 'safari14', 'edge90'],
+    target: ['es2020'],
     sourcemap: true,
     footer: {
       js: `
@@ -81,7 +81,7 @@ if (typeof window !== 'undefined') {
     format: 'iife',
     globalName: 'XsltProcessorLib',
     platform: 'browser',
-    target: ['chrome90', 'firefox88', 'safari14', 'edge90'],
+    target: ['es2020'],
     minify: true,
     sourcemap: true,
     footer: {
@@ -314,7 +314,9 @@ export default XSLTProcessor;
   console.log('  dist/xslt-processor.d.ts       - TypeScript declarations');
 }
 
-buildAll().catch((error) => {
+try {
+  await buildAll();
+} catch (error) {
   console.error('Build failed:', error);
   process.exit(1);
-});
+}
