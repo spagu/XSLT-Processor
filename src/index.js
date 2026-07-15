@@ -61,5 +61,4 @@ export const isBrowser =
  * Check if we're running in Node.js
  */
 export const isNode =
-  typeof process !== "undefined" &&
-  process.versions?.node != null;
+  typeof process !== "undefined" && process.versions?.node != null;
