@@ -6,10 +6,10 @@
  * xsl:output settings of the stylesheet are honored.
  */
 
-'use strict';
+"use strict";
 
-import { JSDOM } from 'jsdom';
-import { XSLTProcessor } from '../../src/XSLTProcessor.js';
+import { JSDOM } from "jsdom";
+import { XSLTProcessor } from "../../src/XSLTProcessor.js";
 
 /**
  * Create a JSDOM based DOM environment and expose it globally.
@@ -20,8 +20,8 @@ import { XSLTProcessor } from '../../src/XSLTProcessor.js';
  * @returns {JSDOM} The created JSDOM instance
  */
 export function createDomEnvironment() {
-  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-    contentType: 'text/html'
+  const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
+    contentType: "text/html",
   });
 
   globalThis.document = dom.window.document;
@@ -42,10 +42,10 @@ export function createDomEnvironment() {
 export function parseDocument(dom, content, label) {
   const doc = new dom.window.DOMParser().parseFromString(
     content,
-    'application/xml'
+    "application/xml",
   );
 
-  const error = doc.querySelector('parsererror');
+  const error = doc.querySelector("parsererror");
   if (error) {
     throw new Error(`Error parsing ${label}: ${error.textContent}`);
   }
@@ -64,13 +64,13 @@ export function applyOutputOverrides(processor, values) {
   const settings = processor._engine.outputSettings;
 
   if (values.format || values.indent) {
-    settings.indent = 'yes';
+    settings.indent = "yes";
   }
   if (values.method) {
     settings.method = values.method;
   }
-  if (values['no-declaration']) {
-    settings.omitXmlDeclaration = 'yes';
+  if (values["no-declaration"]) {
+    settings.omitXmlDeclaration = "yes";
   }
 
   return settings;
@@ -92,10 +92,10 @@ export function runTransformation({
   xmlContent,
   xsltContent,
   params,
-  values
+  values,
 }) {
-  const xmlDoc = parseDocument(dom, xmlContent, 'XML');
-  const xsltDoc = parseDocument(dom, xsltContent, 'XSLT');
+  const xmlDoc = parseDocument(dom, xmlContent, "XML");
+  const xsltDoc = parseDocument(dom, xsltContent, "XSLT");
 
   const processor = new XSLTProcessor();
   processor.importStylesheet(xsltDoc);
@@ -108,7 +108,7 @@ export function runTransformation({
 
   const output = processor.transformToString(xmlDoc);
   if (output === null) {
-    throw new Error('Transformation failed');
+    throw new Error("Transformation failed");
   }
 
   return output;

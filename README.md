@@ -158,6 +158,7 @@ options below override individual `xsl:output` settings.
 | Option | Description |
 |--------|-------------|
 | `-o, --output <file>` | Write output to file instead of stdout |
+| `--base-dir <dir>` | Directory every file argument must live in (default: current working directory). Paths outside it are rejected. |
 | `-p, --param <n>=<v>` | Set XSLT parameter (can be used multiple times) |
 | `-f, --format` | Format output with indentation (same as `--indent`) |
 | `--indent` | Override `xsl:output` to `indent="yes"` |

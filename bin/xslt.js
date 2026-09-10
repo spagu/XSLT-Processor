@@ -8,18 +8,22 @@
  * stylesheet (XSLT 1.0 section 16).
  */
 
-'use strict';
+"use strict";
 
-import { readFile, writeFile } from 'node:fs/promises';
-import { parseArgs } from 'node:util';
+import { readFile, writeFile } from "node:fs/promises";
+import { parseArgs } from "node:util";
 import {
   CLI_OPTIONS,
   parseParameters,
   printHelp,
-  printVersion
-} from './lib/options.js';
-import { createDomEnvironment, runTransformation } from './lib/transform.js';
-import { resolveInputPath, resolveOutputPath } from './lib/paths.js';
+  printVersion,
+} from "./lib/options.js";
+import { createDomEnvironment, runTransformation } from "./lib/transform.js";
+import {
+  resolveBaseDir,
+  resolveInputPath,
+  resolveOutputPath,
+} from "./lib/paths.js";
 
 /**
  * Parse the command line, exiting on malformed input.
@@ -44,7 +48,7 @@ function readArguments() {
  */
 async function writeOutput(output, target) {
   if (target) {
-    await writeFile(target, output, 'utf-8');
+    await writeFile(target, output, "utf-8");
     console.error(`Output written to ${target}`);
     return;
   }
@@ -72,7 +76,7 @@ async function main() {
   const [xmlPath, xsltPath] = args.positionals;
 
   if (!xmlPath || !xsltPath) {
-    console.error('Error: Both XML and XSLT file paths are required');
+    console.error("Error: Both XML and XSLT file paths are required");
     console.error('Run "xslt --help" for usage information');
     process.exit(1);
   }
@@ -80,15 +84,16 @@ async function main() {
   const dom = createDomEnvironment();
 
   try {
-    const xmlFile = resolveInputPath(xmlPath, 'XML');
-    const xsltFile = resolveInputPath(xsltPath, 'XSLT');
+    const baseDir = resolveBaseDir(args.values["base-dir"]);
+    const xmlFile = resolveInputPath(xmlPath, "XML", baseDir);
+    const xsltFile = resolveInputPath(xsltPath, "XSLT", baseDir);
     const outputFile = args.values.output
-      ? resolveOutputPath(args.values.output)
+      ? resolveOutputPath(args.values.output, baseDir)
       : undefined;
 
     const [xmlContent, xsltContent] = await Promise.all([
-      readFile(xmlFile, 'utf-8'),
-      readFile(xsltFile, 'utf-8')
+      readFile(xmlFile, "utf-8"),
+      readFile(xsltFile, "utf-8"),
     ]);
 
     const output = runTransformation({
@@ -96,7 +101,7 @@ async function main() {
       xmlContent,
       xsltContent,
       params: parseParameters(args.values.param),
-      values: args.values
+      values: args.values,
     });
 
     await writeOutput(output, outputFile);

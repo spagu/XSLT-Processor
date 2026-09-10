@@ -4,9 +4,9 @@
  * Command line option definitions, help/version banners and parameter parsing.
  */
 
-'use strict';
+"use strict";
 
-import { createRequire } from 'node:module';
+import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 
@@ -14,21 +14,22 @@ const require = createRequire(import.meta.url);
  * Version of the CLI, read from the package manifest.
  * @type {string}
  */
-export const VERSION = require('../../package.json').version;
+export const VERSION = require("../../package.json").version;
 
 /**
  * parseArgs option definitions.
  * @type {object}
  */
 export const CLI_OPTIONS = {
-  output: { type: 'string', short: 'o' },
-  param: { type: 'string', short: 'p', multiple: true },
-  format: { type: 'boolean', short: 'f', default: false },
-  indent: { type: 'boolean', default: false },
-  method: { type: 'string' },
-  'no-declaration': { type: 'boolean', default: false },
-  help: { type: 'boolean', short: 'h', default: false },
-  version: { type: 'boolean', short: 'v', default: false }
+  output: { type: "string", short: "o" },
+  "base-dir": { type: "string" },
+  param: { type: "string", short: "p", multiple: true },
+  format: { type: "boolean", short: "f", default: false },
+  indent: { type: "boolean", default: false },
+  method: { type: "string" },
+  "no-declaration": { type: "boolean", default: false },
+  help: { type: "boolean", short: "h", default: false },
+  version: { type: "boolean", short: "v", default: false },
 };
 
 /**
@@ -48,6 +49,8 @@ ARGUMENTS:
 
 OPTIONS:
   -o, --output <file>     Write output to file instead of stdout
+      --base-dir <dir>    Directory all file arguments must live in
+                          (default: the current working directory)
   -p, --param <n>=<v>     Set XSLT parameter (can be used multiple times)
   -f, --format            Format output with indentation (same as --indent)
       --indent            Override xsl:output to indent="yes"
@@ -96,9 +99,11 @@ export function parseParameters(params) {
   }
 
   for (const param of params) {
-    const equalIndex = param.indexOf('=');
+    const equalIndex = param.indexOf("=");
     if (equalIndex === -1) {
-      console.error(`Warning: Invalid parameter format "${param}". Expected name=value`);
+      console.error(
+        `Warning: Invalid parameter format "${param}". Expected name=value`,
+      );
       continue;
     }
 

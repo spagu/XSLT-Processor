@@ -49,7 +49,7 @@ function escapeWith(value, pattern, escapes) {
  */
 export function escapeXmlText(value) {
   return escapeWith(value, /[&<]/g, XML_TEXT_ESCAPES).replaceAll(
-    /]]>/g,
+    "]]>",
     "]]&gt;",
   );
 }
@@ -94,5 +94,5 @@ export function escapeHtmlAttribute(value) {
  * @returns {string} One or more CDATA sections
  */
 export function wrapCdata(value) {
-  return `<![CDATA[${String(value).replaceAll(/]]>/g, "]]]]><![CDATA[>")}]]>`;
+  return `<![CDATA[${String(value).replaceAll("]]>", "]]]]><![CDATA[>")}]]>`;
 }

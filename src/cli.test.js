@@ -56,6 +56,7 @@ function runCli(args) {
     encoding: "utf-8",
     stdio: ["ignore", "pipe", "pipe"],
     env: cliEnvironment(),
+    cwd: workDir,
   });
 }
 
@@ -242,6 +243,58 @@ describe("xslt CLI", () => {
 
     assert.strictEqual(status, 1);
     assert.match(stderr, /Output path is not a file/);
+  });
+
+  it("should refuse files outside the base directory", () => {
+    const outside = mkdtempSync(join(tmpdir(), "xslt-outside-"));
+    const xml = join(outside, "data.xml");
+    writeFileSync(xml, "<root/>", "utf-8");
+    try {
+      const { status, stderr } = runCliFailing([xml, "plain.xsl"]);
+      assert.strictEqual(status, 1);
+      assert.match(stderr, /outside the allowed base directory/);
+      assert.match(stderr, /--base-dir/);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("should accept files under an explicit --base-dir", () => {
+    const outside = mkdtempSync(join(tmpdir(), "xslt-outside-"));
+    const xml = join(outside, "data.xml");
+    writeFileSync(xml, "<root/>", "utf-8");
+    try {
+      const { status, stderr } = runCliFailing([
+        xml,
+        "plain.xsl",
+        "--base-dir",
+        outside,
+      ]);
+      // the stylesheet is now the one outside the base directory
+      assert.strictEqual(status, 1);
+      assert.match(stderr, /XSLT path is outside the allowed base directory/);
+      const xsl = join(outside, "plain.xsl");
+      writeFileSync(
+        xsl,
+        readFileSync(join(workDir, "plain.xsl"), "utf-8"),
+        "utf-8",
+      );
+      const out = runCli([xml, xsl, "--base-dir", outside, "--no-declaration"]);
+      assert.strictEqual(out.trim(), "<out>none</out>");
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("should fail when --base-dir is not a directory", () => {
+    const { status, stderr } = runCliFailing([
+      "data.xml",
+      "plain.xsl",
+      "--base-dir",
+      "data.xml",
+    ]);
+    assert.strictEqual(status, 1);
+    assert.match(stderr, /Base directory is not a directory/);
   });
 
   it("should fail for malformed XML", () => {
