@@ -46,10 +46,18 @@ export {
 // XSLT engine (for advanced users)
 export { XsltEngine, XsltContext } from "./xslt/index.js";
 
+// Output serializer (xsl:output, XSLT 1.0 section 16)
+export {
+  serializeResult,
+  markRawText,
+  isRawText,
+  resolveOutputSettings,
+} from "./xslt/serializer.js";
+
 /**
  * Version information
  */
-export const VERSION = "1.0.8";
+export const VERSION = "1.1.0";
 
 /**
  * Check if we're running in a browser environment

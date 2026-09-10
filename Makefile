@@ -1,4 +1,4 @@
-.PHONY: install test test-watch build lint format clean docker-test docker-dev docker-build help
+.PHONY: install test test-watch build lint format format-check clean docker-test docker-dev docker-build docker-clean help
 
 # Default target
 help:

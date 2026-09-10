@@ -30,6 +30,113 @@ export class XSLTProcessor {
     this._engine = null;
     this._stylesheet = null;
     this._parameters = new Map();
+    this._stylesheetLoader = null;
+    this._documentLoader = null;
+  }
+
+  /**
+   * The underlying XSLT engine (advanced usage).
+   *
+   * The engine is created lazily by {@link XSLTProcessor#importStylesheet},
+   * so this getter returns `null` until a stylesheet has been imported.
+   * Prefer the public {@link XSLTProcessor#setStylesheetLoader} over reaching
+   * into the engine directly.
+   *
+   * @returns {import('./xslt/engine.js').XsltEngine|null} The engine, or null before import
+   *
+   * @example
+   * processor.importStylesheet(xslDoc, '/styles/main.xsl');
+   * console.log(processor.engine.outputSettings.method);
+   */
+  get engine() {
+    return this._engine;
+  }
+
+  /**
+   * Sets the loader used to resolve `xsl:import` and `xsl:include` references.
+   *
+   * The loader is synchronous: it MUST return the external stylesheet as a
+   * `Document` or as an XML string (which is parsed automatically). Promises
+   * are not awaited by the engine, so pre-load remote stylesheets before
+   * calling `importStylesheet`.
+   *
+   * The loader may be set before or after `importStylesheet`. When set before,
+   * it is passed to the engine on creation, which is required for the loader to
+   * be used while the stylesheet is being compiled. When set after, the live
+   * engine is updated as well.
+   *
+   * @param {((href: string, baseUri?: string) => (Document|string))|null} loader
+   *   The loader function, or null to remove a previously configured loader
+   * @returns {XSLTProcessor} This processor, to allow chaining
+   * @throws {TypeError} If the loader is neither a function nor null
+   *
+   * @example
+   * processor.setStylesheetLoader((href) => readFileSync(href, 'utf8'));
+   * processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
+   */
+  setStylesheetLoader(loader) {
+    if (
+      loader !== null &&
+      loader !== undefined &&
+      typeof loader !== "function"
+    ) {
+      throw new TypeError(
+        "Failed to execute 'setStylesheetLoader' on 'XSLTProcessor': The loader argument must be a function or null.",
+      );
+    }
+
+    this._stylesheetLoader = loader ?? null;
+
+    // Keep an already created engine in sync
+    if (this._engine) {
+      this._engine.setStylesheetLoader(this._stylesheetLoader);
+    }
+
+    return this;
+  }
+
+  /**
+   * Sets the loader used to resolve the XSLT `document()` function.
+   *
+   * The loader is synchronous: it MUST return the referenced document as a
+   * `Document`, as an XML string (which is parsed automatically) or as `null`
+   * when the document cannot be provided. Returning `null`, like configuring no
+   * loader at all, makes `document()` evaluate to an empty node-set rather than
+   * failing the transformation.
+   *
+   * The loader may be set before or after `importStylesheet`; a live engine is
+   * kept in sync.
+   *
+   * @param {((uri: string, baseUri?: string) => (Document|string|null))|null} loader
+   *   The loader function, or null to remove a previously configured loader
+   * @returns {XSLTProcessor} This processor, to allow chaining
+   * @throws {TypeError} If the loader is neither a function nor null
+   *
+   * @example
+   * // Node.js: resolve document() against the file system
+   * import { readFileSync } from 'node:fs';
+   * processor.setDocumentLoader((uri) => readFileSync(uri, 'utf8'));
+   * processor.importStylesheet(xslDoc, '/styles/main.xsl');
+   */
+  setDocumentLoader(loader) {
+    if (
+      loader !== null &&
+      loader !== undefined &&
+      typeof loader !== "function"
+    ) {
+      throw new TypeError(
+        "Failed to execute 'setDocumentLoader' on 'XSLTProcessor': The loader argument must be a function or null.",
+      );
+    }
+
+    this._documentLoader = loader ?? null;
+
+    // Keep an already created engine in sync
+    if (this._engine) {
+      this._engine.setDocumentLoader(this._documentLoader);
+    }
+
+    return this;
   }
 
   /**
@@ -40,14 +147,17 @@ export class XSLTProcessor {
    * <xsl:stylesheet> or <xsl:transform> element.
    *
    * @param {Node} style - The XSLT stylesheet to import (Document or Element)
+   * @param {string} [stylesheetUri] - Optional URI of the stylesheet, used as the
+   *   base URI when resolving relative `xsl:import`/`xsl:include` hrefs. When
+   *   omitted, hrefs are passed to the loader unresolved.
    * @returns {void}
    *
    * @example
    * const parser = new DOMParser();
    * const xslDoc = parser.parseFromString(xslText, 'application/xml');
-   * processor.importStylesheet(xslDoc);
+   * processor.importStylesheet(xslDoc, '/styles/main.xsl');
    */
-  importStylesheet(style) {
+  importStylesheet(style, stylesheetUri) {
     if (!style) {
       throw new TypeError(
         "Failed to execute 'importStylesheet' on 'XSLTProcessor': 1 argument required, but only 0 present.",
@@ -70,14 +180,17 @@ export class XSLTProcessor {
     }
 
     this._stylesheet = style;
-    this._engine = new XsltEngine();
+    this._engine = new XsltEngine({
+      stylesheetLoader: this._stylesheetLoader,
+      documentLoader: this._documentLoader,
+    });
 
     // Apply any previously set parameters
     for (const [key, value] of this._parameters) {
-      this._engine.globalParameters[key] = { value };
+      this._engine.setParameterValue(key, value);
     }
 
-    this._engine.importStylesheet(style);
+    this._engine.importStylesheet(style, stylesheetUri);
   }
 
   /**
@@ -183,6 +296,55 @@ export class XSLTProcessor {
   }
 
   /**
+   * Transforms the node source by applying the XSLT stylesheet and serializes
+   * the result to a string honoring the stylesheet `xsl:output` settings.
+   *
+   * Non-W3C convenience method: the native XSLTProcessor has no equivalent.
+   * Output method, indentation, XML declaration, document type declaration,
+   * CDATA sections and `disable-output-escaping` are all honored
+   * (XSLT 1.0 section 16).
+   *
+   * @param {Node} source - The XML document to transform
+   * @returns {string|null} The serialized result, or null on a transformation error
+   *
+   * @example
+   * const xml = processor.transformToString(xmlDoc);
+   * // '<?xml version="1.0" encoding="UTF-8"?>\n<BAR>\n  <QUX/>\n</BAR>'
+   */
+  transformToString(source) {
+    if (!source) {
+      throw new TypeError(
+        "Failed to execute 'transformToString' on 'XSLTProcessor': 1 argument required, but only 0 present.",
+      );
+    }
+
+    if (!this._engine || !this._stylesheet) {
+      throw new Error(
+        "Failed to execute 'transformToString' on 'XSLTProcessor': No stylesheet has been imported.",
+      );
+    }
+
+    // Validate source node
+    if (
+      source.nodeType !== 1 &&
+      source.nodeType !== 9 &&
+      source.nodeType !== 11
+    ) {
+      throw new TypeError(
+        "Failed to execute 'transformToString' on 'XSLTProcessor': The source is not a valid node type.",
+      );
+    }
+
+    try {
+      return this._engine.transformToString(source);
+    } catch (error) {
+      // Match transformToDocument behavior - return null on error
+      console.error("XSLT transformation error:", error);
+      return null;
+    }
+  }
+
+  /**
    * Sets a parameter in the XSLT stylesheet.
    *
    * @param {string|null} namespaceURI - The namespace URI of the XSLT parameter (use null for no namespace)
@@ -212,7 +374,7 @@ export class XSLTProcessor {
 
     // If engine is already initialized, update it
     if (this._engine) {
-      this._engine.globalParameters[key] = { value };
+      this._engine.setParameterValue(key, value);
     }
   }
 
@@ -279,7 +441,7 @@ export class XSLTProcessor {
     this._parameters.delete(key);
 
     if (this._engine) {
-      delete this._engine.globalParameters[key];
+      this._engine.clearParameterValue(key);
     }
   }
 
@@ -297,12 +459,19 @@ export class XSLTProcessor {
     this._parameters.clear();
 
     if (this._engine) {
-      this._engine.globalParameters = {};
+      this._engine.clearParameterValues();
     }
   }
 
   /**
    * Removes all parameters and stylesheets from the XSLTProcessor.
+   *
+   * Per the W3C `XSLTProcessor` semantics, `reset()` clears stylesheet state and
+   * parameters only. The stylesheet and document loaders are processor
+   * configuration rather than stylesheet state, so they are deliberately
+   * preserved and stay effective for the next `importStylesheet()` call. Pass
+   * `null` to {@link XSLTProcessor#setStylesheetLoader} or
+   * {@link XSLTProcessor#setDocumentLoader} to remove them explicitly.
    *
    * @returns {void}
    *

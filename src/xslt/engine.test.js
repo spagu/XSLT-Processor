@@ -256,7 +256,8 @@ describe("XsltEngine", () => {
 
     it("should process xsl:namespace-alias", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
-        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                        xmlns:myns="urn:alias-source" xmlns:output="urn:alias-result">
           <xsl:namespace-alias stylesheet-prefix="myns" result-prefix="output"/>
           <xsl:template match="/"><out/></xsl:template>
         </xsl:stylesheet>
@@ -264,7 +265,10 @@ describe("XsltEngine", () => {
 
       engine.importStylesheet(xslt);
 
-      assert.strictEqual(engine.namespaceAliases.myns, "output");
+      assert.deepStrictEqual(
+        engine.namespaceAliases.resolve("urn:alias-source", "thing"),
+        { namespaceUri: "urn:alias-result", qname: "output:thing" },
+      );
     });
 
     it("should process xsl:attribute-set", () => {
@@ -1822,7 +1826,7 @@ describe("XsltEngine", () => {
   });
 
   describe("createDocument without global document", () => {
-    it("should throw when document is not available", () => {
+    it("should fall back to the source document implementation", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/"><out/></xsl:template>
@@ -1836,9 +1840,8 @@ describe("XsltEngine", () => {
       const originalDoc = global.document;
       global.document = undefined;
 
-      assert.throws(() => {
-        engine.transformToDocument(xml);
-      }, /Document creation not available/);
+      const result = engine.transformToDocument(xml);
+      assert.strictEqual(result.documentElement.tagName, "out");
 
       global.document = originalDoc;
     });
@@ -3017,7 +3020,8 @@ describe("XsltEngine", () => {
       engine.setStylesheetLoader((href) => {
         if (href === "full-features.xsl") {
           return parseXML(`<?xml version="1.0"?>
-            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                            xmlns:ns1="urn:imported-source" xmlns:ns2="urn:imported-result">
               <xsl:output method="html" indent="yes"/>
               <xsl:param name="importedParam" select="'param-value'"/>
               <xsl:key name="importedKey" match="item" use="@id"/>
@@ -3053,7 +3057,10 @@ describe("XsltEngine", () => {
       assert.ok("importedParam" in engine.globalParameters);
       assert.ok("importedKey" in engine.keys);
       assert.ok("importedFormat" in engine.decimalFormats);
-      assert.strictEqual(engine.namespaceAliases.ns1, "ns2");
+      assert.deepStrictEqual(
+        engine.namespaceAliases.resolve("urn:imported-source", "thing"),
+        { namespaceUri: "urn:imported-result", qname: "ns2:thing" },
+      );
       assert.ok("importedAttrs" in engine.attributeSets);
       assert.ok(engine.stripSpace.includes("pre"));
       assert.ok(engine.preserveSpace.includes("code"));
@@ -3125,6 +3132,436 @@ describe("XsltEngine", () => {
       const result = engine.parseXmlString("<root><item>test</item></root>");
       assert.ok(result.documentElement);
       assert.strictEqual(result.documentElement.tagName, "root");
+    });
+  });
+});
+
+describe("XSLT 1.0 conformance", () => {
+  let engine;
+
+  beforeEach(() => {
+    setupDOM();
+    engine = new XsltEngine();
+  });
+
+  /**
+   * Serialize the children of a result fragment.
+   *
+   * @param {DocumentFragment} fragment - The transformation result
+   * @returns {string} The serialized markup
+   */
+  function serialize(fragment) {
+    const serializer = new XMLSerializer();
+    let output = "";
+    for (const node of fragment.childNodes) {
+      output += serializer.serializeToString(node);
+    }
+    return output;
+  }
+
+  /**
+   * Transform a source document with a stylesheet.
+   *
+   * @param {string} xsl - The stylesheet markup
+   * @param {string} xml - The source markup
+   * @param {Document} [output] - The output document
+   * @returns {string} The serialized result
+   */
+  function run(xsl, xml, output) {
+    engine.importStylesheet(parseXML(xsl));
+    return serialize(engine.transform(parseXML(xml), output || document));
+  }
+
+  const IDENTITY = `<?xml version="1.0"?>
+    <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+      <xsl:template match="@*|node()">
+        <xsl:copy><xsl:apply-templates select="@*|node()"/></xsl:copy>
+      </xsl:template>
+    </xsl:stylesheet>`;
+
+  describe("xsl:copy", () => {
+    it("should keep attributes in an identity transform", () => {
+      assert.strictEqual(
+        run(IDENTITY, '<r><i k="a">1</i></r>'),
+        '<r><i k="a">1</i></r>',
+      );
+    });
+
+    it("should round-trip elements, attributes, text, comments and PIs", () => {
+      const xml =
+        '<r a="1"><n><i k="x">text</i></n><!--note--><?pi data?>tail</r>';
+
+      assert.strictEqual(run(IDENTITY, xml), xml);
+    });
+
+    it("should copy only the node itself, not its children", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/r"><xsl:copy>kept</xsl:copy></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(
+        run(xsl, '<r a="1"><i>dropped</i></r>'),
+        "<r>kept</r>",
+      );
+    });
+  });
+
+  describe("xsl:output", () => {
+    it("should read the version and standalone attributes", () => {
+      engine.importStylesheet(
+        parseXML(`<?xml version="1.0"?>
+          <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+            <xsl:output method="xml" version="1.1" standalone="yes"/>
+            <xsl:template match="/"><out/></xsl:template>
+          </xsl:stylesheet>`),
+      );
+
+      assert.strictEqual(engine.outputSettings.version, "1.1");
+      assert.strictEqual(engine.outputSettings.standalone, "yes");
+    });
+
+    it("should default the version and leave standalone unset", () => {
+      engine.importStylesheet(
+        parseXML(`<?xml version="1.0"?>
+          <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+            <xsl:output method="xml"/>
+            <xsl:template match="/"><out/></xsl:template>
+          </xsl:stylesheet>`),
+      );
+
+      assert.strictEqual(engine.outputSettings.version, "1.0");
+      assert.strictEqual(engine.outputSettings.standalone, null);
+    });
+  });
+
+  describe("built-in template rules", () => {
+    it("should copy the value of an attribute without a template", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:apply-templates select="/r/@k"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, '<r k="value"/>'), "<out>value</out>");
+    });
+  });
+
+  describe("formatNumber", () => {
+    it("should format a single number with a format token", () => {
+      assert.strictEqual(engine.formatNumber(3, "01"), "03");
+      assert.strictEqual(engine.formatNumber(3, "a"), "c");
+    });
+  });
+
+  describe("CDATA sections", () => {
+    const xml = "<r><i><![CDATA[hello]]></i></r>";
+
+    it("should contribute to the string-value of an element", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:value-of select="/r/i"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, xml), "<out>hello</out>");
+    });
+
+    it("should be selected by the text() node test", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:value-of select="count(/r/i/text())"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, xml), "<out>1</out>");
+    });
+
+    it("should be copied by xsl:copy-of", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:copy-of select="/r/i"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, xml), "<out><i>hello</i></out>");
+    });
+
+    it("should be copied by the built-in text template", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:apply-templates select="/r/i"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, xml), "<out>hello</out>");
+    });
+  });
+
+  describe("xsl:number", () => {
+    it("should number nodes across the document for level=any", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:for-each select="//i"><xsl:number level="any" format="I"/>,</xsl:for-each></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(
+        run(xsl, "<r><s><i/></s><s><i/><i/></s></r>"),
+        "<out>I,II,III,</out>",
+      );
+    });
+
+    it("should number nested levels for level=multiple", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:for-each select="//i"><xsl:number level="multiple" count="s|i" format="1.1"/>,</xsl:for-each></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(
+        run(xsl, "<r><s><i/></s><s><i/><i/></s></r>"),
+        "<out>1.1,2.1,2.2,</out>",
+      );
+    });
+
+    it("should honour count and from for level=single", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:for-each select="//i"><xsl:number level="single" count="i" from="s" format="a"/>,</xsl:for-each></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, "<r><s><i/><i/></s></r>"), "<out>a,b,</out>");
+    });
+
+    it("should support padded, alphabetic and Roman formats", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:for-each select="//i"><xsl:number format="01"/><xsl:number format="A"/><xsl:number format="i"/>,</xsl:for-each></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, "<r><i/><i/></r>"), "<out>01Ai,02Bii,</out>");
+    });
+  });
+
+  describe("xsl:strip-space and xsl:preserve-space", () => {
+    const xml = "<r>\n  <keep> </keep>\n  <i>x</i>\n</r>";
+
+    it("should remove whitespace-only text nodes of stripped elements", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:strip-space elements="*"/>
+          <xsl:template match="/"><out><xsl:value-of select="count(/r/node())"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, xml), "<out>2</out>");
+    });
+
+    it("should let xsl:preserve-space win over xsl:strip-space", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:strip-space elements="*"/>
+          <xsl:preserve-space elements="keep"/>
+          <xsl:template match="/"><out><xsl:value-of select="count(/r/keep/node())"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, xml), "<out>1</out>");
+    });
+
+    it("should keep whitespace under xml:space=preserve", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:strip-space elements="*"/>
+          <xsl:template match="/"><out><xsl:value-of select="count(/r/node())"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(
+        run(xsl, '<r xml:space="preserve">\n  <i/>\n</r>'),
+        "<out>3</out>",
+      );
+    });
+
+    it("should not modify the source document", () => {
+      const source = parseXML(xml);
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:strip-space elements="*"/>
+          <xsl:template match="/"><out/></xsl:template>
+        </xsl:stylesheet>`;
+
+      engine.importStylesheet(parseXML(xsl));
+      engine.transform(source, document);
+
+      assert.strictEqual(source.documentElement.childNodes.length, 5);
+    });
+
+    it("should ignore whitespace in the stylesheet but keep it in xsl:text", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/">
+            <out>
+              <xsl:text>  spaced  </xsl:text>
+            </out>
+          </xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, "<r/>"), "<out>  spaced  </out>");
+    });
+  });
+
+  describe("xsl:namespace-alias", () => {
+    it("should generate a stylesheet through an alias namespace", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                        xmlns:axsl="http://www.w3.org/1999/XSL/TransformAlias">
+          <xsl:namespace-alias stylesheet-prefix="axsl" result-prefix="xsl"/>
+          <xsl:template match="/">
+            <axsl:stylesheet version="1.0"><axsl:template match="/"/></axsl:stylesheet>
+          </xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(
+        run(xsl, "<r/>"),
+        '<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"><xsl:template match="/"/></xsl:stylesheet>',
+      );
+    });
+
+    it("should alias attributes in the aliased namespace", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                        xmlns:a="urn:source" xmlns:b="urn:result">
+          <xsl:namespace-alias stylesheet-prefix="a" result-prefix="b"/>
+          <xsl:template match="/"><out a:flag="on"/></xsl:template>
+        </xsl:stylesheet>`;
+
+      engine.importStylesheet(parseXML(xsl));
+      const element = engine.transform(parseXML("<r/>"), document).firstChild;
+
+      assert.strictEqual(element.getAttributeNS("urn:result", "flag"), "on");
+      assert.strictEqual(element.attributes[0].prefix, "b");
+    });
+  });
+
+  describe("literal result element attributes", () => {
+    it("should apply xsl:use-attribute-sets", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:attribute-set name="s"><xsl:attribute name="a">1</xsl:attribute></xsl:attribute-set>
+          <xsl:template match="/"><out xsl:use-attribute-sets="s" b="2"/></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, "<r/>"), '<out a="1" b="2"/>');
+    });
+
+    it("should let literal attributes override attribute sets", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:attribute-set name="s"><xsl:attribute name="a">from-set</xsl:attribute></xsl:attribute-set>
+          <xsl:template match="/"><out xsl:use-attribute-sets="s" a="literal"/></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, "<r/>"), '<out a="literal"/>');
+    });
+
+    it("should never copy XSLT attributes to the result", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out xsl:version="1.0" xsl:exclude-result-prefixes="ext" xsl:extension-element-prefixes="ext"/></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, "<r/>"), "<out/>");
+    });
+
+    it("should not emit excluded or unused namespace declarations", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                        xmlns:ext="urn:ext" exclude-result-prefixes="ext">
+          <xsl:template match="/"><out/></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, "<r/>"), "<out/>");
+    });
+  });
+
+  describe("xsl:apply-imports", () => {
+    it("should apply the imported template of lower precedence", () => {
+      engine.setStylesheetLoader(
+        () => `<?xml version="1.0"?>
+          <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+            <xsl:template match="i"><base><xsl:value-of select="."/></base></xsl:template>
+          </xsl:stylesheet>`,
+      );
+
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="base.xsl"/>
+          <xsl:template match="i"><wrap><xsl:apply-imports/></wrap></xsl:template>
+          <xsl:template match="/"><out><xsl:apply-templates select="//i"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(
+        run(xsl, "<r><i>x</i></r>"),
+        "<out><wrap><base>x</base></wrap></out>",
+      );
+    });
+
+    it("should fall back to the built-in template when nothing is imported", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="i"><wrap><xsl:apply-imports/></wrap></xsl:template>
+          <xsl:template match="/"><out><xsl:apply-templates select="//i"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(
+        run(xsl, "<r><i>x</i></r>"),
+        "<out><wrap>x</wrap></out>",
+      );
+    });
+
+    it("should respect modes", () => {
+      engine.setStylesheetLoader(
+        () => `<?xml version="1.0"?>
+          <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+            <xsl:template match="i" mode="m"><base/></xsl:template>
+          </xsl:stylesheet>`,
+      );
+
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="base.xsl"/>
+          <xsl:template match="i" mode="m"><wrap><xsl:apply-imports/></wrap></xsl:template>
+          <xsl:template match="/"><out><xsl:apply-templates select="//i" mode="m"/></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(
+        run(xsl, "<r><i>x</i></r>"),
+        "<out><wrap><base/></wrap></out>",
+      );
+    });
+  });
+
+  describe("result tree construction", () => {
+    it("should keep element names and namespaces in an HTML output document", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><BAR><qux/></BAR></xsl:template>
+        </xsl:stylesheet>`;
+
+      engine.importStylesheet(parseXML(xsl));
+      const fragment = engine.transform(parseXML("<r/>"), document);
+
+      assert.strictEqual(fragment.firstChild.nodeName, "BAR");
+      assert.strictEqual(fragment.firstChild.namespaceURI, null);
+      assert.strictEqual(fragment.firstChild.firstChild.nodeName, "qux");
+      assert.strictEqual(fragment.ownerDocument, document);
+    });
+
+    it("should keep disable-output-escaping markers on imported text", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><out><xsl:text disable-output-escaping="yes">&lt;b/&gt;</xsl:text></out></xsl:template>
+        </xsl:stylesheet>`;
+
+      engine.importStylesheet(parseXML(xsl));
+      const fragment = engine.transform(parseXML("<r/>"), document);
+
+      assert.strictEqual(
+        fragment.firstChild.firstChild._disableOutputEscaping,
+        true,
+      );
     });
   });
 });

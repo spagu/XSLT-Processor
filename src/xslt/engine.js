@@ -7,8 +7,23 @@
 
 import { parse as parseXPath } from "../xpath/parser.js";
 import { XPathEvaluator, XPathContext } from "../xpath/evaluator.js";
+import { XSLT_NAMESPACE } from "./elements.js";
+import { createXsltFunctions } from "./functions.js";
+import { KeyIndexRegistry } from "./keys.js";
+import { countXsltNumber } from "./number.js";
+import { formatXsltNumber, toRoman } from "./numberFormat.js";
+import { resolveUri, stripFragment } from "./uri.js";
+import { WhitespaceFilter, stripWhitespaceNodes } from "./whitespace.js";
+import {
+  NamespaceAliasMap,
+  getXsltAttribute,
+  shouldCopyAttribute,
+} from "./literalResult.js";
+import { createResultDocument, importResultFragment } from "./resultTree.js";
+import { calculatePriority } from "./templatePriority.js";
+import { serializeResult } from "./serializer.js";
 
-const XSLT_NS = "http://www.w3.org/1999/XSL/Transform";
+const XSLT_NS = XSLT_NAMESPACE;
 
 /**
  * XSLT Processing Context
@@ -28,6 +43,8 @@ export class XsltContext {
     this.decimalFormats = options.decimalFormats || {};
     this.outputMethod = options.outputMethod || "xml";
     this.xpathEvaluator = options.xpathEvaluator || new XPathEvaluator();
+    this.currentTemplate = options.currentTemplate || null;
+    this.currentMode = options.currentMode ?? null;
   }
 
   clone(overrides = {}) {
@@ -51,6 +68,8 @@ export class XsltContext {
       decimalFormats: this.decimalFormats,
       outputMethod: this.outputMethod,
       xpathEvaluator: this.xpathEvaluator,
+      currentTemplate: overrides.currentTemplate ?? this.currentTemplate,
+      currentMode: overrides.currentMode ?? this.currentMode,
     });
   }
 
@@ -81,7 +100,9 @@ export class XsltEngine {
     this.globalParameters = {};
     this.outputSettings = {
       method: "xml",
+      version: "1.0",
       encoding: "UTF-8",
+      standalone: null,
       indent: "no",
       omitXmlDeclaration: "no",
       doctypePublic: null,
@@ -93,7 +114,7 @@ export class XsltEngine {
     this.decimalFormats = {};
     this.stylesheetDoc = null;
     this.attributeSets = {};
-    this.namespaceAliases = {};
+    this.namespaceAliases = new NamespaceAliasMap();
     this.stripSpace = [];
     this.preserveSpace = [];
 
@@ -102,6 +123,117 @@ export class XsltEngine {
     this.currentImportPrecedence = 0;
     this.processedStylesheets = new Set();
     this.baseUri = options.baseUri || "";
+
+    // document() support
+    this.documentLoader = options.documentLoader || null;
+    this.loadedDocuments = new Map();
+
+    // generate-id() support
+    this.generatedIds = new WeakMap();
+    this.generatedIdCount = 0;
+
+    // key() support
+    this.rootContext = null;
+    this.keyRegistry = new KeyIndexRegistry({
+      keys: this.keys,
+      matchesPattern: (node, pattern) =>
+        this.matchesPattern(node, pattern, this.rootContext),
+      evaluateUse: (node, expression) =>
+        this.evaluateKeyValues(node, expression),
+    });
+
+    this.xpathEvaluator.registerFunctions(createXsltFunctions(this));
+  }
+
+  /**
+   * Set the loader used by the XSLT `document()` function.
+   *
+   * The loader is synchronous and must return a `Document`, an XML string or
+   * null. Returning null (or configuring no loader at all) makes `document()`
+   * evaluate to an empty node-set instead of failing the transformation.
+   *
+   * @param {((uri: string, baseUri?: string) => (Document|string|null))|null} loader - The loader, or null to remove it
+   * @returns {XsltEngine} This engine, to allow chaining
+   *
+   * @example
+   * engine.setDocumentLoader((uri) => readFileSync(uri, 'utf8'));
+   */
+  setDocumentLoader(loader) {
+    this.documentLoader = loader ?? null;
+    this.loadedDocuments.clear();
+    return this;
+  }
+
+  /**
+   * Load an external document for the `document()` function.
+   *
+   * Results are cached per resolved URI for the life of the engine, so the same
+   * URI always yields the identical node-set.
+   *
+   * @param {string} uri - The requested URI, fragment identifiers are ignored
+   * @param {string} [baseUri] - Base URI used to resolve relative references
+   * @returns {Document|null} The loaded document, or null when unavailable
+   *
+   * @example
+   * engine.loadDocument('data.xml', '/styles/main.xsl');
+   */
+  loadDocument(uri, baseUri) {
+    const target = stripFragment(uri);
+
+    if (target === "") return this.stylesheetDoc;
+    if (!this.documentLoader) return null;
+
+    const resolved = resolveUri(target, baseUri);
+    if (this.loadedDocuments.has(resolved)) {
+      return this.loadedDocuments.get(resolved);
+    }
+
+    const loaded = this.documentLoader(resolved, baseUri);
+    const doc =
+      typeof loaded === "string" ? this.parseXmlString(loaded) : loaded || null;
+
+    this.loadedDocuments.set(resolved, doc);
+    return doc;
+  }
+
+  /**
+   * Return the stable identifier of a node for `generate-id()`.
+   *
+   * @param {Node} node - The node to identify
+   * @returns {string} An identifier starting with a letter
+   *
+   * @example
+   * engine.generateId(element); // 'N1'
+   */
+  generateId(node) {
+    let id = this.generatedIds.get(node);
+    if (!id) {
+      this.generatedIdCount++;
+      id = `N${this.generatedIdCount}`;
+      this.generatedIds.set(node, id);
+    }
+    return id;
+  }
+
+  /**
+   * Evaluate the `use` expression of an `xsl:key` for one node.
+   *
+   * @param {Node} node - The node being indexed
+   * @param {string} expression - The `use` expression
+   * @returns {string[]} The key values contributed by the node
+   */
+  evaluateKeyValues(node, expression) {
+    const context = this.rootContext.clone({
+      currentNode: node,
+      currentNodeList: [node],
+      position: 1,
+    });
+    const value = this.evaluateXPath(expression, context);
+
+    if (Array.isArray(value)) {
+      return value.map((item) => this.xpathEvaluator.getStringValue(item));
+    }
+    return [this.xpathEvaluator.toString(value)];
   }
 
   /**
@@ -114,22 +246,13 @@ export class XsltEngine {
 
   /**
    * Resolve a relative URI against a base URI
+   *
+   * @param {string} href - The URI to resolve
+   * @param {string} [baseUri] - The base URI
+   * @returns {string} The resolved URI
    */
   resolveUri(href, baseUri) {
-    if (
-      !baseUri ||
-      href.startsWith("http://") ||
-      href.startsWith("https://") ||
-      href.startsWith("/")
-    ) {
-      return href;
-    }
-
-    // Remove filename from baseUri to get directory
-    const lastSlash = baseUri.lastIndexOf("/");
-    const baseDir = lastSlash >= 0 ? baseUri.substring(0, lastSlash + 1) : "";
-
-    return baseDir + href;
+    return resolveUri(href, baseUri);
   }
 
   /**
@@ -290,6 +413,7 @@ export class XsltEngine {
     } catch (error) {
       throw new Error(
         `Failed to include stylesheet "${href}": ${error.message}`,
+        { cause: error },
       );
     }
   }
@@ -331,6 +455,7 @@ export class XsltEngine {
     } catch (error) {
       throw new Error(
         `Failed to import stylesheet "${href}": ${error.message}`,
+        { cause: error },
       );
     }
   }
@@ -427,61 +552,60 @@ export class XsltEngine {
     }
   }
 
+  /**
+   * Register a template rule.
+   *
+   * A union match pattern is equivalent to a set of template rules, one per
+   * alternative (XSLT 1.0 section 5.5), so each alternative is registered
+   * separately with its own default priority.
+   *
+   * @param {Element} node - The xsl:template element
+   */
   registerTemplate(node) {
     const match = node.getAttribute("match");
     const name = node.getAttribute("name");
     const mode = node.getAttribute("mode") || null;
     const priorityAttr = node.getAttribute("priority");
-    const priority = priorityAttr
-      ? parseFloat(priorityAttr)
-      : this.calculatePriority(match);
+    const alternatives = match
+      ? this.splitUnionPattern(match).map((p) => p.trim())
+      : [null];
 
-    this.templates.push({
-      match,
-      name,
-      mode,
-      priority,
-      importPrecedence: this.currentImportPrecedence,
-      node,
-    });
+    for (const alternative of alternatives) {
+      this.templates.push({
+        match: alternative,
+        name,
+        mode,
+        priority: priorityAttr
+          ? parseFloat(priorityAttr)
+          : this.calculatePriority(alternative),
+        importPrecedence: this.currentImportPrecedence,
+        node,
+      });
+    }
   }
 
+  /**
+   * Default priority of a single match pattern (see templatePriority.js).
+   *
+   * @param {string|null} matchPattern - The match pattern
+   * @returns {number} The default priority
+   */
   calculatePriority(matchPattern) {
-    if (!matchPattern) return 0.5;
-
-    // Simplified priority calculation based on XPath 1.0 spec
-    // - NodeType or * have priority -0.5
-    // - NCName:* has priority -0.25
-    // - QName has priority 0
-    // - Other patterns have priority 0.5
-
-    if (
-      matchPattern === "*" ||
-      matchPattern === "node()" ||
-      matchPattern === "text()" ||
-      matchPattern === "comment()" ||
-      matchPattern === "processing-instruction()"
-    ) {
-      return -0.5;
-    }
-
-    if (matchPattern.includes(":*")) {
-      return -0.25;
-    }
-
-    if (/^[a-zA-Z_][\w.-]*$/.test(matchPattern)) {
-      return 0;
-    }
-
-    return 0.5;
+    return calculatePriority(matchPattern ? matchPattern.trim() : matchPattern);
   }
 
   processOutput(node) {
     const method = node.getAttribute("method");
     if (method) this.outputSettings.method = method;
 
+    const version = node.getAttribute("version");
+    if (version) this.outputSettings.version = version;
+
     const encoding = node.getAttribute("encoding");
     if (encoding) this.outputSettings.encoding = encoding;
+
+    const standalone = node.getAttribute("standalone");
+    if (standalone) this.outputSettings.standalone = standalone;
 
     const indent = node.getAttribute("indent");
     if (indent) this.outputSettings.indent = indent;
@@ -513,11 +637,80 @@ export class XsltEngine {
     this.globalVariables[name] = { node, select };
   }
 
+  /**
+   * Register an `xsl:param` top level declaration.
+   *
+   * A value supplied from outside (through `setParameter`) has precedence over
+   * the declared default, so it survives compilation of the stylesheet.
+   *
+   * @param {Element} node - The `xsl:param` element
+   * @returns {void}
+   */
   processGlobalParam(node) {
     const name = node.getAttribute("name");
     const select = node.getAttribute("select");
+    const existing = this.globalParameters[name];
+    const definition = { node, select };
 
-    this.globalParameters[name] = { node, select };
+    if (existing && "value" in existing) {
+      definition.value = existing.value;
+    }
+
+    this.globalParameters[name] = definition;
+  }
+
+  /**
+   * Supply the value of a global parameter from outside the stylesheet.
+   *
+   * The value is merged into the `xsl:param` declaration when there is one, so
+   * removing the value later restores the declared default.
+   *
+   * @param {string} name - The parameter name, `{uri}local` when namespaced
+   * @param {*} value - The value to use
+   * @returns {void}
+   *
+   * @example
+   * engine.setParameterValue('sortOrder', 'ascending');
+   */
+  setParameterValue(name, value) {
+    const definition = this.globalParameters[name];
+
+    if (definition) definition.value = value;
+    else this.globalParameters[name] = { value };
+  }
+
+  /**
+   * Remove an externally supplied parameter value.
+   *
+   * The `xsl:param` declaration of the stylesheet is kept, so the parameter
+   * falls back to its declared default instead of becoming undefined.
+   *
+   * @param {string} name - The parameter name, `{uri}local` when namespaced
+   * @returns {void}
+   *
+   * @example
+   * engine.clearParameterValue('sortOrder');
+   */
+  clearParameterValue(name) {
+    const definition = this.globalParameters[name];
+    if (!definition) return;
+
+    if (definition.node) delete definition.value;
+    else delete this.globalParameters[name];
+  }
+
+  /**
+   * Remove every externally supplied parameter value.
+   *
+   * @returns {void}
+   *
+   * @example
+   * engine.clearParameterValues();
+   */
+  clearParameterValues() {
+    for (const name of Object.keys(this.globalParameters)) {
+      this.clearParameterValue(name);
+    }
   }
 
   processKey(node) {
@@ -526,6 +719,7 @@ export class XsltEngine {
     const use = node.getAttribute("use");
 
     this.keys[name] = { match, use };
+    this.keyRegistry.clear();
   }
 
   processDecimalFormat(node) {
@@ -546,9 +740,7 @@ export class XsltEngine {
   }
 
   processNamespaceAlias(node) {
-    const stylesheet = node.getAttribute("stylesheet-prefix");
-    const result = node.getAttribute("result-prefix");
-    this.namespaceAliases[stylesheet] = result;
+    this.namespaceAliases.add(node);
   }
 
   processAttributeSet(node) {
@@ -588,13 +780,19 @@ export class XsltEngine {
       throw new Error("No output document available");
     }
 
+    // Build the result tree in a neutral XML document: creating nodes directly
+    // in an HTML owner document would lower case names and force the XHTML
+    // namespace on every element.
+    const resultDocument = createResultDocument(doc);
+    const source = this.prepareSource(sourceNode, doc);
+
     // Create context - use document node as initial context for "/" template matching
     // XPath paths like "RootElement/child" expect to start from document node
     const context = new XsltContext({
-      currentNode: sourceNode,
-      currentNodeList: [sourceNode],
+      currentNode: source,
+      currentNodeList: [source],
       position: 1,
-      outputDocument: doc,
+      outputDocument: resultDocument,
       stylesheet: this.stylesheetDoc,
       namespaces: { ...this.namespaces },
       templates: this.templates,
@@ -603,6 +801,8 @@ export class XsltEngine {
       outputMethod: this.outputSettings.method,
       xpathEvaluator: this.xpathEvaluator,
     });
+
+    this.rootContext = context;
 
     // Evaluate global variables
     for (const [name, def] of Object.entries(this.globalParameters)) {
@@ -616,14 +816,35 @@ export class XsltEngine {
     }
 
     // Create result document fragment
-    const fragment = doc.createDocumentFragment();
+    const fragment = resultDocument.createDocumentFragment();
 
     // Apply templates to document node (not documentElement)
     // This ensures "/" template has document as context, so paths like
     // "RootElement/child" work correctly
-    this.applyTemplates([sourceNode], null, context, fragment);
+    this.applyTemplates([source], null, context, fragment);
 
-    return fragment;
+    return importResultFragment(fragment, doc);
+  }
+
+  /**
+   * Apply `xsl:strip-space` to the source tree.
+   *
+   * Stripping produces a copy so the caller's document is never modified; when
+   * no `xsl:strip-space` is declared the original node is used unchanged.
+   *
+   * @param {Node} sourceNode - The source document or element
+   * @param {Document} ownerDocument - Document providing the DOM implementation
+   * @returns {Node} The source to transform
+   */
+  prepareSource(sourceNode, ownerDocument) {
+    const filter = new WhitespaceFilter(this.stripSpace, this.preserveSpace);
+    if (!filter.isActive()) return sourceNode;
+
+    return stripWhitespaceNodes(
+      sourceNode,
+      filter,
+      createResultDocument(ownerDocument),
+    );
   }
 
   /**
@@ -631,7 +852,7 @@ export class XsltEngine {
    */
   transformToDocument(sourceNode) {
     // For Node.js environments, we need a document implementation
-    const doc = this.createDocument();
+    const doc = this.createDocument(sourceNode);
     const fragment = this.transform(sourceNode, doc);
 
     // Move fragment contents to document
@@ -642,16 +863,66 @@ export class XsltEngine {
     return doc;
   }
 
-  createDocument() {
+  /**
+   * Transform a source document and serialize the result to a string.
+   *
+   * Non-W3C convenience method: the result tree is serialized honoring the
+   * `xsl:output` settings of the stylesheet (XSLT 1.0 section 16).
+   *
+   * @param {Node} sourceNode - Source document or element to transform
+   * @returns {string} The serialized transformation result
+   */
+  transformToString(sourceNode) {
+    const fragment = this.transform(
+      sourceNode,
+      this.createDocument(sourceNode),
+    );
+    return serializeResult(fragment, this.outputSettings);
+  }
+
+  /**
+   * Create an empty XML document to hold a transformation result.
+   *
+   * Uses the global `document` when running in a browser and otherwise falls
+   * back to the DOM implementation owning `referenceNode` (e.g. a jsdom or
+   * xmldom document in Node.js).
+   *
+   * @param {Node} [referenceNode] - Any node whose DOM implementation can be reused
+   * @returns {Document} A new empty document
+   * @throws {Error} When no DOM implementation is available
+   */
+  createDocument(referenceNode) {
     if (typeof document !== "undefined") {
       return document.implementation.createDocument(null, null, null);
     }
 
-    // For Node.js - would need JSDOM or similar
+    const ownerDocument =
+      referenceNode &&
+      (referenceNode.nodeType === 9
+        ? referenceNode
+        : referenceNode.ownerDocument);
+    if (ownerDocument?.implementation) {
+      return ownerDocument.implementation.createDocument(null, null, null);
+    }
+
     throw new Error("Document creation not available in this environment");
   }
 
+  /**
+   * Compute the value of a variable or parameter definition.
+   *
+   * A value supplied from outside (`setParameter`) wins over the `select`
+   * expression and over the instantiated content of the declaration.
+   *
+   * @param {{value?: *, select?: string, node?: Element}} def - The definition
+   * @param {XsltContext} context - The context used for evaluation
+   * @returns {*} The variable value
+   */
   evaluateVariable(def, context) {
+    if ("value" in def) {
+      return def.value;
+    }
+
     if (def.select) {
       return this.evaluateXPath(def.select, context);
     }
@@ -677,6 +948,8 @@ export class XsltEngine {
           currentNode: node,
           currentNodeList: nodeList,
           position: i + 1,
+          currentTemplate: template,
+          currentMode: mode,
         });
 
         this.processTemplate(template.node, newContext, output);
@@ -690,7 +963,7 @@ export class XsltEngine {
   /**
    * Find the best matching template for a node
    */
-  findMatchingTemplate(node, mode, context) {
+  findMatchingTemplate(node, mode, context, maxImportPrecedence = Infinity) {
     let bestMatch = null;
     let bestPriority = -Infinity;
     let bestImportPrecedence = -Infinity;
@@ -698,6 +971,7 @@ export class XsltEngine {
     for (const template of this.templates) {
       if (template.mode !== mode) continue;
       if (!template.match) continue;
+      if ((template.importPrecedence || 0) >= maxImportPrecedence) continue;
 
       if (this.matchesPattern(node, template.match, context)) {
         const priority = template.priority;
@@ -796,20 +1070,24 @@ export class XsltEngine {
           1,
           { ...context.variables, ...context.parameters },
           context.namespaces,
+          context,
         );
         const result = this.xpathEvaluator.evaluate(ast, xpathContext);
         const nodes = Array.isArray(result) ? result : [result];
         return nodes.includes(node);
       }
 
-      // For relative patterns, check if this node matches when evaluated from parent
-      if (node.parentNode) {
+      // For relative patterns, check if this node matches when evaluated from
+      // its parent; attribute nodes are reached through their owner element
+      const parent = node.nodeType === 2 ? node.ownerElement : node.parentNode;
+      if (parent) {
         const xpathContext = new XPathContext(
-          node.parentNode,
+          parent,
           1,
           1,
           { ...context.variables, ...context.parameters },
           context.namespaces,
+          context,
         );
         const result = this.xpathEvaluator.evaluate(ast, xpathContext);
         const nodes = Array.isArray(result) ? result : [result];
@@ -823,6 +1101,7 @@ export class XsltEngine {
         1,
         { ...context.variables, ...context.parameters },
         context.namespaces,
+        context,
       );
       const result = this.xpathEvaluator.evaluate(ast, xpathContext);
       const nodes = Array.isArray(result) ? result : [result];
@@ -959,6 +1238,10 @@ export class XsltEngine {
         this.xslApplyTemplates(node, context, output);
         break;
 
+      case "apply-imports":
+        this.xslApplyImports(node, context, output);
+        break;
+
       case "call-template":
         this.xslCallTemplate(node, context, output);
         break;
@@ -1042,42 +1325,56 @@ export class XsltEngine {
 
   /**
    * Process a literal result element (non-XSLT)
+   *
+   * Applies `xsl:namespace-alias` to the element and its attributes, honours
+   * `xsl:use-attribute-sets` and keeps XSLT-only attributes and namespace
+   * declarations out of the result tree.
+   *
+   * @param {Element} node - The literal result element in the stylesheet
+   * @param {XsltContext} context - The current XSLT context
+   * @param {Node} output - The result tree node receiving the element
+   * @returns {void}
    */
   processLiteralResultElement(node, context, output) {
-    // Create element in output
-    let outputElement;
-    const namespaceURI = node.namespaceURI;
-    const nodeName = node.nodeName;
+    const localName = node.localName || node.nodeName;
+    const alias = this.namespaceAliases.resolve(node.namespaceURI, localName);
+    const namespaceUri = alias ? alias.namespaceUri : node.namespaceURI;
+    const qname = alias ? alias.qname : node.nodeName;
 
-    // Apply namespace aliases
-    let resolvedNS = namespaceURI;
-    if (namespaceURI) {
-      for (const [from, to] of Object.entries(this.namespaceAliases)) {
-        if (this.namespaces[from] === namespaceURI) {
-          resolvedNS = this.namespaces[to] || to;
-          break;
-        }
-      }
+    const outputElement =
+      namespaceUri && context.outputDocument.createElementNS
+        ? context.outputDocument.createElementNS(namespaceUri, qname)
+        : context.outputDocument.createElement(qname);
+
+    // Attribute sets come first so literal attributes take precedence
+    const useAttributeSets = getXsltAttribute(
+      node,
+      "use-attribute-sets",
+      XSLT_NS,
+    );
+    if (useAttributeSets) {
+      this.applyAttributeSets(useAttributeSets, context, outputElement);
     }
 
-    if (resolvedNS && context.outputDocument.createElementNS) {
-      outputElement = context.outputDocument.createElementNS(
-        resolvedNS,
-        nodeName,
-      );
-    } else {
-      outputElement = context.outputDocument.createElement(nodeName);
-    }
-
-    // Copy attributes (except XSLT namespace)
     if (node.attributes) {
       for (const attr of node.attributes) {
-        if (attr.namespaceURI === XSLT_NS) continue;
-        if (attr.name.startsWith("xmlns")) continue;
+        if (!shouldCopyAttribute(attr, XSLT_NS)) continue;
 
-        // Process attribute value templates
         const value = this.processAttributeValueTemplate(attr.value, context);
-        outputElement.setAttribute(attr.name, value);
+        const attrAlias = this.namespaceAliases.resolve(
+          attr.namespaceURI,
+          attr.localName || attr.name,
+        );
+
+        if (attrAlias) {
+          outputElement.setAttributeNS(
+            attrAlias.namespaceUri,
+            attrAlias.qname,
+            value,
+          );
+        } else {
+          outputElement.setAttribute(attr.name, value);
+        }
       }
     }
 
@@ -1185,6 +1482,44 @@ export class XsltEngine {
       parameters: { ...context.parameters, ...params },
     });
     this.applyTemplates(nodes, mode, newContext, output);
+  }
+
+  /**
+   * Instantiate `xsl:apply-imports`.
+   *
+   * Only templates with a lower import precedence than the template being
+   * instantiated are considered; when none matches, the built-in template rules
+   * apply, exactly as for `xsl:apply-templates`.
+   *
+   * @param {Element} node - The `xsl:apply-imports` element
+   * @param {XsltContext} context - The current XSLT context
+   * @param {Node} output - The result tree node receiving the output
+   * @returns {void}
+   */
+  xslApplyImports(node, context, output) {
+    const currentNode = context.currentNode;
+    const mode = context.currentMode ?? null;
+    const precedence = context.currentTemplate
+      ? context.currentTemplate.importPrecedence || 0
+      : 0;
+
+    const template = this.findMatchingTemplate(
+      currentNode,
+      mode,
+      context,
+      precedence,
+    );
+
+    if (!template) {
+      this.applyBuiltinTemplate(currentNode, mode, context, output);
+      return;
+    }
+
+    this.processTemplate(
+      template.node,
+      context.clone({ currentTemplate: template }),
+      output,
+    );
   }
 
   xslCallTemplate(node, context, output) {
@@ -1592,96 +1927,52 @@ export class XsltEngine {
   xslNumber(node, context, output) {
     const value = node.getAttribute("value");
     const format = node.getAttribute("format") || "1";
-    const level = node.getAttribute("level") || "single";
 
-    let number;
+    let numbers;
     if (value) {
-      number = Math.round(
-        this.xpathEvaluator.toNumber(this.evaluateXPath(value, context)),
-      );
+      numbers = [
+        Math.round(
+          this.xpathEvaluator.toNumber(this.evaluateXPath(value, context)),
+        ),
+      ];
     } else {
-      // Count based on level
-      number = this.countNumber(context.currentNode, level, node, context);
+      numbers = countXsltNumber(
+        context.currentNode,
+        {
+          level: node.getAttribute("level") || "single",
+          count: node.getAttribute("count"),
+          from: node.getAttribute("from"),
+        },
+        (candidate, pattern) =>
+          this.matchesPattern(candidate, pattern, context),
+      );
     }
 
-    const formatted = this.formatNumber(number, format);
-    const text = context.outputDocument.createTextNode(formatted);
+    const text = context.outputDocument.createTextNode(
+      formatXsltNumber(numbers, format),
+    );
     output.appendChild(text);
   }
 
-  countNumber(node, level, spec, context) {
-    const count = spec.getAttribute("count");
-    const _from = spec.getAttribute("from");
-
-    // Simplified implementation
-    if (level === "single") {
-      // Count preceding siblings matching pattern
-      let n = 1;
-      let sibling = node.previousSibling;
-      while (sibling) {
-        if (sibling.nodeType === 1) {
-          if (!count || this.matchesPattern(sibling, count, context)) {
-            n++;
-          }
-        }
-        sibling = sibling.previousSibling;
-      }
-      return n;
-    }
-
-    return 1;
-  }
-
+  /**
+   * Format a single number with an `xsl:number` format token.
+   *
+   * @param {number} number - The number to format
+   * @param {string} format - The format token, e.g. `1`, `01`, `a`, `I`
+   * @returns {string} The formatted number
+   */
   formatNumber(number, format) {
-    // Simple format implementation
-    if (/^[0-9]+$/.test(format)) {
-      return String(number).padStart(format.length, "0");
-    }
-
-    if (format === "a") {
-      return String.fromCharCode(96 + ((number - 1) % 26) + 1);
-    }
-
-    if (format === "A") {
-      return String.fromCharCode(64 + ((number - 1) % 26) + 1);
-    }
-
-    if (format === "i") {
-      return this.toRoman(number).toLowerCase();
-    }
-
-    if (format === "I") {
-      return this.toRoman(number);
-    }
-
-    return String(number);
+    return formatXsltNumber([number], format);
   }
 
+  /**
+   * Convert a number to an upper case Roman numeral.
+   *
+   * @param {number} num - The number to convert
+   * @returns {string} The Roman numeral
+   */
   toRoman(num) {
-    const romanNumerals = [
-      ["M", 1000],
-      ["CM", 900],
-      ["D", 500],
-      ["CD", 400],
-      ["C", 100],
-      ["XC", 90],
-      ["L", 50],
-      ["XL", 40],
-      ["X", 10],
-      ["IX", 9],
-      ["V", 5],
-      ["IV", 4],
-      ["I", 1],
-    ];
-
-    let result = "";
-    for (const [numeral, value] of romanNumerals) {
-      while (num >= value) {
-        result += numeral;
-        num -= value;
-      }
-    }
-    return result;
+    return toRoman(num);
   }
 
   xslMessage(node, context, _output) {
@@ -1787,6 +2078,7 @@ export class XsltEngine {
       context.currentNodeList.length,
       { ...context.variables, ...context.parameters },
       context.namespaces,
+      context,
     );
     return this.xpathEvaluator.evaluate(ast, xpathContext);
   }

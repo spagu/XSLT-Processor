@@ -8,7 +8,8 @@
  * - dist/xslt-processor.cjs - CommonJS module
  * - dist/xslt-processor.browser.js - Browser bundle (IIFE)
  * - dist/xslt-processor.browser.min.js - Minified browser bundle
- * - dist/xslt-processor.d.ts - TypeScript declarations
+ * - dist/xslt-processor.d.ts - TypeScript declarations (ESM)
+ * - dist/xslt-processor.d.cts - TypeScript declarations (CommonJS)
  */
 
 import { build } from 'esbuild';
@@ -35,7 +36,7 @@ async function buildAll() {
     bundle: true,
     format: 'esm',
     platform: 'neutral',
-    target: ['es2020'],
+    target: ['es2022'],
     sourcemap: true
   });
 
@@ -47,7 +48,7 @@ async function buildAll() {
     bundle: true,
     format: 'cjs',
     platform: 'node',
-    target: ['node18'],
+    target: ['node20'],
     sourcemap: true
   });
 
@@ -60,7 +61,7 @@ async function buildAll() {
     format: 'iife',
     globalName: 'XsltProcessorLib',
     platform: 'browser',
-    target: ['es2020'],
+    target: ['es2022'],
     sourcemap: true,
     footer: {
       js: `
@@ -81,7 +82,7 @@ if (typeof window !== 'undefined') {
     format: 'iife',
     globalName: 'XsltProcessorLib',
     platform: 'browser',
-    target: ['es2020'],
+    target: ['es2022'],
     minify: true,
     sourcemap: true,
     footer: {
@@ -92,8 +93,19 @@ if (typeof window !== 'undefined') {
   // Generate TypeScript declarations
   console.log('Generating TypeScript declarations...');
   const declarations = `/**
- * @cv-xslt/xslt-processor - TypeScript Declarations
+ * @tradik/xslt-processor - TypeScript Declarations
  */
+
+/**
+ * Loader used to resolve xsl:import and xsl:include references.
+ *
+ * The loader is synchronous: it must return the external stylesheet as a
+ * Document or as an XML string (which is parsed automatically).
+ *
+ * @param href - The resolved URI of the referenced stylesheet
+ * @param baseUri - The URI of the importing/including stylesheet, if known
+ */
+export type StylesheetLoader = (href: string, baseUri?: string) => Document | string;
 
 /**
  * XSLTProcessor - Applies XSLT stylesheet transformations to XML documents.
@@ -102,10 +114,27 @@ export class XSLTProcessor {
   constructor();
 
   /**
+   * The underlying XSLT engine (advanced usage).
+   * Null until a stylesheet has been imported.
+   */
+  readonly engine: XsltEngine | null;
+
+  /**
+   * Sets the loader used to resolve xsl:import and xsl:include references.
+   * Call it before importStylesheet() so the loader is available while the
+   * stylesheet is compiled; calling it afterwards updates the live engine.
+   * @param loader - The loader function, or null to remove it
+   * @returns This processor, to allow chaining
+   */
+  setStylesheetLoader(loader: StylesheetLoader | null): this;
+
+  /**
    * Imports the XSLT stylesheet.
    * @param style - The XSLT stylesheet to import (Document or Element)
+   * @param stylesheetUri - Optional base URI used to resolve relative
+   *   xsl:import/xsl:include hrefs
    */
-  importStylesheet(style: Node): void;
+  importStylesheet(style: Node, stylesheetUri?: string): void;
 
   /**
    * Transforms the node source and returns a document fragment.
@@ -121,6 +150,14 @@ export class XSLTProcessor {
    * @returns The transformed result as an XMLDocument
    */
   transformToDocument(source: Node): XMLDocument | null;
+
+  /**
+   * Transforms the node source and serializes the result to a string,
+   * honoring the stylesheet xsl:output settings (non-W3C convenience method).
+   * @param source - The XML document to transform
+   * @returns The serialized result, or null on a transformation error
+   */
+  transformToString(source: Node): string | null;
 
   /**
    * Sets a parameter in the XSLT stylesheet.
@@ -152,6 +189,7 @@ export class XSLTProcessor {
 
   /**
    * Removes all parameters and stylesheets from the XSLTProcessor.
+   * The stylesheet loader is configuration, not stylesheet state, and is preserved.
    */
   reset(): void;
 }
@@ -279,12 +317,63 @@ export class XsltContext {
  * XSLT processing engine.
  */
 export class XsltEngine {
-  constructor();
+  constructor(options?: { stylesheetLoader?: StylesheetLoader | null; baseUri?: string });
 
-  importStylesheet(stylesheetNode: Node): void;
+  setStylesheetLoader(loader: StylesheetLoader | null): void;
+  importStylesheet(stylesheetNode: Node, stylesheetUri?: string): void;
   transform(sourceNode: Node, ownerDocument: Document): DocumentFragment;
   transformToDocument(sourceNode: Node): Document;
+  transformToString(sourceNode: Node): string;
+
+  outputSettings: OutputSettings;
 }
+
+/**
+ * xsl:output settings driving the result serialization
+ * (XSLT 1.0 section 16). Accepts the raw stylesheet values, so the yes/no
+ * attributes are strings and cdata-section-elements may be a name list.
+ */
+export interface OutputSettings {
+  method?: 'xml' | 'html' | 'xhtml' | 'text' | 'auto' | string;
+  version?: string;
+  encoding?: string;
+  standalone?: 'yes' | 'no' | string | null;
+  indent?: 'yes' | 'no' | boolean;
+  omitXmlDeclaration?: 'yes' | 'no' | boolean;
+  doctypePublic?: string | null;
+  doctypeSystem?: string | null;
+  mediaType?: string | null;
+  cdataSectionElements?: string[] | string;
+}
+
+/**
+ * Serialize a transformation result honoring the xsl:output settings.
+ * @param node - Result document, fragment or element
+ * @param outputSettings - xsl:output settings
+ * @returns The serialized result, or an empty string for a null node
+ */
+export function serializeResult(
+  node: Node | null,
+  outputSettings?: OutputSettings
+): string;
+
+/**
+ * Mark a text node as produced with disable-output-escaping="yes".
+ */
+export function markRawText<T extends Node | null>(node: T): T;
+
+/**
+ * Check whether a node must be serialized without output escaping.
+ */
+export function isRawText(node: Node | null): boolean;
+
+/**
+ * Normalize raw xsl:output settings for the serializers.
+ */
+export function resolveOutputSettings(
+  outputSettings: OutputSettings | null,
+  node: Node | null
+): Required<OutputSettings> & { indent: boolean; omitXmlDeclaration: boolean; cdataSectionElements: Set<string> };
 
 /**
  * Version information.
@@ -304,14 +393,19 @@ export const isNode: boolean;
 export default XSLTProcessor;
 `;
 
+  // The same declarations are emitted twice so that TypeScript's node16/nodenext
+  // resolution picks a CommonJS-flavoured file for `require()` consumers instead
+  // of treating the ESM `.d.ts` as the type source of the `.cjs` bundle.
   writeFileSync(join(distDir, 'xslt-processor.d.ts'), declarations);
+  writeFileSync(join(distDir, 'xslt-processor.d.cts'), declarations);
 
   console.log('\nBuild complete! Output files:');
   console.log('  dist/xslt-processor.js         - ESM module');
   console.log('  dist/xslt-processor.cjs        - CommonJS module');
   console.log('  dist/xslt-processor.browser.js - Browser bundle');
   console.log('  dist/xslt-processor.browser.min.js - Minified browser bundle');
-  console.log('  dist/xslt-processor.d.ts       - TypeScript declarations');
+  console.log('  dist/xslt-processor.d.ts       - TypeScript declarations (ESM)');
+  console.log('  dist/xslt-processor.d.cts      - TypeScript declarations (CommonJS)');
 }
 
 try {
