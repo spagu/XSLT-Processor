@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-09-10
+
+### Added
+
+- **Output serializer (`xsl:output`, XSLT 1.0 section 16)** - new `src/xslt/serializer.js` exporting `serializeResult(node, outputSettings)` plus the focused modules in `src/xslt/serializer/` (`baseWriter`, `xmlSerializer`, `htmlSerializer`, `textSerializer`, `escape`, `indent`, `namespaces`, `settings`, `rawText`, `constants`).
+  - `method="xml"` - XML declaration honoring `encoding`, `version` and `standalone`, `omit-xml-declaration`, `doctype-public`/`doctype-system`, minimal text and attribute escaping, `<x/>` for empty elements, namespace declarations emitted where first used and never twice, comments and processing instructions.
+  - `method="html"` - no XML declaration, HTML doctype, void elements written as `<br>`, minimized boolean attributes, unescaped `script`/`style` content, `>`-terminated processing instructions, original element and attribute name case, no namespace declarations.
+  - `method="xhtml"` - XML rules with void elements written as `<br />`.
+  - `method="text"` - concatenation of all descendant text nodes, unescaped.
+  - Automatic default method detection: `html` when the result document element is `html` in no namespace, `xml` otherwise.
+  - `indent="yes"` - newline plus two-space indentation for element-only content; mixed content, `cdata-section-elements` and the HTML `pre`/`script`/`style`/`textarea` elements are left untouched.
+  - `cdata-section-elements` - text children wrapped in `<![CDATA[...]]>`, split around any `]]>` terminator.
+  - `disable-output-escaping="yes"` on `xsl:text` and `xsl:value-of` is now honored; text nodes can also be marked explicitly with the exported `markRawText()` helper.
+- **`XSLTProcessor.transformToString(source)`** and **`XsltEngine.transformToString(sourceNode)`** - non-W3C convenience methods returning the serialized result. `transformToFragment()` and `transformToDocument()` are unchanged.
+- **Public exports** - `serializeResult`, `markRawText`, `isRawText` and `resolveOutputSettings` are exported from the package entry point, and `transformToString`/`OutputSettings` are declared in the generated TypeScript declarations.
+- **CLI** - `bin/xslt.js` now serializes through `transformToString()` instead of re-indenting with a regular expression, and gained `--indent`, `--method <m>` and `--no-declaration` flags that override the stylesheet `xsl:output` settings. Helpers were extracted to `bin/lib/options.js` and `bin/lib/transform.js`.
+- **Tests** - `src/xslt/serializer.test.js`, `src/XSLTProcessor.serialization.test.js` and `src/cli.test.js` (119 new tests, 560 in total), including the `<xsl:output method="xml" indent="yes"/>` regression from DesignLiquido/xslt-processor#219.
+
+### Changed
+
+- `-f, --format` on the CLI is now an alias of `--indent` and drives the real serializer instead of the previous naive re-indentation.
+
 ## [1.0.8] - 2026-07-15
 
 ### Changed
