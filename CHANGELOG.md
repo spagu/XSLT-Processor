@@ -74,8 +74,9 @@ Minor release: new public API (`setStylesheetLoader`, `setDocumentLoader`, `tran
 
 ### Security
 
-- **CLI path validation** - input and output paths are resolved, confined to a base directory (the working directory, or `--base-dir <dir>`) and validated (regular file / existing parent directory, no NUL bytes) before any filesystem access (SonarCloud S8707). Paths outside the base directory are rejected with a hint to use `--base-dir`.
-- **Release workflow** - the publish job installs with `npm ci --ignore-scripts`; `docker/setup-buildx-action` is pinned to a full commit SHA.
+- **CLI path validation** - input and output paths are resolved, canonicalized (`realpathSync`, so symbolic links cannot escape), confined to a trusted base directory (the working directory, or `XSLT_BASE_DIR`) and validated (regular file / existing parent directory, no NUL bytes) before any filesystem access (SonarCloud S8707). Paths outside the base directory are rejected with a hint.
+- **Workflows** - every GitHub Action is pinned to a full commit SHA; the publish job installs with `npm ci --ignore-scripts`.
+- **Docker** - the production image runs as the unprivileged `node` user.
 - **js-yaml** (transitive via `eslint`) - GHSA-5p4m-2wfm-xmqj, vulnerable `>= 4.0.0, < 4.3.1`. Resolved by upgrading `eslint` to 10.x, which no longer pulls `@eslint/eslintrc`/`js-yaml` at all; `npm audit` reports 0 vulnerabilities.
 - **brace-expansion** - GHSA-mh99-v99m-4gvg / GHSA-rgw5-rvv9-x895 (DoS), resolved via `npm audit fix` (now 5.0.9).
 

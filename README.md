@@ -153,12 +153,19 @@ The output is serialized according to the `xsl:output` element of the
 stylesheet (see [Serializing output](#serializing-output-xsloutput)); the
 options below override individual `xsl:output` settings.
 
+All file arguments must live inside the current working directory (symbolic
+links are resolved first). To work with files elsewhere, run the command from
+that directory or point `XSLT_BASE_DIR` at it:
+
+```bash
+XSLT_BASE_DIR=/srv/data xslt /srv/data/in.xml /srv/data/t.xsl -o /srv/data/out.html
+```
+
 #### CLI Options
 
 | Option | Description |
 |--------|-------------|
 | `-o, --output <file>` | Write output to file instead of stdout |
-| `--base-dir <dir>` | Directory every file argument must live in (default: current working directory). Paths outside it are rejected. |
 | `-p, --param <n>=<v>` | Set XSLT parameter (can be used multiple times) |
 | `-f, --format` | Format output with indentation (same as `--indent`) |
 | `--indent` | Override `xsl:output` to `indent="yes"` |

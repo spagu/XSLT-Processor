@@ -84,7 +84,7 @@ async function main() {
   const dom = createDomEnvironment();
 
   try {
-    const baseDir = resolveBaseDir(args.values["base-dir"]);
+    const baseDir = resolveBaseDir();
     const xmlFile = resolveInputPath(xmlPath, "XML", baseDir);
     const xsltFile = resolveInputPath(xsltPath, "XSLT", baseDir);
     const outputFile = args.values.output

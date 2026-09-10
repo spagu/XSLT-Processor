@@ -22,7 +22,6 @@ export const VERSION = require("../../package.json").version;
  */
 export const CLI_OPTIONS = {
   output: { type: "string", short: "o" },
-  "base-dir": { type: "string" },
   param: { type: "string", short: "p", multiple: true },
   format: { type: "boolean", short: "f", default: false },
   indent: { type: "boolean", default: false },
@@ -49,8 +48,6 @@ ARGUMENTS:
 
 OPTIONS:
   -o, --output <file>     Write output to file instead of stdout
-      --base-dir <dir>    Directory all file arguments must live in
-                          (default: the current working directory)
   -p, --param <n>=<v>     Set XSLT parameter (can be used multiple times)
   -f, --format            Format output with indentation (same as --indent)
       --indent            Override xsl:output to indent="yes"
@@ -61,6 +58,9 @@ OPTIONS:
 
 The output is serialized according to the xsl:output element of the
 stylesheet; the options above override individual xsl:output settings.
+
+All file arguments must live inside the current working directory, or inside
+the directory named by the XSLT_BASE_DIR environment variable when it is set.
 
 EXAMPLES:
   # Basic transformation

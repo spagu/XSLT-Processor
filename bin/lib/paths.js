@@ -2,17 +2,16 @@
  * XSLT Processor CLI - Path Validation
  *
  * Every file the CLI reads or writes goes through this module first: the raw
- * command line argument is resolved to an absolute path, confined to the base
- * directory (the working directory unless `--base-dir` says otherwise) and
- * validated against the file system before any read or write is attempted, so
- * a malformed or hostile argument fails with a clear message instead of
- * reaching `fs`.
+ * command line argument is resolved, canonicalized with `realpathSync`, checked
+ * to lie inside the trusted base directory and validated against the file
+ * system before any read or write is attempted. The base directory is the
+ * current working directory, or `XSLT_BASE_DIR` when that variable is set.
  */
 
 "use strict";
 
-import { statSync } from "node:fs";
-import { dirname, resolve, sep } from "node:path";
+import { realpathSync, statSync } from "node:fs";
+import { basename, dirname, join, resolve, sep } from "node:path";
 
 /**
  * Error raised for a command line path that cannot be used.
@@ -48,128 +47,136 @@ function toAbsolutePath(rawPath, label) {
 }
 
 /**
- * Ensure an absolute path lies inside the allowed base directory.
+ * Canonicalize an existing path, turning a missing entry into a CLI error.
  *
- * This is the actual security boundary of the CLI: whatever the caller typed,
- * the canonical path must be the base directory itself or a descendant of it.
+ * @param {string} absolute - Absolute path that should exist
+ * @param {string} message - Error message when nothing exists there
+ * @returns {string} The canonical path with symbolic links resolved
+ * @throws {CliPathError} When the path does not exist
+ */
+function canonicalize(absolute, message) {
+  try {
+    return realpathSync(absolute);
+  } catch {
+    throw new CliPathError(message);
+  }
+}
+
+/**
+ * Ensure a canonical path lies inside the trusted base directory.
  *
- * @param {string} absolute - Canonical absolute path
+ * This is the security boundary of the CLI: whatever the caller typed, the
+ * canonical path must be the base directory itself or a descendant of it.
+ *
+ * @param {string} canonical - Canonical absolute path
  * @param {string} baseDir - Canonical absolute base directory
  * @param {string} label - Human readable role of the path, used in errors
- * @returns {string} The same absolute path, now known to be inside baseDir
+ * @returns {string} The same path, now known to be inside baseDir
  * @throws {CliPathError} When the path escapes the base directory
  */
-function assertInsideBase(absolute, baseDir, label) {
-  if (absolute !== baseDir && !absolute.startsWith(baseDir + sep)) {
+function assertInsideBase(canonical, baseDir, label) {
+  const inside =
+    canonical === baseDir ||
+    (canonical.startsWith(baseDir) && canonical.startsWith(baseDir + sep));
+
+  if (!inside) {
     throw new CliPathError(
-      `${label} path is outside the allowed base directory (${baseDir}): ${absolute}. ` +
-        "Use --base-dir to allow another directory.",
+      `${label} path is outside the allowed base directory (${baseDir}): ${canonical}. ` +
+        "Run the command from that directory or set XSLT_BASE_DIR.",
     );
   }
-  return absolute;
+
+  return canonical;
 }
 
 /**
- * Resolve and validate the base directory all other paths are confined to.
+ * Resolve the trusted base directory all file arguments are confined to.
  *
- * @param {string} [rawPath] - Raw `--base-dir` argument; defaults to the working directory
- * @returns {string} The absolute path of an existing directory
- * @throws {CliPathError} When the argument is malformed or not a directory
+ * Uses `XSLT_BASE_DIR` when set, otherwise the current working directory.
+ *
+ * @returns {string} The canonical absolute path of an existing directory
+ * @throws {CliPathError} When the configured directory does not exist or is not a directory
  *
  * @example
- * const baseDir = resolveBaseDir(); // process.cwd()
+ * const baseDir = resolveBaseDir(); // process.cwd() unless XSLT_BASE_DIR is set
  */
-export function resolveBaseDir(rawPath = process.cwd()) {
-  const absolute = toAbsolutePath(rawPath, "Base directory");
-  const stats = statOrNothing(absolute);
+export function resolveBaseDir() {
+  const configured = process.env.XSLT_BASE_DIR || process.cwd();
+  const absolute = toAbsolutePath(configured, "Base directory");
+  const canonical = canonicalize(
+    absolute,
+    `Base directory does not exist: ${absolute}`,
+  );
 
-  if (!stats || !stats.isDirectory()) {
-    throw new CliPathError(`Base directory is not a directory: ${absolute}`);
+  if (!statSync(canonical).isDirectory()) {
+    throw new CliPathError(`Base directory is not a directory: ${canonical}`);
   }
 
-  return absolute;
-}
-
-/**
- * Stat a path without throwing when nothing exists there.
- *
- * @param {string} target - Absolute path to stat
- * @returns {import('node:fs').Stats|undefined} The stats, or undefined
- */
-function statOrNothing(target) {
-  return statSync(target, { throwIfNoEntry: false });
+  return canonical;
 }
 
 /**
  * Validate a path the CLI is going to read.
  *
  * @param {string} rawPath - Raw command line argument
- * @param {string} [label] - Human readable role of the path, used in errors
- * @param {string} [baseDir] - Directory the path must live in (see resolveBaseDir)
- * @returns {string} The absolute path of an existing regular file
- * @throws {CliPathError} When the path is malformed, missing or not a file
+ * @param {string} label - Human readable role of the path, used in errors
+ * @param {string} baseDir - Canonical base directory from resolveBaseDir()
+ * @returns {string} The canonical path of an existing regular file inside baseDir
+ * @throws {CliPathError} When the path is malformed, missing, outside baseDir or not a file
  *
  * @example
- * const xmlFile = resolveInputPath('data.xml', 'XML');
+ * const xmlFile = resolveInputPath("data.xml", "XML", resolveBaseDir());
  */
-export function resolveInputPath(
-  rawPath,
-  label = "Input",
-  baseDir = process.cwd(),
-) {
-  const absolute = assertInsideBase(
-    toAbsolutePath(rawPath, label),
+export function resolveInputPath(rawPath, label, baseDir) {
+  const absolute = toAbsolutePath(rawPath, label);
+  const canonical = assertInsideBase(
+    canonicalize(absolute, `File not found: ${absolute}`),
     baseDir,
     label,
   );
-  const stats = statOrNothing(absolute);
 
-  if (!stats) {
-    throw new CliPathError(`File not found: ${absolute}`);
+  if (!statSync(canonical).isFile()) {
+    throw new CliPathError(`${label} path is not a file: ${canonical}`);
   }
 
-  if (!stats.isFile()) {
-    throw new CliPathError(`${label} path is not a file: ${absolute}`);
-  }
-
-  return absolute;
+  return canonical;
 }
 
 /**
  * Validate a path the CLI is going to write.
  *
- * The file itself may be missing, but its parent directory has to exist and an
- * existing target has to be a regular file.
+ * The file itself may be missing, but its parent directory has to exist, lie
+ * inside the base directory, and an existing target has to be a regular file.
  *
  * @param {string} rawPath - Raw command line argument
- * @param {string} [baseDir] - Directory the path must live in (see resolveBaseDir)
- * @returns {string} The absolute path to write to
- * @throws {CliPathError} When the path is malformed or not writable as a file
+ * @param {string} baseDir - Canonical base directory from resolveBaseDir()
+ * @returns {string} The canonical path to write to
+ * @throws {CliPathError} When the path is malformed, outside baseDir or not writable as a file
  *
  * @example
- * const target = resolveOutputPath('build/result.html');
+ * const target = resolveOutputPath("build/result.html", resolveBaseDir());
  */
-export function resolveOutputPath(rawPath, baseDir = process.cwd()) {
-  const absolute = assertInsideBase(
-    toAbsolutePath(rawPath, "Output"),
-    baseDir,
-    "Output",
+export function resolveOutputPath(rawPath, baseDir) {
+  const absolute = toAbsolutePath(rawPath, "Output");
+  const parent = canonicalize(
+    dirname(absolute),
+    `Output directory does not exist: ${dirname(absolute)}`,
   );
-  const parent = dirname(absolute);
-  const parentStats = statOrNothing(parent);
 
-  if (!parentStats) {
-    throw new CliPathError(`Output directory does not exist: ${parent}`);
-  }
-
-  if (!parentStats.isDirectory()) {
+  if (!statSync(parent).isDirectory()) {
     throw new CliPathError(`Output directory is not a directory: ${parent}`);
   }
 
-  const targetStats = statOrNothing(absolute);
+  const canonical = assertInsideBase(
+    join(parent, basename(absolute)),
+    baseDir,
+    "Output",
+  );
+  const targetStats = statSync(canonical, { throwIfNoEntry: false });
+
   if (targetStats && !targetStats.isFile()) {
-    throw new CliPathError(`Output path is not a file: ${absolute}`);
+    throw new CliPathError(`Output path is not a file: ${canonical}`);
   }
 
-  return absolute;
+  return canonical;
 }

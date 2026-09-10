@@ -56,9 +56,11 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 
 # Install production dependencies only
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts && chown -R node:node /app
 
 ENV NODE_ENV=production
+
+USER node
 
 # Default command shows version
 CMD ["node", "-e", "console.log('xslt-processor v' + require('./package.json').version)"]

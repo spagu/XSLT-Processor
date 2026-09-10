@@ -51,11 +51,11 @@ function cliEnvironment() {
  * @param {string[]} args - Command line arguments
  * @returns {string} Captured stdout
  */
-function runCli(args) {
+function runCli(args, extraEnv = {}) {
   return execFileSync(process.execPath, [CLI, ...args], {
     encoding: "utf-8",
     stdio: ["ignore", "pipe", "pipe"],
-    env: cliEnvironment(),
+    env: { ...cliEnvironment(), ...extraEnv },
     cwd: workDir,
   });
 }
@@ -65,9 +65,9 @@ function runCli(args) {
  * @param {string[]} args - Command line arguments
  * @returns {{status: number, stderr: string}} Exit status and stderr
  */
-function runCliFailing(args) {
+function runCliFailing(args, extraEnv = {}) {
   try {
-    runCli(args);
+    runCli(args, extraEnv);
     throw new Error("expected the CLI to fail");
   } catch (error) {
     return { status: error.status, stderr: String(error.stderr) };
@@ -253,48 +253,48 @@ describe("xslt CLI", () => {
       const { status, stderr } = runCliFailing([xml, "plain.xsl"]);
       assert.strictEqual(status, 1);
       assert.match(stderr, /outside the allowed base directory/);
-      assert.match(stderr, /--base-dir/);
+      assert.match(stderr, /XSLT_BASE_DIR/);
     } finally {
       rmSync(outside, { recursive: true, force: true });
     }
   });
 
-  it("should accept files under an explicit --base-dir", () => {
+  it("should accept files under XSLT_BASE_DIR", () => {
     const outside = mkdtempSync(join(tmpdir(), "xslt-outside-"));
     const xml = join(outside, "data.xml");
+    const xsl = join(outside, "plain.xsl");
     writeFileSync(xml, "<root/>", "utf-8");
+    writeFileSync(
+      xsl,
+      readFileSync(join(workDir, "plain.xsl"), "utf-8"),
+      "utf-8",
+    );
     try {
-      const { status, stderr } = runCliFailing([
-        xml,
-        "plain.xsl",
-        "--base-dir",
-        outside,
-      ]);
-      // the stylesheet is now the one outside the base directory
+      const env = { XSLT_BASE_DIR: outside };
+      const { status, stderr } = runCliFailing([xml, "plain.xsl"], env);
       assert.strictEqual(status, 1);
       assert.match(stderr, /XSLT path is outside the allowed base directory/);
-      const xsl = join(outside, "plain.xsl");
-      writeFileSync(
-        xsl,
-        readFileSync(join(workDir, "plain.xsl"), "utf-8"),
-        "utf-8",
-      );
-      const out = runCli([xml, xsl, "--base-dir", outside, "--no-declaration"]);
+      const out = runCli([xml, xsl, "--no-declaration"], env);
       assert.strictEqual(out.trim(), "<out>none</out>");
     } finally {
       rmSync(outside, { recursive: true, force: true });
     }
   });
 
-  it("should fail when --base-dir is not a directory", () => {
-    const { status, stderr } = runCliFailing([
-      "data.xml",
-      "plain.xsl",
-      "--base-dir",
-      "data.xml",
-    ]);
+  it("should fail when XSLT_BASE_DIR is not a directory", () => {
+    const { status, stderr } = runCliFailing(["data.xml", "plain.xsl"], {
+      XSLT_BASE_DIR: join(workDir, "data.xml"),
+    });
     assert.strictEqual(status, 1);
     assert.match(stderr, /Base directory is not a directory/);
+  });
+
+  it("should fail when XSLT_BASE_DIR does not exist", () => {
+    const { status, stderr } = runCliFailing(["data.xml", "plain.xsl"], {
+      XSLT_BASE_DIR: join(workDir, "missing"),
+    });
+    assert.strictEqual(status, 1);
+    assert.match(stderr, /Base directory does not exist/);
   });
 
   it("should fail for malformed XML", () => {
