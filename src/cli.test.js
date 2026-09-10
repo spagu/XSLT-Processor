@@ -8,7 +8,13 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -234,11 +240,13 @@ describe("xslt CLI", () => {
   });
 
   it("should fail when the output path is an existing directory", () => {
+    const directory = join(workDir, "existing-dir");
+    mkdirSync(directory, { recursive: true });
     const { status, stderr } = runCliFailing([
       join(workDir, "data.xml"),
       join(workDir, "identity.xsl"),
       "-o",
-      workDir,
+      directory,
     ]);
 
     assert.strictEqual(status, 1);
