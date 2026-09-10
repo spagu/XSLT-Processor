@@ -49,7 +49,7 @@ export { XsltEngine, XsltContext } from "./xslt/index.js";
 /**
  * Version information
  */
-export const VERSION = "1.0.8";
+export const VERSION = "1.0.9";
 
 /**
  * Check if we're running in a browser environment

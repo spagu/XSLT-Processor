@@ -168,14 +168,21 @@ const processor = new XSLTProcessor();
 
 | Method | Description |
 |--------|-------------|
-| `importStylesheet(node)` | Imports an XSLT stylesheet from a Document or Element node |
+| `importStylesheet(node, stylesheetUri?)` | Imports an XSLT stylesheet from a Document or Element node. The optional `stylesheetUri` is the base URI used to resolve relative `xsl:import`/`xsl:include` hrefs |
 | `transformToFragment(source, output)` | Transforms XML and returns a DocumentFragment |
 | `transformToDocument(source)` | Transforms XML and returns an XMLDocument |
 | `setParameter(namespaceURI, localName, value)` | Sets an XSLT parameter |
 | `getParameter(namespaceURI, localName)` | Gets an XSLT parameter value |
 | `removeParameter(namespaceURI, localName)` | Removes an XSLT parameter |
 | `clearParameters()` | Removes all parameters |
-| `reset()` | Resets the processor, removing stylesheet and parameters |
+| `reset()` | Resets the processor, removing stylesheet and parameters (the stylesheet loader is kept) |
+| `setStylesheetLoader(loader)` | Sets the loader used to resolve `xsl:import`/`xsl:include`. Returns the processor for chaining |
+
+#### Properties
+
+| Property | Description |
+|----------|-------------|
+| `engine` | Read-only access to the underlying `XsltEngine` (advanced usage). It is `null` until `importStylesheet()` has been called |
 
 ### Parameters Example
 
@@ -196,31 +203,93 @@ processor.clearParameters();
 
 ### Using xsl:import and xsl:include
 
-To use `xsl:import` and `xsl:include` elements in your stylesheets, you need to configure a stylesheet loader that tells the processor how to fetch external stylesheets:
+To use `xsl:import` and `xsl:include` elements in your stylesheets, configure a
+stylesheet loader that tells the processor how to fetch external stylesheets.
+
+Call `processor.setStylesheetLoader(...)` **before** `importStylesheet()` -
+references are resolved while the main stylesheet is being compiled, so a loader
+set afterwards is too late for that stylesheet (it still applies to the next
+`importStylesheet()` call).
+
+The loader is **synchronous**. It receives the resolved `href` and the `baseUri`
+of the importing stylesheet, and must return either a `Document` or an XML
+`string` (which is parsed automatically). Promises are not awaited, so pre-load
+remote stylesheets before importing.
 
 ```javascript
 import { XSLTProcessor } from '@tradik/xslt-processor';
 
 const processor = new XSLTProcessor();
 
-// Configure stylesheet loader
-processor.engine.setStylesheetLoader((href, baseUri) => {
-  // href: the href attribute from xsl:import/xsl:include
-  // baseUri: the URI of the importing stylesheet
+// Pre-loaded stylesheets, keyed by resolved URI
+const stylesheets = {
+  '/styles/base.xsl': baseXslText,
+  '/styles/utils.xsl': utilsXslText,
+};
 
-  // Option 1: Return a parsed Document
-  const response = await fetch(href);
-  const text = await response.text();
-  const parser = new DOMParser();
-  return parser.parseFromString(text, 'application/xml');
-
-  // Option 2: Return XML string (will be parsed automatically)
-  return await fetch(href).then(r => r.text());
+processor.setStylesheetLoader((href, baseUri) => {
+  // href:    resolved URI of the xsl:import/xsl:include target
+  // baseUri: URI of the importing stylesheet (the stylesheetUri you passed in)
+  const xml = stylesheets[href];
+  if (!xml) {
+    throw new Error(`Unknown stylesheet: ${href} (from ${baseUri})`);
+  }
+  return xml; // a Document is also accepted
 });
 
-// Now xsl:import and xsl:include will work
+// The second argument is the base URI used to resolve relative hrefs
 processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
 ```
+
+If you need remote stylesheets in the browser, fetch them first and hand the
+loader a ready-made map:
+
+```javascript
+const hrefs = ['/styles/base.xsl', '/styles/utils.xsl'];
+const texts = await Promise.all(
+  hrefs.map((href) => fetch(href).then((response) => response.text())),
+);
+const cache = Object.fromEntries(hrefs.map((href, i) => [href, texts[i]]));
+
+processor.setStylesheetLoader((href) => cache[href]);
+processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
+```
+
+#### Node.js example (filesystem loader)
+
+```javascript
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { DOMParser } from '@xmldom/xmldom'; // or: new JSDOM(...).window.DOMParser
+import { XSLTProcessor } from '@tradik/xslt-processor';
+
+const parser = new DOMParser();
+const mainPath = path.resolve('./styles/main.xsl');
+
+const processor = new XSLTProcessor();
+
+processor.setStylesheetLoader((href, baseUri) => {
+  const filePath = path.resolve(path.dirname(baseUri), href);
+  return readFileSync(filePath, 'utf8'); // returned XML string is parsed for you
+});
+
+const mainStylesheet = parser.parseFromString(
+  readFileSync(mainPath, 'utf8'),
+  'application/xml',
+);
+
+processor.importStylesheet(mainStylesheet, mainPath);
+
+const xml = parser.parseFromString(readFileSync('./data.xml', 'utf8'), 'application/xml');
+const result = processor.transformToDocument(xml);
+```
+
+#### Advanced: the engine accessor
+
+After `importStylesheet()`, `processor.engine` exposes the underlying
+`XsltEngine` for advanced inspection (output settings, compiled templates). It
+is `null` before the first import, which is why the loader must be configured
+through `processor.setStylesheetLoader(...)` rather than `processor.engine`.
 
 #### Import vs Include Behavior
 
@@ -461,30 +530,35 @@ docker-compose run build
 
 ### Publishing to npm
 
-The package is automatically published to npm when a GitHub release is created or a version tag is pushed.
+The package is published to npm automatically by the `Release` workflow when a
+`v*` tag is pushed (or a GitHub release is published). Publishing uses npm
+**Trusted Publishing** (OIDC): no `NPM_TOKEN` secret and no OTP are involved,
+and every release carries provenance attestations.
 
-**Prerequisites:**
-1. Set up `NPM_TOKEN` secret in GitHub repository settings
-2. Ensure version in `package.json` matches the release tag
+**One-time prerequisite** (npmjs.com -> package `@tradik/xslt-processor` ->
+Settings -> Trusted Publisher): provider *GitHub Actions*, owner `spagu`,
+repository `XSLT-Processor`, workflow `release.yml`, environment left empty.
+Until this is configured the `publish` job fails and the package must be
+published manually with `npm publish --provenance --access public --otp=CODE`.
 
-**Release Process:**
+**Release process:**
 
 ```bash
-# 1. Update version in package.json
-npm version patch  # or minor, major
+# 1. Bump the version in package.json, package-lock.json, src/index.js and
+#    add a CHANGELOG.md entry, then commit to main.
 
-# 2. Push the tag
-git push origin --tags
-
-# 3. Create a GitHub release (or push triggers automatically)
+# 2. Tag and push the tag; the workflow refuses to publish if the tag does
+#    not match package.json.
+git tag v1.0.9
+git push origin v1.0.9
 ```
 
-**Automated Workflow:**
-1. Runs all tests and linting checks
-2. Performs security audit with `npm audit`
-3. Builds distribution bundles
-4. Publishes to npm with provenance (supply chain security)
-5. Uploads build artifacts to GitHub
+**Automated workflow:**
+1. Runs lint, formatting check and tests on Node.js 18, 20, 22 and 25
+2. Builds the distribution bundles and verifies the package contents
+3. Checks that the tag matches the `package.json` version
+4. Uploads the `dist/` build artifacts to GitHub
+5. Publishes to npm with provenance
 
 ## Browser Compatibility
 

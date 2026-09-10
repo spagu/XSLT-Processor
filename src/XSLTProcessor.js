@@ -30,6 +30,68 @@ export class XSLTProcessor {
     this._engine = null;
     this._stylesheet = null;
     this._parameters = new Map();
+    this._stylesheetLoader = null;
+  }
+
+  /**
+   * The underlying XSLT engine (advanced usage).
+   *
+   * The engine is created lazily by {@link XSLTProcessor#importStylesheet},
+   * so this getter returns `null` until a stylesheet has been imported.
+   * Prefer the public {@link XSLTProcessor#setStylesheetLoader} over reaching
+   * into the engine directly.
+   *
+   * @returns {import('./xslt/engine.js').XsltEngine|null} The engine, or null before import
+   *
+   * @example
+   * processor.importStylesheet(xslDoc, '/styles/main.xsl');
+   * console.log(processor.engine.outputSettings.method);
+   */
+  get engine() {
+    return this._engine;
+  }
+
+  /**
+   * Sets the loader used to resolve `xsl:import` and `xsl:include` references.
+   *
+   * The loader is synchronous: it MUST return the external stylesheet as a
+   * `Document` or as an XML string (which is parsed automatically). Promises
+   * are not awaited by the engine, so pre-load remote stylesheets before
+   * calling `importStylesheet`.
+   *
+   * The loader may be set before or after `importStylesheet`. When set before,
+   * it is passed to the engine on creation, which is required for the loader to
+   * be used while the stylesheet is being compiled. When set after, the live
+   * engine is updated as well.
+   *
+   * @param {((href: string, baseUri?: string) => (Document|string))|null} loader
+   *   The loader function, or null to remove a previously configured loader
+   * @returns {XSLTProcessor} This processor, to allow chaining
+   * @throws {TypeError} If the loader is neither a function nor null
+   *
+   * @example
+   * processor.setStylesheetLoader((href) => readFileSync(href, 'utf8'));
+   * processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
+   */
+  setStylesheetLoader(loader) {
+    if (
+      loader !== null &&
+      loader !== undefined &&
+      typeof loader !== "function"
+    ) {
+      throw new TypeError(
+        "Failed to execute 'setStylesheetLoader' on 'XSLTProcessor': The loader argument must be a function or null.",
+      );
+    }
+
+    this._stylesheetLoader = loader ?? null;
+
+    // Keep an already created engine in sync
+    if (this._engine) {
+      this._engine.setStylesheetLoader(this._stylesheetLoader);
+    }
+
+    return this;
   }
 
   /**
@@ -40,14 +102,17 @@ export class XSLTProcessor {
    * <xsl:stylesheet> or <xsl:transform> element.
    *
    * @param {Node} style - The XSLT stylesheet to import (Document or Element)
+   * @param {string} [stylesheetUri] - Optional URI of the stylesheet, used as the
+   *   base URI when resolving relative `xsl:import`/`xsl:include` hrefs. When
+   *   omitted, hrefs are passed to the loader unresolved.
    * @returns {void}
    *
    * @example
    * const parser = new DOMParser();
    * const xslDoc = parser.parseFromString(xslText, 'application/xml');
-   * processor.importStylesheet(xslDoc);
+   * processor.importStylesheet(xslDoc, '/styles/main.xsl');
    */
-  importStylesheet(style) {
+  importStylesheet(style, stylesheetUri) {
     if (!style) {
       throw new TypeError(
         "Failed to execute 'importStylesheet' on 'XSLTProcessor': 1 argument required, but only 0 present.",
@@ -70,14 +135,14 @@ export class XSLTProcessor {
     }
 
     this._stylesheet = style;
-    this._engine = new XsltEngine();
+    this._engine = new XsltEngine({ stylesheetLoader: this._stylesheetLoader });
 
     // Apply any previously set parameters
     for (const [key, value] of this._parameters) {
       this._engine.globalParameters[key] = { value };
     }
 
-    this._engine.importStylesheet(style);
+    this._engine.importStylesheet(style, stylesheetUri);
   }
 
   /**
@@ -303,6 +368,12 @@ export class XSLTProcessor {
 
   /**
    * Removes all parameters and stylesheets from the XSLTProcessor.
+   *
+   * Per the W3C `XSLTProcessor` semantics, `reset()` clears stylesheet state and
+   * parameters only. The stylesheet loader is processor configuration rather
+   * than stylesheet state, so it is deliberately preserved and stays effective
+   * for the next `importStylesheet()` call. Pass `null` to
+   * {@link XSLTProcessor#setStylesheetLoader} to remove it explicitly.
    *
    * @returns {void}
    *

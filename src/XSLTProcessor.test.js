@@ -12,6 +12,7 @@ import {
   isNativeXSLTSupported,
   installGlobal,
 } from "./XSLTProcessor.js";
+import { XsltEngine } from "./xslt/engine.js";
 
 // Setup JSDOM environment
 function setupDOM() {
@@ -29,6 +30,15 @@ function setupDOM() {
 function parseXML(xmlString) {
   const parser = new DOMParser();
   return parser.parseFromString(xmlString, "application/xml");
+}
+
+/** Minimal stylesheet used by tests that only need an imported stylesheet. */
+function IDENTITY_STYLESHEET() {
+  return parseXML(`<?xml version="1.0"?>
+    <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+      <xsl:template match="/"><out/></xsl:template>
+    </xsl:stylesheet>
+  `);
 }
 
 describe("XSLTProcessor", () => {
@@ -925,6 +935,178 @@ describe("XSLTProcessor", () => {
 
       assert.strictEqual(processor.getParameter(null, "param1"), "");
       assert.strictEqual(processor.getParameter(null, "param2"), "");
+    });
+  });
+
+  describe("engine getter", () => {
+    it("should be null before a stylesheet is imported", () => {
+      const processor = new XSLTProcessor();
+      assert.strictEqual(processor.engine, null);
+    });
+
+    it("should expose the XsltEngine after import", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(IDENTITY_STYLESHEET());
+      assert.ok(processor.engine instanceof XsltEngine);
+    });
+
+    it("should be null again after reset", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(IDENTITY_STYLESHEET());
+      processor.reset();
+      assert.strictEqual(processor.engine, null);
+    });
+  });
+
+  describe("setStylesheetLoader", () => {
+    const HELPER_XSL = `<?xml version="1.0"?>
+      <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template name="greeting"><hello>World</hello></xsl:template>
+      </xsl:stylesheet>
+    `;
+
+    function includingStylesheet(href) {
+      return parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:include href="${href}"/>
+          <xsl:template match="/">
+            <result><xsl:call-template name="greeting"/></result>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+    }
+
+    it("should make xsl:include work when set before importStylesheet", () => {
+      const processor = new XSLTProcessor();
+      processor.setStylesheetLoader((href) => {
+        assert.strictEqual(href, "helper.xsl");
+        return parseXML(HELPER_XSL);
+      });
+
+      processor.importStylesheet(includingStylesheet("helper.xsl"));
+      const result = processor.transformToDocument(parseXML("<root/>"));
+
+      assert.ok(result);
+      assert.strictEqual(
+        result.documentElement.querySelector("hello").textContent,
+        "World",
+      );
+    });
+
+    it("should make xsl:import work when set before importStylesheet", () => {
+      const processor = new XSLTProcessor();
+      processor.setStylesheetLoader(
+        () => `<?xml version="1.0"?>
+          <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+            <xsl:template match="/"><base/></xsl:template>
+          </xsl:stylesheet>
+        `,
+      );
+
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:import href="base.xsl"/>
+          <xsl:template match="/"><derived/></xsl:template>
+        </xsl:stylesheet>
+      `);
+
+      processor.importStylesheet(xslt);
+      const result = processor.transformToDocument(parseXML("<root/>"));
+
+      // The importing stylesheet wins over the imported one
+      assert.strictEqual(result.documentElement.nodeName, "derived");
+    });
+
+    it("should accept an XML string returned by the loader", () => {
+      const processor = new XSLTProcessor();
+      processor.setStylesheetLoader(() => HELPER_XSL);
+
+      processor.importStylesheet(includingStylesheet("helper.xsl"));
+      const result = processor.transformToDocument(parseXML("<root/>"));
+
+      assert.strictEqual(
+        result.documentElement.querySelector("hello").textContent,
+        "World",
+      );
+    });
+
+    it("should update the live engine when set after importStylesheet", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(IDENTITY_STYLESHEET());
+
+      const loader = () => HELPER_XSL;
+      processor.setStylesheetLoader(loader);
+
+      assert.strictEqual(processor.engine.stylesheetLoader, loader);
+    });
+
+    it("should pass stylesheetUri to the loader as baseUri", () => {
+      const processor = new XSLTProcessor();
+      const calls = [];
+
+      processor.setStylesheetLoader((href, baseUri) => {
+        calls.push({ href, baseUri });
+        return HELPER_XSL;
+      });
+
+      processor.importStylesheet(
+        includingStylesheet("helper.xsl"),
+        "/styles/main.xsl",
+      );
+
+      assert.deepStrictEqual(calls, [
+        { href: "/styles/helper.xsl", baseUri: "/styles/main.xsl" },
+      ]);
+    });
+
+    it("should return the processor for chaining", () => {
+      const processor = new XSLTProcessor();
+      assert.strictEqual(
+        processor.setStylesheetLoader(() => HELPER_XSL),
+        processor,
+      );
+    });
+
+    it("should accept null to remove the loader", () => {
+      const processor = new XSLTProcessor();
+      processor.setStylesheetLoader(() => HELPER_XSL);
+      processor.setStylesheetLoader(null);
+
+      processor.importStylesheet(IDENTITY_STYLESHEET());
+      assert.strictEqual(processor.engine.stylesheetLoader, null);
+    });
+
+    it("should accept undefined as a removal of the loader", () => {
+      const processor = new XSLTProcessor();
+      processor.setStylesheetLoader(undefined);
+
+      processor.importStylesheet(IDENTITY_STYLESHEET());
+      assert.strictEqual(processor.engine.stylesheetLoader, null);
+    });
+
+    it("should throw TypeError for a non-function loader", () => {
+      const processor = new XSLTProcessor();
+
+      assert.throws(
+        () => processor.setStylesheetLoader("not-a-function"),
+        /must be a function or null/,
+      );
+      assert.throws(() => processor.setStylesheetLoader(42), TypeError);
+    });
+
+    it("should keep the loader across reset()", () => {
+      const processor = new XSLTProcessor();
+      processor.setStylesheetLoader(() => HELPER_XSL);
+      processor.importStylesheet(includingStylesheet("helper.xsl"));
+      processor.reset();
+
+      processor.importStylesheet(includingStylesheet("helper.xsl"));
+      const result = processor.transformToDocument(parseXML("<root/>"));
+
+      assert.strictEqual(
+        result.documentElement.querySelector("hello").textContent,
+        "World",
+      );
     });
   });
 });

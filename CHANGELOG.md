@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-09-10
+
+### Added
+
+- **`XSLTProcessor.setStylesheetLoader(loader)`** - public API for configuring the loader used to resolve `xsl:import` and `xsl:include`. It can be called before `importStylesheet()` (required, since the engine is created during import) or after it (the live engine is updated). Passing anything other than a function or `null` throws a `TypeError`. Returns the processor for chaining.
+- **`XSLTProcessor.engine`** - read-only getter exposing the underlying `XsltEngine` for advanced usage. Returns `null` until a stylesheet has been imported.
+- **`importStylesheet(style, stylesheetUri)`** - the optional second argument is now forwarded to the engine and used as the base URI when resolving relative `xsl:import`/`xsl:include` hrefs.
+- TypeScript declarations for the new API, including an exported `StylesheetLoader` type (synchronous: `(href, baseUri?) => Document | string`).
+- **`dist/xslt-processor.d.cts`** - CommonJS-flavoured declarations, wired through nested `types` conditions in `package.json` `exports`, so `require()` consumers under TypeScript `node16`/`nodenext` resolution no longer get the ESM declarations for the CommonJS bundle ("Masquerading as ESM" reported by `@arethetypeswrong/cli`). Verified with TypeScript 7.0.2 in `strict` mode under `nodenext` and `bundler` resolution.
+- **Release workflow** - `publish` job using npm Trusted Publishing (OIDC) with provenance; runs on `v*` tags after tests and build, and refuses to publish when the tag does not match `package.json`. Requires a one-time Trusted Publisher configuration on npmjs.com (documented in README).
+
+### Fixed
+
+- **`TypeError: Cannot read properties of undefined (reading 'setStylesheetLoader')`** ([#6](https://github.com/spagu/XSLT-Processor/issues/6)) - the README documented `processor.engine.setStylesheetLoader(...)`, but `processor.engine` was undefined and the engine did not exist before `importStylesheet()`. The documented workflow now works through `processor.setStylesheetLoader(...)`.
+- **README** - rewrote the "Using xsl:import and xsl:include" section: the previous example used `await` inside a non-async callback and contained two unreachable "options". It now shows a correct synchronous loader, a browser pre-fetch pattern, and a Node.js filesystem example using `path.resolve(path.dirname(baseUri), href)`.
+
+### Changed
+
+- `reset()` keeps the configured stylesheet loader (it is processor configuration, not stylesheet state); pass `null` to `setStylesheetLoader()` to remove it. Documented in JSDoc and the README API table.
+- Updated `VERSION` in `src/index.js` to `1.0.9`.
+- Fixed the package name in the generated declaration header (`@tradik/xslt-processor`).
+- `xsl:include`/`xsl:import` failures are rethrown with `{ cause }` so the original loader/parser error and stack are preserved (ESLint 10 `preserve-caught-error`).
+- GitHub Actions bumped to `actions/checkout@v7`, `actions/setup-node@v7`, `actions/upload-artifact@v7`, `docker/setup-buildx-action@v4`; `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` enabled.
+- README "Publishing to npm" section rewritten to match the actual workflow (it previously claimed an `NPM_TOKEN`-based auto-publish that did not exist).
+
+### Security
+
+- **js-yaml** (transitive via `eslint`) - GHSA-5p4m-2wfm-xmqj, vulnerable `>= 4.0.0, < 4.3.1`. Resolved by upgrading `eslint` to 10.x, which no longer pulls `@eslint/eslintrc`/`js-yaml` at all; `npm audit` reports 0 vulnerabilities.
+- **brace-expansion** - GHSA-mh99-v99m-4gvg / GHSA-rgw5-rvv9-x895 (DoS), resolved via `npm audit fix` (now 5.0.9).
+
+### Dependencies
+
+- `eslint` `^9.0.0` -> `^10.10.0` (flat config unchanged; `@eslint/js` is now an explicit devDependency because ESLint 10 stopped bundling it).
+- `jsdom` `^25.0.0` -> `^29.1.1`, `esbuild` `^0.28.0` -> `^0.28.2`, `prettier` `^3.4.0` -> `^3.9.6`.
+
 ## [1.0.8] - 2026-07-15
 
 ### Changed

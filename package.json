@@ -1,6 +1,6 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "main": "dist/xslt-processor.cjs",
@@ -12,10 +12,18 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/xslt-processor.d.ts",
-      "browser": "./dist/xslt-processor.js",
-      "import": "./dist/xslt-processor.js",
-      "require": "./dist/xslt-processor.cjs"
+      "browser": {
+        "types": "./dist/xslt-processor.d.ts",
+        "default": "./dist/xslt-processor.js"
+      },
+      "import": {
+        "types": "./dist/xslt-processor.d.ts",
+        "default": "./dist/xslt-processor.js"
+      },
+      "require": {
+        "types": "./dist/xslt-processor.d.cts",
+        "default": "./dist/xslt-processor.cjs"
+      }
     }
   },
   "files": [
@@ -60,9 +68,10 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "eslint": "^9.0.0",
-    "prettier": "^3.4.0",
-    "esbuild": "^0.28.0",
-    "jsdom": "^25.0.0"
+    "@eslint/js": "^10.0.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.10.0",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.9.6"
   }
 }

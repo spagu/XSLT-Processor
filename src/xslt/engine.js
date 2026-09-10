@@ -290,6 +290,7 @@ export class XsltEngine {
     } catch (error) {
       throw new Error(
         `Failed to include stylesheet "${href}": ${error.message}`,
+        { cause: error },
       );
     }
   }
@@ -331,6 +332,7 @@ export class XsltEngine {
     } catch (error) {
       throw new Error(
         `Failed to import stylesheet "${href}": ${error.message}`,
+        { cause: error },
       );
     }
   }

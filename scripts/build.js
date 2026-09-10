@@ -8,7 +8,8 @@
  * - dist/xslt-processor.cjs - CommonJS module
  * - dist/xslt-processor.browser.js - Browser bundle (IIFE)
  * - dist/xslt-processor.browser.min.js - Minified browser bundle
- * - dist/xslt-processor.d.ts - TypeScript declarations
+ * - dist/xslt-processor.d.ts - TypeScript declarations (ESM)
+ * - dist/xslt-processor.d.cts - TypeScript declarations (CommonJS)
  */
 
 import { build } from 'esbuild';
@@ -92,8 +93,19 @@ if (typeof window !== 'undefined') {
   // Generate TypeScript declarations
   console.log('Generating TypeScript declarations...');
   const declarations = `/**
- * @cv-xslt/xslt-processor - TypeScript Declarations
+ * @tradik/xslt-processor - TypeScript Declarations
  */
+
+/**
+ * Loader used to resolve xsl:import and xsl:include references.
+ *
+ * The loader is synchronous: it must return the external stylesheet as a
+ * Document or as an XML string (which is parsed automatically).
+ *
+ * @param href - The resolved URI of the referenced stylesheet
+ * @param baseUri - The URI of the importing/including stylesheet, if known
+ */
+export type StylesheetLoader = (href: string, baseUri?: string) => Document | string;
 
 /**
  * XSLTProcessor - Applies XSLT stylesheet transformations to XML documents.
@@ -102,10 +114,27 @@ export class XSLTProcessor {
   constructor();
 
   /**
+   * The underlying XSLT engine (advanced usage).
+   * Null until a stylesheet has been imported.
+   */
+  readonly engine: XsltEngine | null;
+
+  /**
+   * Sets the loader used to resolve xsl:import and xsl:include references.
+   * Call it before importStylesheet() so the loader is available while the
+   * stylesheet is compiled; calling it afterwards updates the live engine.
+   * @param loader - The loader function, or null to remove it
+   * @returns This processor, to allow chaining
+   */
+  setStylesheetLoader(loader: StylesheetLoader | null): this;
+
+  /**
    * Imports the XSLT stylesheet.
    * @param style - The XSLT stylesheet to import (Document or Element)
+   * @param stylesheetUri - Optional base URI used to resolve relative
+   *   xsl:import/xsl:include hrefs
    */
-  importStylesheet(style: Node): void;
+  importStylesheet(style: Node, stylesheetUri?: string): void;
 
   /**
    * Transforms the node source and returns a document fragment.
@@ -152,6 +181,7 @@ export class XSLTProcessor {
 
   /**
    * Removes all parameters and stylesheets from the XSLTProcessor.
+   * The stylesheet loader is configuration, not stylesheet state, and is preserved.
    */
   reset(): void;
 }
@@ -279,9 +309,10 @@ export class XsltContext {
  * XSLT processing engine.
  */
 export class XsltEngine {
-  constructor();
+  constructor(options?: { stylesheetLoader?: StylesheetLoader | null; baseUri?: string });
 
-  importStylesheet(stylesheetNode: Node): void;
+  setStylesheetLoader(loader: StylesheetLoader | null): void;
+  importStylesheet(stylesheetNode: Node, stylesheetUri?: string): void;
   transform(sourceNode: Node, ownerDocument: Document): DocumentFragment;
   transformToDocument(sourceNode: Node): Document;
 }
@@ -304,14 +335,19 @@ export const isNode: boolean;
 export default XSLTProcessor;
 `;
 
+  // The same declarations are emitted twice so that TypeScript's node16/nodenext
+  // resolution picks a CommonJS-flavoured file for `require()` consumers instead
+  // of treating the ESM `.d.ts` as the type source of the `.cjs` bundle.
   writeFileSync(join(distDir, 'xslt-processor.d.ts'), declarations);
+  writeFileSync(join(distDir, 'xslt-processor.d.cts'), declarations);
 
   console.log('\nBuild complete! Output files:');
   console.log('  dist/xslt-processor.js         - ESM module');
   console.log('  dist/xslt-processor.cjs        - CommonJS module');
   console.log('  dist/xslt-processor.browser.js - Browser bundle');
   console.log('  dist/xslt-processor.browser.min.js - Minified browser bundle');
-  console.log('  dist/xslt-processor.d.ts       - TypeScript declarations');
+  console.log('  dist/xslt-processor.d.ts       - TypeScript declarations (ESM)');
+  console.log('  dist/xslt-processor.d.cts      - TypeScript declarations (CommonJS)');
 }
 
 try {
