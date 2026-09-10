@@ -8,7 +8,7 @@
 [![Release](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml)
 [![npm version](https://img.shields.io/npm/v/@tradik/xslt-processor.svg)](https://www.npmjs.com/package/@tradik/xslt-processor)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.19.0-brightgreen.svg)](https://nodejs.org/)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/spagu/XSLT-Processor)
 
 > **Source Code:** [github.com/spagu/XSLT-Processor](https://github.com/spagu/XSLT-Processor)
@@ -633,7 +633,7 @@ const result = evaluator.evaluate(ast, context);
 
 ### Prerequisites
 
-- Node.js 25+ (for native test runner)
+- Node.js 22+ (native test runner; CI runs 22, 24 and 26)
 - Docker (optional, for containerized testing)
 
 ### Setup
@@ -696,12 +696,12 @@ published manually with `npm publish --provenance --access public --otp=CODE`.
 
 # 2. Tag and push the tag; the workflow refuses to publish if the tag does
 #    not match package.json.
-git tag v1.0.9
-git push origin v1.0.9
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 **Automated workflow:**
-1. Runs lint, formatting check and tests on Node.js 18, 20, 22 and 25
+1. Runs lint, formatting check and tests on Node.js 22, 24 and 26
 2. Builds the distribution bundles and verifies the package contents
 3. Checks that the tag matches the `package.json` version
 4. Uploads the `dist/` build artifacts to GitHub
@@ -715,13 +715,13 @@ This library provides a JavaScript polyfill for XSLTProcessor that works across 
 
 | Browser | Minimum Version | ES Modules | Status |
 |---------|-----------------|------------|--------|
-| Chrome | 90+ | Yes | Fully Supported |
-| Firefox | 88+ | Yes | Fully Supported |
-| Safari | 14+ | Yes | Fully Supported |
-| Edge | 90+ | Yes | Fully Supported |
-| Opera | 76+ | Yes | Fully Supported |
-| Samsung Internet | 15+ | Yes | Fully Supported |
-| Node.js | 25+ | Yes | Fully Supported |
+| Chrome | 92+ | Yes | Fully Supported |
+| Firefox | 92+ | Yes | Fully Supported |
+| Safari | 15.4+ | Yes | Fully Supported |
+| Edge | 92+ | Yes | Fully Supported |
+| Opera | 78+ | Yes | Fully Supported |
+| Samsung Internet | 16+ | Yes | Fully Supported |
+| Node.js | 20.19+ | Yes | Fully Supported (CI: 22, 24, 26) |
 
 ### Native XSLT Deprecation Timeline
 

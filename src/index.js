@@ -57,7 +57,7 @@ export {
 /**
  * Version information
  */
-export const VERSION = "1.0.9";
+export const VERSION = "1.1.0";
 
 /**
  * Check if we're running in a browser environment

@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.9] - 2026-09-10
+## [1.1.0] - 2026-09-10
+
+Minor release: new public API (`setStylesheetLoader`, `setDocumentLoader`, `transformToString`, `engine`), the `xsl:output` serializer and the XSLT 1.0 conformance fixes below. Versions 1.0.4-1.0.8 were tagged but never published to npm, so this is the first npm release after 1.0.3.
 
 ### Added
 
@@ -56,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `reset()` keeps the configured stylesheet loader (it is processor configuration, not stylesheet state); pass `null` to `setStylesheetLoader()` to remove it. Documented in JSDoc and the README API table.
-- Updated `VERSION` in `src/index.js` to `1.0.9`.
+- Updated `VERSION` in `src/index.js` to `1.1.0`.
 - Fixed the package name in the generated declaration header (`@tradik/xslt-processor`).
 - `xsl:include`/`xsl:import` failures are rethrown with `{ cause }` so the original loader/parser error and stack are preserved (ESLint 10 `preserve-caught-error`).
 - GitHub Actions bumped to `actions/checkout@v7`, `actions/setup-node@v7`, `actions/upload-artifact@v7`, `docker/setup-buildx-action@v4`; `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` enabled.
@@ -64,12 +66,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `XsltEngine.namespaceAliases` is now a `NamespaceAliasMap` keyed by namespace URI instead of a plain prefix-to-prefix object (internal API; the previous shape never produced correct output).
 - `XsltEngine.countNumber()` was replaced by `countXsltNumber()` in `src/xslt/number.js`; `XsltEngine.formatNumber()` and `XsltEngine.toRoman()` are kept as thin delegating wrappers.
 - `XsltEngine.resolveUri()` delegates to `src/xslt/uri.js`, which also recognises URIs with any scheme (not just `http:`/`https:`) as absolute.
+- `system-property('xsl:version')` returns the string `"1"` (previously the number `1`); XPath converts it for arithmetic and comparisons, so output is unchanged.
+- Build targets raised from ES2020/Node 18 to ES2022/Node 20 (the code now uses `Object.hasOwn` and `Array.prototype.at`; browser bundle needs Chrome 92+, Firefox 92+, Safari 15.4+).
 - `removeParameter()` and `clearParameters()` now restore the `xsl:param` default of the stylesheet instead of deleting the declaration (which made `$name` an undefined variable). New engine helpers `setParameterValue()`, `clearParameterValue()` and `clearParameterValues()` back this.
 
 - `-f, --format` on the CLI is now an alias of `--indent` and drives the real serializer instead of the previous naive re-indentation.
 
 ### Security
 
+- **CLI path validation** - input and output paths are resolved and validated (regular file / existing parent directory, no NUL bytes) before any filesystem access (SonarCloud S8707).
+- **Release workflow** - the publish job installs with `npm ci --ignore-scripts`; `docker/setup-buildx-action` is pinned to a full commit SHA.
 - **js-yaml** (transitive via `eslint`) - GHSA-5p4m-2wfm-xmqj, vulnerable `>= 4.0.0, < 4.3.1`. Resolved by upgrading `eslint` to 10.x, which no longer pulls `@eslint/eslintrc`/`js-yaml` at all; `npm audit` reports 0 vulnerabilities.
 - **brace-expansion** - GHSA-mh99-v99m-4gvg / GHSA-rgw5-rvv9-x895 (DoS), resolved via `npm audit fix` (now 5.0.9).
 
@@ -77,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `eslint` `^9.0.0` -> `^10.10.0` (flat config unchanged; `@eslint/js` is now an explicit devDependency because ESLint 10 stopped bundling it).
 - `jsdom` `^25.0.0` -> `^29.1.1`, `esbuild` `^0.28.0` -> `^0.28.2`, `prettier` `^3.4.0` -> `^3.9.6`.
+- **Supported Node.js**: `engines.node` raised from `>=18.0.0` to `>=20.19.0` (Node.js 18 and 20 are end-of-life; jsdom 29 needs 20.19+). CI matrix is now Node.js 22, 24 and 26; Docker images use `node:26-alpine`.
 
 ## [1.0.8] - 2026-07-15
 

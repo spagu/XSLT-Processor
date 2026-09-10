@@ -36,7 +36,7 @@ async function buildAll() {
     bundle: true,
     format: 'esm',
     platform: 'neutral',
-    target: ['es2020'],
+    target: ['es2022'],
     sourcemap: true
   });
 
@@ -48,7 +48,7 @@ async function buildAll() {
     bundle: true,
     format: 'cjs',
     platform: 'node',
-    target: ['node18'],
+    target: ['node20'],
     sourcemap: true
   });
 
@@ -61,7 +61,7 @@ async function buildAll() {
     format: 'iife',
     globalName: 'XsltProcessorLib',
     platform: 'browser',
-    target: ['es2020'],
+    target: ['es2022'],
     sourcemap: true,
     footer: {
       js: `
@@ -82,7 +82,7 @@ if (typeof window !== 'undefined') {
     format: 'iife',
     globalName: 'XsltProcessorLib',
     platform: 'browser',
-    target: ['es2020'],
+    target: ['es2022'],
     minify: true,
     sourcemap: true,
     footer: {

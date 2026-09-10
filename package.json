@@ -1,6 +1,6 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "main": "dist/xslt-processor.cjs",
@@ -65,7 +65,7 @@
   },
   "homepage": "https://github.com/spagu/XSLT-Processor#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

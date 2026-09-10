@@ -3,7 +3,7 @@
 # xslt-processor - Development and Test Environment
 # Uses Node.js 25 as primary, with backward compatibility to Node.js 18+
 
-FROM node:25-alpine AS base
+FROM node:26-alpine AS base
 
 # Install dependencies for building native modules
 RUN apk add --no-cache \
@@ -47,7 +47,7 @@ FROM base AS builder
 RUN npm run build
 
 # Production stage - minimal image with just the built files
-FROM node:25-alpine AS production
+FROM node:26-alpine AS production
 
 WORKDIR /app
 
