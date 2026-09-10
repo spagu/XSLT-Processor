@@ -183,6 +183,55 @@ export class XSLTProcessor {
   }
 
   /**
+   * Transforms the node source by applying the XSLT stylesheet and serializes
+   * the result to a string honoring the stylesheet `xsl:output` settings.
+   *
+   * Non-W3C convenience method: the native XSLTProcessor has no equivalent.
+   * Output method, indentation, XML declaration, document type declaration,
+   * CDATA sections and `disable-output-escaping` are all honored
+   * (XSLT 1.0 section 16).
+   *
+   * @param {Node} source - The XML document to transform
+   * @returns {string|null} The serialized result, or null on a transformation error
+   *
+   * @example
+   * const xml = processor.transformToString(xmlDoc);
+   * // '<?xml version="1.0" encoding="UTF-8"?>\n<BAR>\n  <QUX/>\n</BAR>'
+   */
+  transformToString(source) {
+    if (!source) {
+      throw new TypeError(
+        "Failed to execute 'transformToString' on 'XSLTProcessor': 1 argument required, but only 0 present.",
+      );
+    }
+
+    if (!this._engine || !this._stylesheet) {
+      throw new Error(
+        "Failed to execute 'transformToString' on 'XSLTProcessor': No stylesheet has been imported.",
+      );
+    }
+
+    // Validate source node
+    if (
+      source.nodeType !== 1 &&
+      source.nodeType !== 9 &&
+      source.nodeType !== 11
+    ) {
+      throw new TypeError(
+        "Failed to execute 'transformToString' on 'XSLTProcessor': The source is not a valid node type.",
+      );
+    }
+
+    try {
+      return this._engine.transformToString(source);
+    } catch (error) {
+      // Match transformToDocument behavior - return null on error
+      console.error("XSLT transformation error:", error);
+      return null;
+    }
+  }
+
+  /**
    * Sets a parameter in the XSLT stylesheet.
    *
    * @param {string|null} namespaceURI - The namespace URI of the XSLT parameter (use null for no namespace)

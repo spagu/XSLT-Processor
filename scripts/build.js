@@ -123,6 +123,14 @@ export class XSLTProcessor {
   transformToDocument(source: Node): XMLDocument | null;
 
   /**
+   * Transforms the node source and serializes the result to a string,
+   * honoring the stylesheet xsl:output settings (non-W3C convenience method).
+   * @param source - The XML document to transform
+   * @returns The serialized result, or null on a transformation error
+   */
+  transformToString(source: Node): string | null;
+
+  /**
    * Sets a parameter in the XSLT stylesheet.
    * @param namespaceURI - The namespace URI (use null for no namespace)
    * @param localName - The local name of the parameter
@@ -284,7 +292,57 @@ export class XsltEngine {
   importStylesheet(stylesheetNode: Node): void;
   transform(sourceNode: Node, ownerDocument: Document): DocumentFragment;
   transformToDocument(sourceNode: Node): Document;
+  transformToString(sourceNode: Node): string;
+
+  outputSettings: OutputSettings;
 }
+
+/**
+ * xsl:output settings driving the result serialization
+ * (XSLT 1.0 section 16). Accepts the raw stylesheet values, so the yes/no
+ * attributes are strings and cdata-section-elements may be a name list.
+ */
+export interface OutputSettings {
+  method?: 'xml' | 'html' | 'xhtml' | 'text' | 'auto' | string;
+  version?: string;
+  encoding?: string;
+  standalone?: 'yes' | 'no' | string | null;
+  indent?: 'yes' | 'no' | boolean;
+  omitXmlDeclaration?: 'yes' | 'no' | boolean;
+  doctypePublic?: string | null;
+  doctypeSystem?: string | null;
+  mediaType?: string | null;
+  cdataSectionElements?: string[] | string;
+}
+
+/**
+ * Serialize a transformation result honoring the xsl:output settings.
+ * @param node - Result document, fragment or element
+ * @param outputSettings - xsl:output settings
+ * @returns The serialized result, or an empty string for a null node
+ */
+export function serializeResult(
+  node: Node | null,
+  outputSettings?: OutputSettings
+): string;
+
+/**
+ * Mark a text node as produced with disable-output-escaping="yes".
+ */
+export function markRawText<T extends Node | null>(node: T): T;
+
+/**
+ * Check whether a node must be serialized without output escaping.
+ */
+export function isRawText(node: Node | null): boolean;
+
+/**
+ * Normalize raw xsl:output settings for the serializers.
+ */
+export function resolveOutputSettings(
+  outputSettings: OutputSettings | null,
+  node: Node | null
+): Required<OutputSettings> & { indent: boolean; omitXmlDeclaration: boolean; cdataSectionElements: Set<string> };
 
 /**
  * Version information.

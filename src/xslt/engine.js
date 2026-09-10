@@ -7,6 +7,7 @@
 
 import { parse as parseXPath } from "../xpath/parser.js";
 import { XPathEvaluator, XPathContext } from "../xpath/evaluator.js";
+import { serializeResult } from "./serializer.js";
 
 const XSLT_NS = "http://www.w3.org/1999/XSL/Transform";
 
@@ -640,6 +641,20 @@ export class XsltEngine {
     }
 
     return doc;
+  }
+
+  /**
+   * Transform a source document and serialize the result to a string.
+   *
+   * Non-W3C convenience method: the result tree is serialized honoring the
+   * `xsl:output` settings of the stylesheet (XSLT 1.0 section 16).
+   *
+   * @param {Node} sourceNode - Source document or element to transform
+   * @returns {string} The serialized transformation result
+   */
+  transformToString(sourceNode) {
+    const fragment = this.transform(sourceNode, this.createDocument());
+    return serializeResult(fragment, this.outputSettings);
   }
 
   createDocument() {
