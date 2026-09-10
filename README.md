@@ -175,8 +175,9 @@ const processor = new XSLTProcessor();
 | `getParameter(namespaceURI, localName)` | Gets an XSLT parameter value |
 | `removeParameter(namespaceURI, localName)` | Removes an XSLT parameter |
 | `clearParameters()` | Removes all parameters |
-| `reset()` | Resets the processor, removing stylesheet and parameters (the stylesheet loader is kept) |
+| `reset()` | Resets the processor, removing stylesheet and parameters (the stylesheet and document loaders are kept) |
 | `setStylesheetLoader(loader)` | Sets the loader used to resolve `xsl:import`/`xsl:include`. Returns the processor for chaining |
+| `setDocumentLoader(loader)` | Sets the loader used to resolve the XSLT `document()` function. Returns the processor for chaining |
 
 #### Properties
 
@@ -290,6 +291,49 @@ After `importStylesheet()`, `processor.engine` exposes the underlying
 `XsltEngine` for advanced inspection (output settings, compiled templates). It
 is `null` before the first import, which is why the loader must be configured
 through `processor.setStylesheetLoader(...)` rather than `processor.engine`.
+
+### Using the document() function
+
+The XSLT `document()` function loads additional XML documents at transformation
+time. Configure a **synchronous** document loader with
+`processor.setDocumentLoader(...)`; it receives the resolved URI and the base URI
+and returns a `Document`, an XML `string` (parsed automatically) or `null`.
+
+Semantics:
+
+- `document('')` returns the stylesheet itself, per the XSLT 1.0 specification.
+- A node-set argument loads one document per node and returns their union.
+- Relative URIs are resolved against the `stylesheetUri` passed to
+  `importStylesheet()`; fragment identifiers are ignored.
+- Without a loader, or when the loader returns `null`, `document()` evaluates to
+  an **empty node-set** instead of failing the transformation.
+- Each resolved URI is loaded once and cached for the life of the processor.
+
+```javascript
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { XSLTProcessor } from '@tradik/xslt-processor';
+
+const processor = new XSLTProcessor();
+
+processor.setDocumentLoader((uri, baseUri) => {
+  const filePath = path.resolve(path.dirname(baseUri || '.'), uri);
+  try {
+    return readFileSync(filePath, 'utf8'); // XML string is parsed for you
+  } catch {
+    return null; // -> empty node-set, the transformation keeps going
+  }
+});
+
+processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
+const result = processor.transformToDocument(xmlDoc);
+```
+
+```xml
+<xsl:template match="/">
+  <rate><xsl:value-of select="document('rates.xml')/rates/eur"/></rate>
+</xsl:template>
+```
 
 #### Import vs Include Behavior
 
@@ -467,6 +511,13 @@ const result = evaluator.evaluate(ast, context);
 | `xsl:with-param` | Supported |
 | `xsl:import` | Supported |
 | `xsl:include` | Supported |
+| `xsl:apply-imports` | Supported |
+| `xsl:attribute-set` | Supported (also via `xsl:use-attribute-sets` on literal result elements) |
+| `xsl:key` | Supported (see `key()`) |
+| `xsl:decimal-format` | Supported (see `format-number()`) |
+| `xsl:namespace-alias` | Supported |
+| `xsl:strip-space` / `xsl:preserve-space` | Supported |
+| `xsl:fallback` | Parsed, never instantiated (no extension elements) |
 
 ## XPath Functions Supported
 
@@ -481,6 +532,23 @@ const result = evaluator.evaluate(ast, context);
 
 ### Number Functions
 - `ceiling()`, `floor()`, `number()`, `round()`, `sum()`
+
+### XSLT-Defined Functions
+- `current()` - the XSLT current node, also inside predicates
+- `document(object, base?)` - external documents, see `setDocumentLoader()`
+- `element-available(name)`, `function-available(name)` - reflect the real element and function tables
+- `format-number(number, pattern, decimalFormat?)` - full XSLT 1.0 picture strings, honouring `xsl:decimal-format`
+- `generate-id(nodeSet?)` - stable identifier for the life of the transformation
+- `key(name, value)` - `xsl:key` lookup, with lazily built per-document indexes
+- `system-property(name)` - `xsl:version`, `xsl:vendor`, `xsl:vendor-url`
+- `unparsed-entity-uri(name)` - always returns `''` (unparsed entities are not exposed by the DOM)
+
+### Conformance Notes
+- CDATA sections count as text everywhere (string-value, `text()`, `xsl:value-of`, `xsl:copy-of`)
+- The identity transform `<xsl:template match="@*|node()"><xsl:copy><xsl:apply-templates select="@*|node()"/></xsl:copy></xsl:template>` round-trips a document exactly
+- `xsl:number` supports `level="single|multiple|any"` with `count`, `from` and the `1`, `01`, `a`, `A`, `i`, `I` format tokens
+- The result tree is built in a neutral XML document and imported into the output
+  document at the end, so element names and namespaces survive an HTML owner document
 
 ## Development
 
