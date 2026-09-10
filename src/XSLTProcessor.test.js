@@ -1109,4 +1109,209 @@ describe("XSLTProcessor", () => {
       );
     });
   });
+
+  describe("setDocumentLoader", () => {
+    const DOCUMENTS = {
+      "colors.xml": "<colors><color>red</color><color>green</color></colors>",
+    };
+
+    function documentStylesheet(expression) {
+      return parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="/"><result><xsl:value-of select="${expression}"/></result></xsl:template>
+        </xsl:stylesheet>
+      `);
+    }
+
+    it("should resolve document() from an object map", () => {
+      const processor = new XSLTProcessor();
+      processor.setDocumentLoader((uri) => DOCUMENTS[uri] ?? null);
+      processor.importStylesheet(
+        documentStylesheet("document('colors.xml')/colors/color[1]"),
+      );
+
+      const result = processor.transformToDocument(parseXML("<root/>"));
+
+      assert.strictEqual(result.documentElement.textContent, "red");
+    });
+
+    it("should work when set after importStylesheet", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(
+        documentStylesheet("count(document('colors.xml')/colors/color)"),
+      );
+      processor.setDocumentLoader((uri) => DOCUMENTS[uri] ?? null);
+
+      const result = processor.transformToDocument(parseXML("<root/>"));
+
+      assert.strictEqual(result.documentElement.textContent, "2");
+    });
+
+    it("should return an empty node-set without a loader", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(
+        documentStylesheet("count(document('colors.xml'))"),
+      );
+
+      const result = processor.transformToDocument(parseXML("<root/>"));
+
+      assert.strictEqual(result.documentElement.textContent, "0");
+    });
+
+    it("should be chainable and accept null", () => {
+      const processor = new XSLTProcessor();
+
+      assert.strictEqual(
+        processor.setDocumentLoader(() => null),
+        processor,
+      );
+      assert.strictEqual(processor.setDocumentLoader(null), processor);
+
+      processor.importStylesheet(IDENTITY_STYLESHEET());
+      assert.strictEqual(processor.setDocumentLoader(null), processor);
+    });
+
+    it("should reject a non function loader", () => {
+      const processor = new XSLTProcessor();
+
+      assert.throws(
+        () => processor.setDocumentLoader("not a function"),
+        TypeError,
+      );
+    });
+
+    it("should keep the loader across reset()", () => {
+      const processor = new XSLTProcessor();
+      processor.setDocumentLoader((uri) => DOCUMENTS[uri] ?? null);
+      processor.importStylesheet(
+        documentStylesheet("document('colors.xml')/colors/color[2]"),
+      );
+      processor.reset();
+
+      processor.importStylesheet(
+        documentStylesheet("document('colors.xml')/colors/color[2]"),
+      );
+      const result = processor.transformToDocument(parseXML("<root/>"));
+
+      assert.strictEqual(result.documentElement.textContent, "green");
+    });
+  });
+
+  describe("global parameters in transformations", () => {
+    function parameterStylesheet(
+      declaration = '<xsl:param name="greeting" select="\'default\'"/>',
+    ) {
+      return parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          ${declaration}
+          <xsl:template match="/"><out><xsl:value-of select="$greeting"/></out></xsl:template>
+        </xsl:stylesheet>
+      `);
+    }
+
+    function transformWith(processor) {
+      const result = processor.transformToDocument(parseXML("<root/>"));
+      assert.ok(result, "the transformation must not fail");
+      return result.documentElement.textContent;
+    }
+
+    it("should use a parameter set before importStylesheet", () => {
+      const processor = new XSLTProcessor();
+      processor.setParameter(null, "greeting", "hello");
+      processor.importStylesheet(parameterStylesheet());
+
+      assert.strictEqual(transformWith(processor), "hello");
+    });
+
+    it("should use a parameter set after importStylesheet", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(parameterStylesheet());
+      processor.setParameter(null, "greeting", "hello");
+
+      assert.strictEqual(transformWith(processor), "hello");
+    });
+
+    it("should accept number values", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(
+        parseXML(`<?xml version="1.0"?>
+          <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+            <xsl:param name="factor" select="1"/>
+            <xsl:template match="/"><out><xsl:value-of select="$factor * 3"/></out></xsl:template>
+          </xsl:stylesheet>
+        `),
+      );
+      processor.setParameter(null, "factor", 14);
+
+      assert.strictEqual(transformWith(processor), "42");
+    });
+
+    it("should use the xsl:param default when nothing is set", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(parameterStylesheet());
+
+      assert.strictEqual(transformWith(processor), "default");
+    });
+
+    it("should work for parameters without a default", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(
+        parameterStylesheet('<xsl:param name="greeting"/>'),
+      );
+      processor.setParameter(null, "greeting", "hello");
+
+      assert.strictEqual(transformWith(processor), "hello");
+    });
+
+    it("should restore the xsl:param default after removeParameter", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(parameterStylesheet());
+      processor.setParameter(null, "greeting", "hello");
+      processor.removeParameter(null, "greeting");
+
+      assert.strictEqual(transformWith(processor), "default");
+    });
+
+    it("should restore the xsl:param default after clearParameters", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(parameterStylesheet());
+      processor.setParameter(null, "greeting", "hello");
+      processor.clearParameters();
+
+      assert.strictEqual(transformWith(processor), "default");
+    });
+
+    it("should drop parameters the stylesheet never declared", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(parameterStylesheet());
+      processor.setParameter(null, "unknown", "x");
+      processor.removeParameter(null, "unknown");
+
+      assert.strictEqual("unknown" in processor.engine.globalParameters, false);
+      assert.strictEqual(transformWith(processor), "default");
+    });
+  });
+
+  describe("transformToFragment with an HTML owner document", () => {
+    it("should keep element names and namespaces", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(
+        parseXML(`<?xml version="1.0"?>
+          <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+            <xsl:template match="/"><BAR><qux/></BAR></xsl:template>
+          </xsl:stylesheet>
+        `),
+      );
+
+      const fragment = processor.transformToFragment(
+        parseXML("<foo/>"),
+        document,
+      );
+
+      assert.strictEqual(fragment.ownerDocument, document);
+      assert.strictEqual(fragment.firstChild.nodeName, "BAR");
+      assert.strictEqual(fragment.firstChild.namespaceURI, null);
+      assert.strictEqual(fragment.firstChild.firstChild.nodeName, "qux");
+    });
+  });
 });
