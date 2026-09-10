@@ -693,8 +693,11 @@ and every release carries provenance attestations.
 **One-time prerequisite** (npmjs.com -> package `@tradik/xslt-processor` ->
 Settings -> Trusted Publisher): provider *GitHub Actions*, owner `spagu`,
 repository `XSLT-Processor`, workflow `release.yml`, environment left empty.
-Until this is configured the `publish` job fails and the package must be
-published manually with `npm publish --provenance --access public --otp=CODE`.
+Alternatively add an `NPM_TOKEN` repository secret (granular access token
+with publish rights and 2FA bypass); the publish step passes it as
+`NODE_AUTH_TOKEN`. Without either, the `publish` job fails with `E404` and the
+package must be published manually with
+`npm publish --provenance --access public --otp=CODE`.
 
 **Release process:**
 
@@ -704,8 +707,8 @@ published manually with `npm publish --provenance --access public --otp=CODE`.
 
 # 2. Tag and push the tag; the workflow refuses to publish if the tag does
 #    not match package.json.
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.1.1
+git push origin v1.1.1
 ```
 
 **Automated workflow:**
