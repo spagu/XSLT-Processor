@@ -693,9 +693,15 @@ and every release carries provenance attestations.
 **One-time prerequisite** (npmjs.com -> package `@tradik/xslt-processor` ->
 Settings -> Trusted Publisher): provider *GitHub Actions*, owner `spagu`,
 repository `XSLT-Processor`, workflow `release.yml`, environment left empty.
-Alternatively add an `NPM_TOKEN` repository secret (granular access token
-with publish rights and 2FA bypass); the publish step passes it as
-`NODE_AUTH_TOKEN`. Without either, the `publish` job fails with `E404` and the
+Alternatively add an `NPM_TOKEN` repository secret; the publish step passes it
+as `NODE_AUTH_TOKEN`. The token has to be one that bypasses two-factor
+authentication, otherwise the job fails with `EOTP` ("This operation requires a
+one-time password") because no one can type a code in CI:
+
+- a **Granular Access Token** with *Read and write* permission for this package, or
+- a classic token of type **Automation**.
+
+A classic **Publish** token still enforces 2FA and will not work. Without either, the `publish` job fails with `E404` and the
 package must be published manually with
 `npm publish --provenance --access public --otp=CODE`.
 

@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **npm packaging** - the `bin` entry used a `./` prefix, which npm 11 rejects ("script name bin/xslt.js was invalid and removed"), so the published package would have had no `xslt` executable. The entry is now `bin/xslt.js`.
 - **npm packaging** - test files (`src/**/*.test.js`) are excluded from the tarball via negated `files` patterns (68 -> 48 files).
 
-- **Release workflow** - the publish step now passes the `NPM_TOKEN` secret as `NODE_AUTH_TOKEN` when it is configured, falling back to Trusted Publishing (OIDC) otherwise.
+- **Release workflow** - the publish step now passes the `NPM_TOKEN` secret as `NODE_AUTH_TOKEN` when it is configured, falling back to Trusted Publishing (OIDC) otherwise. The README documents that the token must be a Granular Access Token or a classic Automation token; a classic Publish token fails in CI with `EOTP`.
 
 Version 1.1.0 was tagged on GitHub but never reached npm (the publish job ran before npm Trusted Publishing was configured); 1.1.1 is the release to install.
 
