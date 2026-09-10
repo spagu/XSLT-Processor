@@ -51,7 +51,7 @@ export class KeyIndexRegistry {
    * registry.lookup('byId', 'a1', xmlDoc);
    */
   lookup(name, values, doc) {
-    if (!Object.prototype.hasOwnProperty.call(this.keys, name)) {
+    if (!Object.hasOwn(this.keys, name)) {
       throw new Error(`Undefined key: ${name}`);
     }
 

@@ -135,8 +135,8 @@ function applyGrouping(digits, size, separator) {
 function translateDigits(text, zeroDigit) {
   const offset = zeroDigit.codePointAt(0) - 48;
   if (offset === 0) return text;
-  return text.replace(/[0-9]/g, (digit) =>
-    String.fromCodePoint(digit.charCodeAt(0) + offset),
+  return text.replaceAll(/\d/g, (digit) =>
+    String.fromCodePoint(digit.codePointAt(0) + offset),
   );
 }
 

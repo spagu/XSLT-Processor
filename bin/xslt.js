@@ -19,6 +19,7 @@ import {
   printVersion
 } from './lib/options.js';
 import { createDomEnvironment, runTransformation } from './lib/transform.js';
+import { resolveInputPath, resolveOutputPath } from './lib/paths.js';
 
 /**
  * Parse the command line, exiting on malformed input.
@@ -38,7 +39,7 @@ function readArguments() {
  * Write the transformation result to a file or to stdout.
  *
  * @param {string} output - Serialized transformation result
- * @param {string|undefined} target - Output file path, if any
+ * @param {string|undefined} target - Validated absolute output path, if any
  * @returns {Promise<void>} Resolves once the result has been written
  */
 async function writeOutput(output, target) {
@@ -79,9 +80,15 @@ async function main() {
   const dom = createDomEnvironment();
 
   try {
+    const xmlFile = resolveInputPath(xmlPath, 'XML');
+    const xsltFile = resolveInputPath(xsltPath, 'XSLT');
+    const outputFile = args.values.output
+      ? resolveOutputPath(args.values.output)
+      : undefined;
+
     const [xmlContent, xsltContent] = await Promise.all([
-      readFile(xmlPath, 'utf-8'),
-      readFile(xsltPath, 'utf-8')
+      readFile(xmlFile, 'utf-8'),
+      readFile(xsltFile, 'utf-8')
     ]);
 
     const output = runTransformation({
@@ -92,13 +99,9 @@ async function main() {
       values: args.values
     });
 
-    await writeOutput(output, args.values.output);
+    await writeOutput(output, outputFile);
   } catch (err) {
-    if (err.code === 'ENOENT') {
-      console.error(`Error: File not found: ${err.path}`);
-    } else {
-      console.error(`Error: ${err.message}`);
-    }
+    console.error(`Error: ${err.message}`);
     process.exit(1);
   }
 }

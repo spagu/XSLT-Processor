@@ -22,7 +22,7 @@ function toAlphabetic(value, upperCase) {
 
   while (remaining > 0) {
     const index = (remaining - 1) % 26;
-    result = String.fromCharCode((upperCase ? 65 : 97) + index) + result;
+    result = String.fromCodePoint((upperCase ? 65 : 97) + index) + result;
     remaining = Math.floor((remaining - 1) / 26);
   }
 
@@ -77,7 +77,7 @@ export function toRoman(value) {
  * @returns {string} The rendered number
  */
 function formatToken(value, token) {
-  if (/^[0-9]+$/.test(token)) {
+  if (/^\d+$/.test(token)) {
     return String(value).padStart(token.length, "0");
   }
 
@@ -118,11 +118,7 @@ function parseFormat(format) {
     else separators.push(part);
   }
 
-  if (
-    parts.length > 0 &&
-    tokens.length > 0 &&
-    !isToken(parts[parts.length - 1])
-  ) {
+  if (parts.length > 0 && tokens.length > 0 && !isToken(parts.at(-1))) {
     suffix = separators.pop();
   }
 
@@ -149,11 +145,10 @@ export function formatXsltNumber(numbers, format = "1") {
 
   numbers.forEach((value, index) => {
     if (index > 0) {
-      const separator =
-        separators[index - 1] ?? separators[separators.length - 1] ?? ".";
+      const separator = separators[index - 1] ?? separators.at(-1) ?? ".";
       result += separator;
     }
-    result += formatToken(value, tokens[index] ?? tokens[tokens.length - 1]);
+    result += formatToken(value, tokens[index] ?? tokens.at(-1));
   });
 
   return result + suffix;

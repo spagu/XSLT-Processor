@@ -635,7 +635,7 @@ export class XPathEvaluator {
   evalFunctionCall(ast, context) {
     const name = ast.prefix ? `${ast.prefix}:${ast.name}` : ast.name;
 
-    if (!Object.prototype.hasOwnProperty.call(this.functions, name)) {
+    if (!Object.hasOwn(this.functions, name)) {
       throw new Error(`Unknown function: ${name}`);
     }
 

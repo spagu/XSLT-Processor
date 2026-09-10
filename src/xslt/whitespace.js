@@ -110,7 +110,7 @@ export class WhitespaceFilter {
 function hasXmlSpacePreserve(node) {
   let current = node;
 
-  while (current && current.nodeType === 1) {
+  while (current?.nodeType === 1) {
     const value = current.getAttribute("xml:space");
     if (value === "preserve") return true;
     if (value === "default") return false;
@@ -138,8 +138,7 @@ function pruneWhitespace(root, filter) {
       (current.nodeType === 3 || current.nodeType === 4) &&
       current.nodeValue !== null &&
       current.nodeValue.trim() === "" &&
-      current.parentNode &&
-      current.parentNode.nodeType === 1 &&
+      current.parentNode?.nodeType === 1 &&
       filter.isStripped(current.parentNode) &&
       !hasXmlSpacePreserve(current.parentNode)
     ) {
@@ -152,7 +151,7 @@ function pruneWhitespace(root, filter) {
     }
   }
 
-  for (const node of doomed) node.parentNode.removeChild(node);
+  for (const node of doomed) node.remove();
 }
 
 /**

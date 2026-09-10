@@ -415,6 +415,10 @@ describe("generate-id()", () => {
   it("should return an empty string for an empty node-set", () => {
     assert.strictEqual(evaluateInTemplate("generate-id(/nothing)"), "");
   });
+
+  it("should return an empty string for a non node-set argument", () => {
+    assert.strictEqual(evaluateInTemplate("generate-id(false())"), "");
+  });
 });
 
 describe("system-property()", () => {
@@ -503,6 +507,13 @@ describe("function-available() and element-available()", () => {
     assert.strictEqual(
       transform(xslDoc, parseXML("<root/>")),
       "<out>false</out>",
+    );
+  });
+
+  it("should report names with an undeclared prefix as unavailable", () => {
+    assert.strictEqual(
+      evaluateInTemplate("element-available('nope:if')"),
+      "false",
     );
   });
 

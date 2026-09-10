@@ -901,7 +901,7 @@ export class XsltEngine {
       (referenceNode.nodeType === 9
         ? referenceNode
         : referenceNode.ownerDocument);
-    if (ownerDocument && ownerDocument.implementation) {
+    if (ownerDocument?.implementation) {
       return ownerDocument.implementation.createDocument(null, null, null);
     }
 

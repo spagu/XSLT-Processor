@@ -31,7 +31,7 @@ export function lookupNamespaceUri(node, prefix) {
   const attributeName = prefix ? `xmlns:${prefix}` : "xmlns";
   let current = node;
 
-  while (current && current.nodeType === 1) {
+  while (current?.nodeType === 1) {
     const value = current.getAttribute(attributeName);
     if (value) return value;
     current = current.parentNode;

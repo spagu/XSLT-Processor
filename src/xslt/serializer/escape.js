@@ -35,7 +35,7 @@ const HTML_ATTRIBUTE_ESCAPES = {
  * @returns {string} Escaped text
  */
 function escapeWith(value, pattern, escapes) {
-  return String(value).replace(pattern, (character) => escapes[character]);
+  return String(value).replaceAll(pattern, (character) => escapes[character]);
 }
 
 /**
@@ -48,7 +48,10 @@ function escapeWith(value, pattern, escapes) {
  * @returns {string} Escaped text
  */
 export function escapeXmlText(value) {
-  return escapeWith(value, /[&<]/g, XML_TEXT_ESCAPES).replace(/]]>/g, "]]&gt;");
+  return escapeWith(value, /[&<]/g, XML_TEXT_ESCAPES).replaceAll(
+    /]]>/g,
+    "]]&gt;",
+  );
 }
 
 /**
@@ -91,5 +94,5 @@ export function escapeHtmlAttribute(value) {
  * @returns {string} One or more CDATA sections
  */
 export function wrapCdata(value) {
-  return `<![CDATA[${String(value).replace(/]]>/g, "]]]]><![CDATA[>")}]]>`;
+  return `<![CDATA[${String(value).replaceAll(/]]>/g, "]]]]><![CDATA[>")}]]>`;
 }

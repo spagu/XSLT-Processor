@@ -9,7 +9,7 @@
  * @module xslt/templatePriority
  */
 
-const NAME = "[A-Za-z_][\\w.-]*";
+const NAME = String.raw`[A-Za-z_][\w.-]*`;
 const QNAME = `(?:${NAME}:)?${NAME}`;
 
 /** Patterns of the form `name`, `prefix:name`, `@name`, `@prefix:name`. */
@@ -17,7 +17,7 @@ const QNAME_PATTERN = new RegExp(`^(?:child::|attribute::|@)?${QNAME}$`);
 
 /** Patterns of the form `prefix:*` or `@prefix:*`. */
 const PREFIX_WILDCARD_PATTERN = new RegExp(
-  `^(?:child::|attribute::|@)?${NAME}:\\*$`,
+  String.raw`^(?:child::|attribute::|@)?${NAME}:\*$`,
 );
 
 /** Patterns of the form `*`, `@*`, `node()`, `text()`, `comment()`, `processing-instruction()`. */

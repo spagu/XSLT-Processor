@@ -19,6 +19,18 @@ export const VENDOR = "@tradik/xslt-processor";
 export const VENDOR_URL = "https://github.com/spagu/XSLT-Processor";
 
 /**
+ * Values reported by `system-property()`, keyed by property name.
+ *
+ * The XSLT version is reported as the string `"1"`; XPath 1.0 converts it to
+ * the number 1 wherever a numeric comparison or arithmetic is used.
+ */
+const SYSTEM_PROPERTIES = Object.freeze({
+  "xsl:version": "1",
+  "xsl:vendor": VENDOR,
+  "xsl:vendor-url": VENDOR_URL,
+});
+
+/**
  * Get the document that owns a node.
  *
  * @param {Node} node - Any node
@@ -34,14 +46,15 @@ function ownerDocumentOf(node) {
  * Node-sets yield the string value of every node, other types yield one string.
  *
  * @param {XPathEvaluator} evaluator - The evaluator providing the conversions
+ * @param {(value: *) => string} stringify - The XPath `string()` conversion
  * @param {*} value - An evaluated XPath value
  * @returns {string[]} The string values
  */
-function toStringList(evaluator, value) {
+function toStringList(evaluator, stringify, value) {
   if (Array.isArray(value)) {
     return value.map((node) => evaluator.getStringValue(node));
   }
-  return [evaluator.toString(value)];
+  return [stringify(value)];
 }
 
 /**
@@ -70,8 +83,18 @@ function splitQName(qname) {
  */
 export function createXsltFunctions(engine) {
   const evaluator = engine.xpathEvaluator;
+
+  /**
+   * The XPath `string()` conversion of the evaluator.
+   *
+   * `XPathEvaluator#toString` shadows `Object#toString` and takes the value to
+   * convert as its argument, so it is bound once under an unambiguous name.
+   *
+   * @type {(value: *) => string}
+   */
+  const stringify = evaluator.toString.bind(evaluator);
   const evaluate = (arg, ctx) => evaluator.evaluate(arg, ctx);
-  const asString = (arg, ctx) => evaluator.toString(evaluate(arg, ctx));
+  const asString = (arg, ctx) => stringify(evaluate(arg, ctx));
 
   return {
     /**
@@ -83,7 +106,7 @@ export function createXsltFunctions(engine) {
      */
     document: (args, ctx) => {
       const baseUri = args.length > 1 ? asString(args[1], ctx) : engine.baseUri;
-      const uris = toStringList(evaluator, evaluate(args[0], ctx));
+      const uris = toStringList(evaluator, stringify, evaluate(args[0], ctx));
       const result = [];
 
       for (const uri of uris) {
@@ -97,7 +120,7 @@ export function createXsltFunctions(engine) {
     /** `key(name, value)` - look up nodes through an `xsl:key` index. */
     key: (args, ctx) => {
       const name = asString(args[0], ctx);
-      const values = toStringList(evaluator, evaluate(args[1], ctx));
+      const values = toStringList(evaluator, stringify, evaluate(args[1], ctx));
       return engine.keyRegistry.lookup(name, values, ownerDocumentOf(ctx.node));
     },
 
@@ -131,22 +154,16 @@ export function createXsltFunctions(engine) {
 
     /** `system-property(name)` - XSLT version and vendor information. */
     "system-property": (args, ctx) => {
-      switch (asString(args[0], ctx)) {
-        case "xsl:version":
-          return 1;
-        case "xsl:vendor":
-          return VENDOR;
-        case "xsl:vendor-url":
-          return VENDOR_URL;
-        default:
-          return "";
-      }
+      const name = asString(args[0], ctx);
+      return Object.hasOwn(SYSTEM_PROPERTIES, name)
+        ? SYSTEM_PROPERTIES[name]
+        : "";
     },
 
     /** `function-available(name)` - reflects the evaluator function table. */
     "function-available": (args, ctx) => {
       const name = asString(args[0], ctx);
-      return Object.prototype.hasOwnProperty.call(evaluator.functions, name);
+      return Object.hasOwn(evaluator.functions, name);
     },
 
     /** `element-available(name)` - reflects the XSLT elements the engine runs. */

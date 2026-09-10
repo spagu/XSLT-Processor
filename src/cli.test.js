@@ -177,13 +177,71 @@ describe("xslt CLI", () => {
   });
 
   it("should fail for a missing file", () => {
+    const missing = join(workDir, "missing.xml");
     const { status, stderr } = runCliFailing([
-      join(workDir, "missing.xml"),
+      missing,
       join(workDir, "identity.xsl"),
     ]);
 
     assert.strictEqual(status, 1);
     assert.match(stderr, /File not found/);
+    assert.ok(stderr.includes(missing));
+  });
+
+  it("should fail when an input path is not a file", () => {
+    const { status, stderr } = runCliFailing([
+      workDir,
+      join(workDir, "identity.xsl"),
+    ]);
+
+    assert.strictEqual(status, 1);
+    assert.match(stderr, /XML path is not a file/);
+  });
+
+  it("should fail for a missing stylesheet", () => {
+    const { status, stderr } = runCliFailing([
+      join(workDir, "data.xml"),
+      join(workDir, "missing.xsl"),
+    ]);
+
+    assert.strictEqual(status, 1);
+    assert.match(stderr, /File not found/);
+  });
+
+  it("should fail when the output directory does not exist", () => {
+    const { status, stderr } = runCliFailing([
+      join(workDir, "data.xml"),
+      join(workDir, "identity.xsl"),
+      "-o",
+      join(workDir, "nowhere", "out.xml"),
+    ]);
+
+    assert.strictEqual(status, 1);
+    assert.match(stderr, /Output directory does not exist/);
+  });
+
+  it("should fail when the output directory is not a directory", () => {
+    const { status, stderr } = runCliFailing([
+      join(workDir, "data.xml"),
+      join(workDir, "identity.xsl"),
+      "-o",
+      join(workDir, "data.xml", "out.xml"),
+    ]);
+
+    assert.strictEqual(status, 1);
+    assert.match(stderr, /Output directory is not a directory/);
+  });
+
+  it("should fail when the output path is an existing directory", () => {
+    const { status, stderr } = runCliFailing([
+      join(workDir, "data.xml"),
+      join(workDir, "identity.xsl"),
+      "-o",
+      workDir,
+    ]);
+
+    assert.strictEqual(status, 1);
+    assert.match(stderr, /Output path is not a file/);
   });
 
   it("should fail for malformed XML", () => {
