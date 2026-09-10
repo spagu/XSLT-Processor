@@ -297,6 +297,25 @@ describe("xslt CLI", () => {
     assert.match(stderr, /Base directory does not exist/);
   });
 
+  it("should refuse an output file outside the base directory", () => {
+    const outside = mkdtempSync(join(tmpdir(), "xslt-outside-"));
+    try {
+      const { status, stderr } = runCliFailing([
+        "data.xml",
+        "plain.xsl",
+        "-o",
+        join(outside, "out.xml"),
+      ]);
+      assert.strictEqual(status, 1);
+      assert.match(
+        stderr,
+        /Output directory path is outside the allowed base directory/,
+      );
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   it("should fail for malformed XML", () => {
     const { status, stderr } = runCliFailing([
       join(workDir, "broken.xml"),

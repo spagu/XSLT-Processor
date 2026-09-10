@@ -158,9 +158,13 @@ export function resolveInputPath(rawPath, label, baseDir) {
  */
 export function resolveOutputPath(rawPath, baseDir) {
   const absolute = toAbsolutePath(rawPath, "Output");
-  const parent = canonicalize(
-    dirname(absolute),
-    `Output directory does not exist: ${dirname(absolute)}`,
+  const parent = assertInsideBase(
+    canonicalize(
+      dirname(absolute),
+      `Output directory does not exist: ${dirname(absolute)}`,
+    ),
+    baseDir,
+    "Output directory",
   );
 
   if (!statSync(parent).isDirectory()) {
