@@ -1826,7 +1826,7 @@ describe("XsltEngine", () => {
   });
 
   describe("createDocument without global document", () => {
-    it("should throw when document is not available", () => {
+    it("should fall back to the source document implementation", () => {
       const xslt = parseXML(`<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:template match="/"><out/></xsl:template>
@@ -1840,9 +1840,8 @@ describe("XsltEngine", () => {
       const originalDoc = global.document;
       global.document = undefined;
 
-      assert.throws(() => {
-        engine.transformToDocument(xml);
-      }, /Document creation not available/);
+      const result = engine.transformToDocument(xml);
+      assert.strictEqual(result.documentElement.tagName, "out");
 
       global.document = originalDoc;
     });

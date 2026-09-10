@@ -28,6 +28,7 @@ This library ensures your XSLT-based applications continue to work regardless of
 - **1:1 Native API Compatibility**: Drop-in replacement for native `XSLTProcessor`
 - **Full XSLT 1.0 Support**: Implements the complete W3C XSLT 1.0 specification
 - **XPath 1.0 Engine**: Built-in XPath evaluator with all core functions
+- **`xsl:output` Serialization**: `transformToString()` honors method, indent, doctype, CDATA sections and `disable-output-escaping`
 - **Zero Dependencies**: Standalone implementation with no external dependencies
 - **Multiple Formats**: ESM, CommonJS, and browser IIFE bundles
 - **TypeScript Support**: Includes TypeScript declarations
@@ -142,7 +143,15 @@ xslt data.xml template.xsl -p title="My Page" -p count=10
 
 # Format output with indentation
 xslt data.xml template.xsl -f -o output.html
+
+# Override the output method and drop the XML declaration
+xslt data.xml template.xsl --method text
+xslt data.xml template.xsl --no-declaration
 ```
+
+The output is serialized according to the `xsl:output` element of the
+stylesheet (see [Serializing output](#serializing-output-xsloutput)); the
+options below override individual `xsl:output` settings.
 
 #### CLI Options
 
@@ -150,7 +159,10 @@ xslt data.xml template.xsl -f -o output.html
 |--------|-------------|
 | `-o, --output <file>` | Write output to file instead of stdout |
 | `-p, --param <n>=<v>` | Set XSLT parameter (can be used multiple times) |
-| `-f, --format` | Format output with indentation |
+| `-f, --format` | Format output with indentation (same as `--indent`) |
+| `--indent` | Override `xsl:output` to `indent="yes"` |
+| `--method <m>` | Override the `xsl:output` method (`xml`, `html`, `xhtml`, `text`) |
+| `--no-declaration` | Override `xsl:output` to omit the XML declaration |
 | `-h, --help` | Show help message |
 | `-v, --version` | Show version number |
 
@@ -171,6 +183,7 @@ const processor = new XSLTProcessor();
 | `importStylesheet(node, stylesheetUri?)` | Imports an XSLT stylesheet from a Document or Element node. The optional `stylesheetUri` is the base URI used to resolve relative `xsl:import`/`xsl:include` hrefs |
 | `transformToFragment(source, output)` | Transforms XML and returns a DocumentFragment |
 | `transformToDocument(source)` | Transforms XML and returns an XMLDocument |
+| `transformToString(source)` | Transforms XML and returns the serialized result honoring `xsl:output` (non-W3C extension) |
 | `setParameter(namespaceURI, localName, value)` | Sets an XSLT parameter |
 | `getParameter(namespaceURI, localName)` | Gets an XSLT parameter value |
 | `removeParameter(namespaceURI, localName)` | Removes an XSLT parameter |
@@ -184,6 +197,61 @@ const processor = new XSLTProcessor();
 | Property | Description |
 |----------|-------------|
 | `engine` | Read-only access to the underlying `XsltEngine` (advanced usage). It is `null` until `importStylesheet()` has been called |
+
+### Serializing output (xsl:output)
+
+`transformToString(source)` serializes the result tree according to the
+`xsl:output` element of the stylesheet (XSLT 1.0 section 16). Unlike the DOM
+based methods it returns ready to write markup, so the CLI and Node.js users do
+not need a separate `XMLSerializer` or a hand rolled re-indenter.
+
+```javascript
+const xslt = parser.parseFromString(`<?xml version="1.0"?>
+  <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+    <xsl:output method="xml" indent="yes"/>
+    <xsl:template match="/"><BAR><QUX/></BAR></xsl:template>
+  </xsl:stylesheet>`, 'application/xml');
+
+const processor = new XSLTProcessor();
+processor.importStylesheet(xslt);
+
+processor.transformToString(xmlDoc);
+// <?xml version="1.0" encoding="UTF-8"?>
+// <BAR>
+//   <QUX/>
+// </BAR>
+```
+
+Supported `xsl:output` attributes:
+
+| Attribute | Behavior |
+|-----------|----------|
+| `method="xml"` | XML declaration, minimal escaping, empty elements as `<x/>` (default) |
+| `method="html"` | No XML declaration, void elements as `<br>`, minimized boolean attributes, unescaped `script`/`style` |
+| `method="xhtml"` | XML rules with void elements written as `<br />` |
+| `method="text"` | Concatenation of all text nodes, no escaping |
+| `indent="yes"` | Newline plus two-space indentation for element-only content; mixed content and `pre`/`script`/`style`/`textarea` are left untouched |
+| `encoding`, `version`, `standalone` | Written into the XML declaration |
+| `omit-xml-declaration="yes"` | Suppresses the XML declaration |
+| `doctype-public`, `doctype-system` | Emit a `<!DOCTYPE ...>` before the document element |
+| `cdata-section-elements` | Text children of the listed elements are wrapped in `<![CDATA[...]]>`, split around any `]]>` |
+| `media-type` | Parsed and exposed on the settings object |
+
+`disable-output-escaping="yes"` on `xsl:text` and `xsl:value-of` is honored: the
+generated text is emitted verbatim, so `&lt;b&gt;` reaches the output as `<b>`.
+
+The serializer can also be used on its own, for example on a fragment produced
+by `transformToFragment`:
+
+```javascript
+import { serializeResult } from '@tradik/xslt-processor';
+
+serializeResult(fragment, { method: 'html', indent: 'yes' });
+```
+
+When `method` is absent (or `auto`), the output method is derived from the
+result tree: `html` when the document element is `html` in no namespace, `xml`
+otherwise.
 
 ### Parameters Example
 
@@ -355,7 +423,12 @@ const result = processor.transformToDocument(xmlDoc);
 ### Utility Functions
 
 ```javascript
-import { isNativeXSLTSupported, installGlobal } from '@tradik/xslt-processor';
+import {
+  isNativeXSLTSupported,
+  installGlobal,
+  serializeResult,
+  markRawText
+} from '@tradik/xslt-processor';
 
 // Check if native XSLT is functional
 if (!isNativeXSLTSupported()) {
@@ -365,6 +438,12 @@ if (!isNativeXSLTSupported()) {
 // Install as global XSLTProcessor
 installGlobal(); // Only if native not available
 installGlobal(true); // Force install
+
+// Serialize any result tree with xsl:output settings
+serializeResult(node, { method: 'xml', indent: 'yes' });
+
+// Mark a text node so that it is emitted without escaping
+markRawText(document.createTextNode('<b>raw</b>'));
 ```
 
 ## Complete Example
@@ -708,7 +787,12 @@ This implementation follows these W3C specifications with comprehensive test cov
 | 13 | Messages | Supported | `xsl:message` with `terminate` attribute |
 | 14 | Extensions | Partial | `xsl:fallback` supported |
 | 15 | Fallback | Supported | `xsl:fallback` element |
-| 16 | Output | Supported | `xsl:output` with method, encoding, indent |
+| 16 | Output | Supported | `xsl:output` honored by `transformToString()` / `serializeResult()` |
+| 16.1 | XML Output Method | Supported | XML declaration (`encoding`, `version`, `standalone`), `omit-xml-declaration`, `doctype-public`/`doctype-system`, namespace declarations, `indent="yes"` for element-only content |
+| 16.1 | CDATA Sections | Supported | `cdata-section-elements`, split around `]]>` |
+| 16.2 | HTML Output Method | Supported | Void elements as `<br>`, minimized boolean attributes, unescaped `script`/`style`, no re-indent inside `pre`/`script`/`style`/`textarea` |
+| 16.3 | Text Output Method | Supported | Concatenation of all text nodes, no escaping |
+| 16.4 | Disabling Output Escaping | Supported | `disable-output-escaping` on `xsl:text` and `xsl:value-of` |
 
 ### XPath 1.0 Specification Compliance
 
@@ -773,6 +857,7 @@ This implementation provides full compatibility with the [MDN XSLTProcessor API]
 | `importStylesheet(node)` | Supported | Accepts Document or Element |
 | `transformToFragment(source, output)` | Supported | Returns DocumentFragment |
 | `transformToDocument(source)` | Supported | Returns XMLDocument |
+| `transformToString(source)` | Extension | Not part of the W3C API; returns the `xsl:output` serialized result |
 | `setParameter(namespaceURI, localName, value)` | Supported | Full namespace support |
 | `getParameter(namespaceURI, localName)` | Supported | Returns parameter value |
 | `removeParameter(namespaceURI, localName)` | Supported | Removes single parameter |
@@ -788,8 +873,9 @@ This implementation provides full compatibility with the [MDN XSLTProcessor API]
 | XPath 1.0 Axes | 26+ | All 13 axes |
 | DOM Level 3 | 20+ | Core interfaces |
 | XSLTProcessor API | 39+ | All methods |
+| Output Serialization | 79+ | `xsl:output`, CLI, `transformToString()` |
 | Security | 34+ | DoS prevention, prototype pollution |
-| **Total** | **441** | **99.41% line coverage** |
+| **Total** | **560** | **100% line coverage** |
 
 ## Style Guide
 

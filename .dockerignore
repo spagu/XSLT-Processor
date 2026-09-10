@@ -43,3 +43,4 @@ docker-compose*.yml
 tmp/
 temp/
 *.tmp
+.claude/

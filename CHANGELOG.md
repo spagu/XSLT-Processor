@@ -23,6 +23,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New focused modules with full test suites: `src/xslt/functions.js`, `keys.js`, `formatNumber.js`, `number.js`, `numberFormat.js`, `whitespace.js`, `literalResult.js`, `resultTree.js`, `elements.js` and `uri.js`.
 - CommonJS consumer smoke test (`tests/cjs-smoke.cjs`) exercising the built bundle through `require()` with jsdom, plus tests for the package entry point.
 
+- **Output serializer (`xsl:output`, XSLT 1.0 section 16)** - new `src/xslt/serializer.js` exporting `serializeResult(node, outputSettings)` plus the focused modules in `src/xslt/serializer/` (`baseWriter`, `xmlSerializer`, `htmlSerializer`, `textSerializer`, `escape`, `indent`, `namespaces`, `settings`, `rawText`, `constants`).
+  - `method="xml"` - XML declaration honoring `encoding`, `version` and `standalone`, `omit-xml-declaration`, `doctype-public`/`doctype-system`, minimal text and attribute escaping, `<x/>` for empty elements, namespace declarations emitted where first used and never twice, comments and processing instructions.
+  - `method="html"` - no XML declaration, HTML doctype, void elements written as `<br>`, minimized boolean attributes, unescaped `script`/`style` content, `>`-terminated processing instructions, original element and attribute name case, no namespace declarations.
+  - `method="xhtml"` - XML rules with void elements written as `<br />`.
+  - `method="text"` - concatenation of all descendant text nodes, unescaped.
+  - Automatic default method detection: `html` when the result document element is `html` in no namespace, `xml` otherwise.
+  - `indent="yes"` - newline plus two-space indentation for element-only content; mixed content, `cdata-section-elements` and the HTML `pre`/`script`/`style`/`textarea` elements are left untouched.
+  - `cdata-section-elements` - text children wrapped in `<![CDATA[...]]>`, split around any `]]>` terminator.
+  - `disable-output-escaping="yes"` on `xsl:text` and `xsl:value-of` is now honored; text nodes can also be marked explicitly with the exported `markRawText()` helper.
+- **`XSLTProcessor.transformToString(source)`** and **`XsltEngine.transformToString(sourceNode)`** - non-W3C convenience methods returning the serialized result. `transformToFragment()` and `transformToDocument()` are unchanged.
+- **Public exports** - `serializeResult`, `markRawText`, `isRawText` and `resolveOutputSettings` are exported from the package entry point, and `transformToString`/`OutputSettings` are declared in the generated TypeScript declarations.
+- **CLI** - `bin/xslt.js` now serializes through `transformToString()` instead of re-indenting with a regular expression, and gained `--indent`, `--method <m>` and `--no-declaration` flags that override the stylesheet `xsl:output` settings. Helpers were extracted to `bin/lib/options.js` and `bin/lib/transform.js`.
+- **Tests** - `src/xslt/serializer.test.js`, `src/XSLTProcessor.serialization.test.js` and `src/cli.test.js` (119 new tests, 560 in total), including the `<xsl:output method="xml" indent="yes"/>` regression from DesignLiquido/xslt-processor#219.
+
 ### Fixed
 
 - **`TypeError: Cannot read properties of undefined (reading 'setStylesheetLoader')`** ([#6](https://github.com/spagu/XSLT-Processor/issues/6)) - the README documented `processor.engine.setStylesheetLoader(...)`, but `processor.engine` was undefined and the engine did not exist before `importStylesheet()`. The documented workflow now works through `processor.setStylesheetLoader(...)`.
@@ -35,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`transformToFragment(xmlDoc, htmlDocument)` lower-cased names and injected the XHTML namespace** (`<bar xmlns="http://www.w3.org/1999/xhtml">` for `<BAR>`). The result tree is now built in a neutral XML document and imported into the output document at the end, preserving names, namespaces and `disable-output-escaping` markers while keeping the W3C behaviour that the fragment is owned by the output document.
 - **XPath function lookup** no longer resolves inherited `Object.prototype` members, so expressions such as `constructor()` report `Unknown function` instead of invoking an object built-in.
 - **`setParameter()` broke every transformation** - the processor stored `{ value }` in `globalParameters`, but the engine only understood `{ select }` / `{ node }` definitions and called `processChildren(undefined)`, throwing `Cannot read properties of undefined (reading 'childNodes')` (so `transformTo*` returned `null`). A value set *before* `importStylesheet()` was silently overwritten by the `xsl:param` declaration. External values are now merged into the declaration and always win over the declared default. This also fixes the CLI `-p name=value` flag.
+- **Union match patterns had the wrong default priority** - `match="@*|node()"` was treated as one "complex" pattern with priority 0.5, so the identity template beat every `match="name"` template (priority 0). Per XSLT 1.0 section 5.5 a union pattern is now registered as one template rule per alternative, each with its own default priority; `calculatePriority()` moved to `src/xslt/templatePriority.js` and also recognises `@name`, `@*`, `prefix:name`, `@prefix:*`, `child::`/`attribute::` axes and `processing-instruction('literal')`.
+- **`transformToDocument()`/`transformToString()` failed in Node.js without a global `document`** (`Document creation not available in this environment`). The result document is now created from the DOM implementation of the source document when no global `document` exists, so jsdom/xmldom users no longer need to install a global.
 - **`xsl:output` ignored `version` and `standalone`** - both attributes are now parsed into `outputSettings` (`version` defaults to `1.0`, `standalone` to `null`).
 
 ### Changed
@@ -49,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `XsltEngine.countNumber()` was replaced by `countXsltNumber()` in `src/xslt/number.js`; `XsltEngine.formatNumber()` and `XsltEngine.toRoman()` are kept as thin delegating wrappers.
 - `XsltEngine.resolveUri()` delegates to `src/xslt/uri.js`, which also recognises URIs with any scheme (not just `http:`/`https:`) as absolute.
 - `removeParameter()` and `clearParameters()` now restore the `xsl:param` default of the stylesheet instead of deleting the declaration (which made `$name` an undefined variable). New engine helpers `setParameterValue()`, `clearParameterValue()` and `clearParameterValues()` back this.
+
+- `-f, --format` on the CLI is now an alias of `--indent` and drives the real serializer instead of the previous naive re-indentation.
 
 ### Security
 

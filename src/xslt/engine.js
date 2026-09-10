@@ -20,6 +20,8 @@ import {
   shouldCopyAttribute,
 } from "./literalResult.js";
 import { createResultDocument, importResultFragment } from "./resultTree.js";
+import { calculatePriority } from "./templatePriority.js";
+import { serializeResult } from "./serializer.js";
 
 const XSLT_NS = XSLT_NAMESPACE;
 
@@ -550,53 +552,46 @@ export class XsltEngine {
     }
   }
 
+  /**
+   * Register a template rule.
+   *
+   * A union match pattern is equivalent to a set of template rules, one per
+   * alternative (XSLT 1.0 section 5.5), so each alternative is registered
+   * separately with its own default priority.
+   *
+   * @param {Element} node - The xsl:template element
+   */
   registerTemplate(node) {
     const match = node.getAttribute("match");
     const name = node.getAttribute("name");
     const mode = node.getAttribute("mode") || null;
     const priorityAttr = node.getAttribute("priority");
-    const priority = priorityAttr
-      ? parseFloat(priorityAttr)
-      : this.calculatePriority(match);
+    const alternatives = match
+      ? this.splitUnionPattern(match).map((p) => p.trim())
+      : [null];
 
-    this.templates.push({
-      match,
-      name,
-      mode,
-      priority,
-      importPrecedence: this.currentImportPrecedence,
-      node,
-    });
+    for (const alternative of alternatives) {
+      this.templates.push({
+        match: alternative,
+        name,
+        mode,
+        priority: priorityAttr
+          ? parseFloat(priorityAttr)
+          : this.calculatePriority(alternative),
+        importPrecedence: this.currentImportPrecedence,
+        node,
+      });
+    }
   }
 
+  /**
+   * Default priority of a single match pattern (see templatePriority.js).
+   *
+   * @param {string|null} matchPattern - The match pattern
+   * @returns {number} The default priority
+   */
   calculatePriority(matchPattern) {
-    if (!matchPattern) return 0.5;
-
-    // Simplified priority calculation based on XPath 1.0 spec
-    // - NodeType or * have priority -0.5
-    // - NCName:* has priority -0.25
-    // - QName has priority 0
-    // - Other patterns have priority 0.5
-
-    if (
-      matchPattern === "*" ||
-      matchPattern === "node()" ||
-      matchPattern === "text()" ||
-      matchPattern === "comment()" ||
-      matchPattern === "processing-instruction()"
-    ) {
-      return -0.5;
-    }
-
-    if (matchPattern.includes(":*")) {
-      return -0.25;
-    }
-
-    if (/^[a-zA-Z_][\w.-]*$/.test(matchPattern)) {
-      return 0;
-    }
-
-    return 0.5;
+    return calculatePriority(matchPattern ? matchPattern.trim() : matchPattern);
   }
 
   processOutput(node) {
@@ -857,7 +852,7 @@ export class XsltEngine {
    */
   transformToDocument(sourceNode) {
     // For Node.js environments, we need a document implementation
-    const doc = this.createDocument();
+    const doc = this.createDocument(sourceNode);
     const fragment = this.transform(sourceNode, doc);
 
     // Move fragment contents to document
@@ -868,12 +863,48 @@ export class XsltEngine {
     return doc;
   }
 
-  createDocument() {
+  /**
+   * Transform a source document and serialize the result to a string.
+   *
+   * Non-W3C convenience method: the result tree is serialized honoring the
+   * `xsl:output` settings of the stylesheet (XSLT 1.0 section 16).
+   *
+   * @param {Node} sourceNode - Source document or element to transform
+   * @returns {string} The serialized transformation result
+   */
+  transformToString(sourceNode) {
+    const fragment = this.transform(
+      sourceNode,
+      this.createDocument(sourceNode),
+    );
+    return serializeResult(fragment, this.outputSettings);
+  }
+
+  /**
+   * Create an empty XML document to hold a transformation result.
+   *
+   * Uses the global `document` when running in a browser and otherwise falls
+   * back to the DOM implementation owning `referenceNode` (e.g. a jsdom or
+   * xmldom document in Node.js).
+   *
+   * @param {Node} [referenceNode] - Any node whose DOM implementation can be reused
+   * @returns {Document} A new empty document
+   * @throws {Error} When no DOM implementation is available
+   */
+  createDocument(referenceNode) {
     if (typeof document !== "undefined") {
       return document.implementation.createDocument(null, null, null);
     }
 
-    // For Node.js - would need JSDOM or similar
+    const ownerDocument =
+      referenceNode &&
+      (referenceNode.nodeType === 9
+        ? referenceNode
+        : referenceNode.ownerDocument);
+    if (ownerDocument && ownerDocument.implementation) {
+      return ownerDocument.implementation.createDocument(null, null, null);
+    }
+
     throw new Error("Document creation not available in this environment");
   }
 

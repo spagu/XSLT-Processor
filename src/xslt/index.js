@@ -29,3 +29,9 @@ export {
   importResultNode,
 } from "./resultTree.js";
 export { isAbsoluteUri, resolveUri, stripFragment } from "./uri.js";
+export {
+  serializeResult,
+  markRawText,
+  isRawText,
+  resolveOutputSettings,
+} from "./serializer.js";
