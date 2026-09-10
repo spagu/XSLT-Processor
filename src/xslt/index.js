@@ -4,3 +4,9 @@
  */
 
 export { XsltContext, XsltEngine } from "./engine.js";
+export {
+  serializeResult,
+  markRawText,
+  isRawText,
+  resolveOutputSettings,
+} from "./serializer.js";
