@@ -1,6 +1,6 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "main": "dist/xslt-processor.cjs",
@@ -8,7 +8,7 @@
   "browser": "dist/xslt-processor.js",
   "types": "dist/xslt-processor.d.ts",
   "bin": {
-    "xslt": "./bin/xslt.js"
+    "xslt": "bin/xslt.js"
   },
   "exports": {
     ".": {
@@ -29,7 +29,9 @@
   "files": [
     "dist",
     "src",
-    "bin"
+    "bin",
+    "!src/**/*.test.js",
+    "!bin/**/*.test.js"
   ],
   "publishConfig": {
     "access": "public"

@@ -704,8 +704,8 @@ published manually with `npm publish --provenance --access public --otp=CODE`.
 
 # 2. Tag and push the tag; the workflow refuses to publish if the tag does
 #    not match package.json.
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.1.1
+git push origin v1.1.1
 ```
 
 **Automated workflow:**
