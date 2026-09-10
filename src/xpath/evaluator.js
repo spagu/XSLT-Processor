@@ -51,12 +51,29 @@ const FORBIDDEN_VARIABLE_NAMES = Object.freeze([
  * XPath evaluation context
  */
 export class XPathContext {
-  constructor(node, position = 1, size = 1, variables = {}, namespaces = {}) {
+  /**
+   * @param {Node} node - The context node
+   * @param {number} [position] - The context position (1-based)
+   * @param {number} [size] - The context size
+   * @param {Object} [variables] - Variable bindings by name
+   * @param {Object} [namespaces] - Namespace bindings by prefix
+   * @param {*} [hostContext] - Opaque context of the host language (XSLT),
+   *   carried through unchanged so host defined functions can reach it
+   */
+  constructor(
+    node,
+    position = 1,
+    size = 1,
+    variables = {},
+    namespaces = {},
+    hostContext = null,
+  ) {
     this.node = node;
     this.position = position;
     this.size = size;
     this.variables = variables;
     this.namespaces = namespaces;
+    this.hostContext = hostContext;
   }
 
   clone(overrides = {}) {
@@ -66,6 +83,7 @@ export class XPathContext {
       overrides.size ?? this.size,
       overrides.variables ?? this.variables,
       overrides.namespaces ?? this.namespaces,
+      overrides.hostContext ?? this.hostContext,
     );
   }
 }
@@ -75,7 +93,10 @@ export class XPathContext {
  */
 export class XPathEvaluator {
   constructor(options = {}) {
-    this.functions = this.initCoreFunctions();
+    this.functions = Object.assign(
+      Object.create(null),
+      this.initCoreFunctions(),
+    );
     this.maxRecursionDepth =
       options.maxRecursionDepth ?? XPathLimits.MAX_RECURSION_DEPTH;
     this.maxResultSize = options.maxResultSize ?? XPathLimits.MAX_RESULT_SIZE;
@@ -535,7 +556,8 @@ export class XPathEvaluator {
       case "node":
         return true;
       case "text":
-        return node.nodeType === 3;
+        // The XPath data model has no CDATA sections: they are text nodes
+        return node.nodeType === 3 || node.nodeType === 4;
       case "comment":
         return node.nodeType === 8;
       case "processing-instruction":
@@ -590,15 +612,34 @@ export class XPathEvaluator {
     return context.variables[name];
   }
 
+  /**
+   * Register additional functions, for example the XSLT function library.
+   *
+   * Existing names are overwritten, so a host language can also specialise a
+   * core function. Each function is called as `fn(args, context)` with the
+   * evaluator as `this`.
+   *
+   * @param {Object<string, Function>} functions - Functions by name
+   * @returns {XPathEvaluator} This evaluator, to allow chaining
+   *
+   * @example
+   * evaluator.registerFunctions({ 'my:double': (args, ctx) => 2 });
+   */
+  registerFunctions(functions) {
+    for (const [name, fn] of Object.entries(functions)) {
+      this.functions[name] = fn;
+    }
+    return this;
+  }
+
   evalFunctionCall(ast, context) {
     const name = ast.prefix ? `${ast.prefix}:${ast.name}` : ast.name;
-    const fn = this.functions[name];
 
-    if (!fn) {
+    if (!Object.prototype.hasOwnProperty.call(this.functions, name)) {
       throw new Error(`Unknown function: ${name}`);
     }
 
-    return fn.call(this, ast.args, context);
+    return this.functions[name].call(this, ast.args, context);
   }
 
   // Type conversion functions
@@ -659,7 +700,7 @@ export class XPathEvaluator {
         // Document Fragment
         let text = "";
         const walker = (n) => {
-          if (n.nodeType === 3) {
+          if (n.nodeType === 3 || n.nodeType === 4) {
             text += n.nodeValue || "";
           } else if (n.childNodes) {
             for (const child of n.childNodes) {
