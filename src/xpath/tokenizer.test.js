@@ -221,4 +221,55 @@ describe("XPath Tokenizer", () => {
       assert.strictEqual(tokens[tokens.length - 1].type, TokenType.EOF);
     });
   });
+
+  describe("Operator names followed by '(' (issue #9)", () => {
+    const types = (expr) => tokenize(expr).map((t) => t.type);
+
+    for (const [name, type] of [
+      ["or", TokenType.OR],
+      ["and", TokenType.AND],
+      ["div", TokenType.DIV],
+      ["mod", TokenType.MOD],
+    ]) {
+      it(`treats '${name}' after ')' as an operator, not a function call`, () => {
+        assert.deepStrictEqual(types(`(a) ${name} (b)`), [
+          TokenType.LPAREN,
+          TokenType.NAME,
+          TokenType.RPAREN,
+          type,
+          TokenType.LPAREN,
+          TokenType.NAME,
+          TokenType.RPAREN,
+          TokenType.EOF,
+        ]);
+      });
+    }
+
+    it("treats an operator name after ']' or a number as an operator", () => {
+      assert.strictEqual(tokenize("a[1] or (b)")[4].type, TokenType.OR);
+      assert.strictEqual(tokenize("4 div(2)")[1].type, TokenType.DIV);
+      assert.strictEqual(tokenize("$x mod(3)")[2].type, TokenType.MOD);
+    });
+
+    it("tokenizes the expression from the issue report", () => {
+      const tokens = tokenize(
+        "(userCourses/Course/Licence[@Valid != '1']) or (userCourses/Course/Licence[@ShowExpiryWarning = '1'])",
+      );
+      assert.strictEqual(tokens[13].type, TokenType.OR);
+      assert.ok(!tokens.some((t) => t.type === TokenType.FUNCTION));
+    });
+
+    it("still treats a leading or bracketed name followed by '(' as a function", () => {
+      assert.strictEqual(tokenize("or(1)")[0].type, TokenType.FUNCTION);
+      assert.strictEqual(tokenize("x[div()]")[2].type, TokenType.FUNCTION);
+      assert.strictEqual(tokenize("f(1, and(2))")[4].type, TokenType.FUNCTION);
+    });
+
+    it("still treats operator names as element names where no operand precedes", () => {
+      assert.strictEqual(tokenize("div")[0].type, TokenType.NAME);
+      assert.strictEqual(tokenize("a/or")[2].type, TokenType.NAME);
+      assert.strictEqual(tokenize("child::and")[2].type, TokenType.NAME);
+      assert.strictEqual(tokenize("@mod")[1].type, TokenType.NAME);
+    });
+  });
 });

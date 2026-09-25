@@ -72,3 +72,31 @@ export function importResultFragment(fragment, targetDoc) {
 
   return imported;
 }
+
+/** The XHTML namespace. */
+export const XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
+
+/**
+ * Turn an empty document into the one Chrome's `XSLTProcessor` returns from
+ * `transformToDocument` for `method="text"`: the text in a `pre` element of
+ * an XHTML page, `<html><head/><body><pre>text</pre></body></html>`. A text
+ * result has no element to be the document element of an XML document.
+ *
+ * @param {Document} doc - An empty document
+ * @param {string} text - The serialized text output
+ * @returns {Document} The same document, filled in
+ *
+ * @example
+ * wrapTextResult(emptyDoc, "hello").documentElement.textContent; // "hello"
+ */
+export function wrapTextResult(doc, text) {
+  const create = (name) => doc.createElementNS(XHTML_NAMESPACE, name);
+  const html = create("html");
+  const body = create("body");
+  const pre = create("pre");
+  if (text) pre.appendChild(doc.createTextNode(text));
+  body.appendChild(pre);
+  html.append(create("head"), body);
+  doc.appendChild(html);
+  return doc;
+}

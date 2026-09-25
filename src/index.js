@@ -44,7 +44,12 @@ export {
 } from "./xpath/index.js";
 
 // XSLT engine (for advanced users)
-export { XsltEngine, XsltContext } from "./xslt/index.js";
+export {
+  XsltEngine,
+  XsltContext,
+  XSLT_MAX_RESULT_SIZE,
+  XSLT_MAX_EXPRESSION_DEPTH,
+} from "./xslt/index.js";
 
 // Output serializer (xsl:output, XSLT 1.0 section 16)
 export {
@@ -57,7 +62,7 @@ export {
 /**
  * Version information
  */
-export const VERSION = "1.1.1";
+export const VERSION = "1.1.2";
 
 /**
  * Check if we're running in a browser environment

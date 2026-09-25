@@ -82,6 +82,14 @@ const NODE_TYPES = new Set([
 
 const OPERATORS = new Set(["and", "or", "mod", "div"]);
 
+/** Token type of each OperatorName. */
+const OPERATOR_TOKEN_TYPES = Object.freeze({
+  and: TokenType.AND,
+  or: TokenType.OR,
+  mod: TokenType.MOD,
+  div: TokenType.DIV,
+});
+
 export class Token {
   constructor(type, value, position) {
     this.type = type;
@@ -296,9 +304,9 @@ export class XPathTokenizer {
       value += this.consume();
     }
 
-    // Decimal part (handles both 1.5 and .5 style numbers)
-    // For .5 style: entry condition ensures digit follows, so this branch handles it
-    if (this.peek() === "." && /[0-9]/.test(this.peek(1))) {
+    // Decimal part: Number ::= Digits ('.' Digits?)? | '.' Digits, so `5.`
+    // is a number too. A `..` after digits is left alone (never valid there).
+    if (this.peek() === "." && this.peek(1) !== ".") {
       value += this.consume(); // .
       while (
         this.position < this.expression.length &&
@@ -311,6 +319,20 @@ export class XPathTokenizer {
     return new Token(TokenType.NUMBER, parseFloat(value), startPos);
   }
 
+  /**
+   * Read an NCName and classify it using the XPath 1.0 lexical
+   * disambiguation rules (section 3.7), applied in the order the
+   * specification lists them:
+   *
+   * 1. After an operand (the preceding token is not `@`, `::`, `(`, `[`, `,`
+   *    or an operator) `and`, `or`, `div` and `mod` are OperatorNames, even
+   *    when a `(` follows, as in `(a) or (b)`.
+   * 2. A name followed by `(` is a NodeType or a FunctionName.
+   * 3. A name followed by `::` is an AxisName.
+   * 4. Anything else is a NameTest.
+   *
+   * @returns {Token} The classified token
+   */
   readName() {
     const startPos = this.position;
     let value = "";
@@ -322,35 +344,25 @@ export class XPathTokenizer {
       value += this.consume();
     }
 
-    // Check for axis name followed by ::
+    if (OPERATORS.has(value) && this.isOperatorContext()) {
+      return new Token(OPERATOR_TOKEN_TYPES[value], value, startPos);
+    }
+
+    const savedPos = this.position;
     this.skipWhitespace();
+
+    if (this.peek() === "(") {
+      const type = NODE_TYPES.has(value)
+        ? TokenType.NODE_TYPE
+        : TokenType.FUNCTION;
+      return new Token(type, value, startPos);
+    }
+
     if (AXIS_NAMES.has(value) && this.peek() === ":" && this.peek(1) === ":") {
       return new Token(TokenType.AXIS, value, startPos);
     }
 
-    // Check for function call (followed by '(')
-    const savedPos = this.position;
-    this.skipWhitespace();
-    if (this.peek() === "(") {
-      // Check if it's a node type test
-      if (NODE_TYPES.has(value)) {
-        return new Token(TokenType.NODE_TYPE, value, startPos);
-      }
-      return new Token(TokenType.FUNCTION, value, startPos);
-    }
     this.position = savedPos;
-
-    // Check for operators - only in operator context per XPath 1.0 disambiguation rules
-    if (OPERATORS.has(value) && this.isOperatorContext()) {
-      const opTokens = {
-        and: TokenType.AND,
-        or: TokenType.OR,
-        mod: TokenType.MOD,
-        div: TokenType.DIV,
-      };
-      return new Token(opTokens[value], value, startPos);
-    }
-
     return new Token(TokenType.NAME, value, startPos);
   }
 

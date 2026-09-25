@@ -70,15 +70,34 @@ export function toRoman(value) {
 }
 
 /**
+ * Insert a grouping separator every `size` digits, counting from the right.
+ *
+ * @param {string} digits - The decimal digits
+ * @param {{separator?: string, size?: number}} grouping - The grouping settings
+ * @returns {string} The grouped digits
+ */
+function groupDigits(digits, { separator, size }) {
+  if (!separator || Number.isNaN(size) || size <= 0) return digits;
+
+  let result = "";
+  for (let end = digits.length; end > 0; end -= size) {
+    const group = digits.slice(Math.max(0, end - size), end);
+    result = result ? `${group}${separator}${result}` : group;
+  }
+  return result;
+}
+
+/**
  * Render one number with a single `xsl:number` format token.
  *
  * @param {number} value - The number to render
  * @param {string} token - The format token, e.g. `1`, `01`, `a`, `I`
+ * @param {{separator?: string, size?: number}} grouping - Digit grouping
  * @returns {string} The rendered number
  */
-function formatToken(value, token) {
+function formatToken(value, token, grouping) {
   if (/^\d+$/.test(token)) {
-    return String(value).padStart(token.length, "0");
+    return groupDigits(String(value).padStart(token.length, "0"), grouping);
   }
 
   if (value <= 0) return String(value);
@@ -130,14 +149,20 @@ function parseFormat(format) {
 /**
  * Format a number sequence produced by {@link countXsltNumber}.
  *
+ * Decimal tokens are grouped when both `grouping.separator` and a positive
+ * `grouping.size` are given (the `grouping-separator` and `grouping-size`
+ * attributes).
+ *
  * @param {number[]} numbers - The numbers, outermost first
  * @param {string} [format] - The `format` attribute value
+ * @param {{separator?: string, size?: number}} [grouping] - Digit grouping
  * @returns {string} The formatted string, empty when there is nothing to number
  *
  * @example
  * formatXsltNumber([2, 3], '1.1'); // '2.3'
+ * formatXsltNumber([1234567], '1', { separator: ',', size: 3 }); // '1,234,567'
  */
-export function formatXsltNumber(numbers, format = "1") {
+export function formatXsltNumber(numbers, format = "1", grouping = {}) {
   if (numbers.length === 0) return "";
 
   const { prefix, suffix, tokens, separators } = parseFormat(format);
@@ -148,7 +173,7 @@ export function formatXsltNumber(numbers, format = "1") {
       const separator = separators[index - 1] ?? separators.at(-1) ?? ".";
       result += separator;
     }
-    result += formatToken(value, tokens[index] ?? tokens.at(-1));
+    result += formatToken(value, tokens[index] ?? tokens.at(-1), grouping);
   });
 
   return result + suffix;

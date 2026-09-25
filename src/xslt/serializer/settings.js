@@ -54,11 +54,35 @@ export function findRootElement(node) {
   return null;
 }
 
+/** Text made only of XML whitespace (#x20 #x9 #xD #xA). */
+const XML_WHITESPACE_ONLY = /^[ \t\r\n]*$/;
+
+/**
+ * Whether text other than XML whitespace precedes the first element child.
+ *
+ * @param {Node} node - Document or fragment that has an element child
+ * @returns {boolean} True when a non-whitespace text node comes first
+ */
+function hasLeadingText(node) {
+  for (
+    let child = node.firstChild;
+    child.nodeType !== NODE_TYPE.ELEMENT;
+    child = child.nextSibling
+  ) {
+    const isText =
+      child.nodeType === NODE_TYPE.TEXT ||
+      child.nodeType === NODE_TYPE.CDATA_SECTION;
+    if (isText && !XML_WHITESPACE_ONLY.test(child.nodeValue)) return true;
+  }
+  return false;
+}
+
 /**
  * Derive the default output method from the result tree.
  *
  * XSLT 1.0 section 16 defaults to `html` when the document element is `html`
- * in no namespace, and to `xml` otherwise.
+ * in no namespace and no text other than whitespace precedes it, and to
+ * `xml` otherwise.
  *
  * @param {Node|null} node - Result tree root
  * @returns {string} Either "html" or "xml"
@@ -66,7 +90,10 @@ export function findRootElement(node) {
 export function detectOutputMethod(node) {
   const root = findRootElement(node);
   const isHtmlRoot =
-    root && !root.namespaceURI && root.localName.toLowerCase() === "html";
+    root &&
+    !root.namespaceURI &&
+    root.localName.toLowerCase() === "html" &&
+    (root === node || !hasLeadingText(node));
   return isHtmlRoot ? "html" : "xml";
 }
 

@@ -21,6 +21,20 @@ import { getIndentableChildren } from "./indent.js";
 import { isRawText } from "./rawText.js";
 import { findRootElement } from "./settings.js";
 
+/**
+ * Make comment text well-formed: XSLT 1.0 section 7.4 recovery inserts a
+ * space after any `-` followed by another `-` or ending the comment.
+ *
+ * @param {string} text - The comment text
+ * @returns {string} Text without `--` and without a trailing `-`
+ *
+ * @example
+ * safeCommentText("a--b-"); // "a- -b- "
+ */
+export function safeCommentText(text) {
+  return text.replace(/-(?=-|$)/g, "- ");
+}
+
 export class BaseWriter {
   /**
    * @param {object} settings - Normalized output settings
@@ -85,7 +99,7 @@ export class BaseWriter {
         this.writeText(node, textMode);
         break;
       case NODE_TYPE.COMMENT:
-        this.parts.push(`<!--${node.nodeValue}-->`);
+        this.parts.push(`<!--${safeCommentText(node.nodeValue)}-->`);
         break;
       case NODE_TYPE.PROCESSING_INSTRUCTION:
         this.writeProcessingInstruction(node);

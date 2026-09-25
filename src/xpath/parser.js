@@ -248,7 +248,7 @@ export class XPathParser {
     }
 
     // Check if this looks like a location path starting with step
-    if (this.isStepStart()) {
+    if (this.isStepStart() && !this.isPrefixedFunctionCall()) {
       return this.parseLocationPath();
     }
 
@@ -505,16 +505,21 @@ export class XPathParser {
       return this.parseFunctionCall();
     }
 
+    // Prefixed function call: the tokenizer emits NAME ':' FUNCTION
+    if (this.isPrefixedFunctionCall()) {
+      const prefix = this.advance().value;
+      this.advance(); // ':'
+      return this.parseFunctionCallArgs(this.advance().value, prefix);
+    }
+
     throw new Error(
       `Unexpected token ${this.peek().type} at position ${this.peek().position}`,
     );
   }
 
   // FunctionCall ::= FunctionName '(' ( Argument ( ',' Argument )* )? ')'
-  // Note: Prefixed function calls (prefix:fn()) are not supported because
-  // the tokenizer identifies functions by NAME followed by '(' - prefixed
-  // names like 'fn:name()' are tokenized as NAME:NAME() which is parsed
-  // as a location path, not a function call.
+  // FunctionName is a QName: an unprefixed name arrives as one FUNCTION
+  // token, a prefixed one as NAME ':' FUNCTION (see isPrefixedFunctionCall).
   parseFunctionCall() {
     const name = this.advance().value;
     return this.parseFunctionCallArgs(name, null);
@@ -537,6 +542,26 @@ export class XPathParser {
   }
 
   // Helper methods
+
+  /**
+   * Whether the next tokens form a prefixed function name, `prefix:name(`.
+   *
+   * The tokenizer classifies the local part as a FUNCTION token (or as a
+   * NODE_TYPE token when it is spelled like one, as in `f:node()`), so
+   * `NAME ':' (FUNCTION | NODE_TYPE)` can only start a function call; a
+   * prefixed name test is `NAME ':' (NAME | '*')`.
+   *
+   * @returns {boolean} True when a prefixed function call follows
+   */
+  isPrefixedFunctionCall() {
+    const next = this.tokens[this.position + 2];
+    return (
+      this.check(TokenType.NAME) &&
+      this.tokens[this.position + 1].type === TokenType.COLON &&
+      (next.type === TokenType.FUNCTION || next.type === TokenType.NODE_TYPE)
+    );
+  }
+
   isStepStart() {
     const type = this.peek().type;
     return (

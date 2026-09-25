@@ -5,6 +5,79 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-09-24
+
+### Fixed
+
+- **`(a) or (b)` failed with `Unexpected token FUNCTION`** ([#9](https://github.com/spagu/XSLT-Processor/issues/9)) - the tokenizer classified `or`, `and`, `div` and `mod` followed by `(` as function calls before applying the XPath 1.0 operator disambiguation rule (section 3.7). The rules now run in the order the specification lists them.
+- **`xsl:sort` ordering** - text keys were upper-cased and compared with `localeCompare`, so `§112` sorted before `100-00` and `case-order` folded the whole string. Text now compares by Unicode code point like libxslt (the engine of Chrome's native `XSLTProcessor`); `lang` or `case-order` switch to an `Intl.Collator`, where `case-order` only breaks ties.
+- **`xsl:sort data-type="number"`** - non-numeric keys were treated as 0 and `parseFloat` accepted `12abc`. Keys now use XPath `number()` and NaN sorts before every number, as section 10 requires.
+- **`xsl:sort` attribute value templates** - `order`, `data-type`, `case-order` and `lang` were read literally, so `order="{$sortOrder}"` never took effect.
+- **`match="/"` also matched the document element**, so the classic catalog stylesheet (`/` template wrapping `apply-templates`, plus `match="catalog"`) rendered its wrapper twice. `/` now matches only the root node (XSLT 5.2).
+- **Multi-step patterns never matched**: `c/d`, `*/d`, `r//d`, `/r/c`, `c/d[2]`, `e/@a`, `id('x')/d`, `key('k','v')//d`. Patterns are now compiled once and matched right to left (new `src/xslt/patterns.js`, `src/xslt/patternCompiler.js`).
+- **Template conflicts**: with equal priority and import precedence the last template now wins, like libxslt (XSLT 5.5 recovery).
+- **Diamond imports** (two imported stylesheets importing the same third one) were rejected as circular; only real cycles are errors now. `xsl:call-template` now honours import precedence.
+- **Default output method**: a result whose root element is `<html>` is serialized as HTML when the stylesheet has no `xsl:output method` (XSLT 16).
+- **Simplified stylesheets** (`<html xsl:version="1.0">`) dropped their literal root element.
+- **Keys**: several `xsl:key` elements with the same name now all feed the index, `key()` with several values returns document order without duplicates, and the index is rebuilt for every transformation instead of going stale after DOM changes.
+- **`!=` on node-sets** is existential (`@n != 1` is true when some `@n` differs), and a node-set compared with a boolean uses `boolean()` (XPath 3.4).
+- **XML whitespace** is only space, tab, CR and LF: `normalize-space()` and `number()` no longer treat a non-breaking space as whitespace.
+- **`number()`** follows the XPath Number grammar: `1e3`, `0x10`, `+5` and `Infinity` are NaN; `5.` and `.5` are numbers.
+- **`string()` of numbers** never uses exponent notation (`1e21` gives `1000000000000000000000`).
+- **Prefixed function calls** such as `exsl:node-set($rtf)` failed to parse. EXSLT `exsl:node-set()` and `msxsl:node-set()` are now available.
+- **`xml:` prefix** is predeclared, so `@xml:lang` works without a declaration.
+- **`@*`** no longer includes `xmlns` namespace declarations.
+- **Adjacent text and CDATA** form one text node in the XPath data model (`<r>a<![CDATA[b]]>c</r>`: one `text()` with value `abc`).
+- **`string-length()`, `substring()`, `translate()`** count characters, not UTF-16 code units.
+- **Template parameters**: a template's `xsl:param` default was overridden by any same-named parameter in scope (the caller's own params, global params, or undeclared `xsl:with-param`s). A param now takes a same-named `with-param` from its direct caller, otherwise its own default (XSLT 11.6).
+- **Variable scoping** was dynamic: a called template saw its caller's local variables, and variables declared inside `xsl:if`, `xsl:choose` or `xsl:for-each` leaked out. Scoping is now lexical (XSLT 11.5).
+- **Global variables and params** may reference ones declared later (XSLT 11.4); circular definitions report a clear error.
+- **`xsl:copy-of select="/"`** copied nothing, and copying attribute nodes produced an empty text node instead of the attribute. Copied elements and attributes keep their namespaces.
+- **Result namespaces**: namespace prefixes declared on `xsl:template` or literal result elements were ignored in XPath expressions; `xsl:element` ignored the default namespace in scope (`<p xmlns=""/>` inside XHTML); `xsl:attribute name="xl:href"` and `namespace=` lost the namespace; literal result elements did not carry their in-scope namespace declarations.
+- **`&#160;` in stylesheets** was stripped as whitespace (`<td>&#160;</td>` became `<td/>`).
+- **Attribute value templates** containing `{` or `}` inside a string literal (`{concat('{', 'x')}`) were split incorrectly.
+- **`xsl:number`**: `grouping-separator` and `grouping-size` were ignored, and `format` was not an attribute value template.
+- **`transformToDocument()` with `method="text"`** returned `null`; it now returns `<html><head/><body><pre>…</pre></body></html>` like Chrome.
+- **`xsl:attribute` after child nodes** is ignored with a warning, as libxslt does, instead of being added.
+- **Serialization**: comments containing `--` and processing instructions containing `?>` are made well-formed instead of producing broken XML or throwing.
+- **Deep recursion**: a recursive named template overflowed the stack after about 700 levels; it now reaches about 1,200 levels (frames per level cut from 11 to 5) and reports `Template recursion too deep` instead of leaking a `RangeError`.
+- **Long XPath expressions** such as a 120-term sum failed with `Maximum recursion depth exceeded (100)` inside stylesheets; transformations now allow 1000 levels (`XSLT_MAX_EXPRESSION_DEPTH`).
+- **Reverse axes in predicates** - `preceding-sibling::*[1]` and `preceding::*[1]` selected the farthest node instead of the nearest one. Reverse axes now use proximity positions (XPath 1.0 section 2.4), while node-sets are still returned in document order.
+- **Axes from attribute nodes** - `parent::`, `ancestor::`, `following::` and `preceding::` returned nothing for an attribute context node.
+- **Transformations of documents with more than 10,000 matching nodes returned `null`** (`Result set exceeds maximum size`). The standalone XPath API keeps its 10,000 guard for untrusted expressions; `XsltEngine` now allows 5,000,000 nodes per step (`XSLT_MAX_RESULT_SIZE`, configurable with the `maxResultSize` engine option).
+- **The `xslt` command crashed for every npm user** with `ERR_MODULE_NOT_FOUND: jsdom`: the CLI imported `jsdom`, which was only a devDependency. `jsdom` is now an optional peer dependency, loaded on demand; when it is missing the CLI prints how to install it. The library itself keeps zero runtime dependencies.
+- The CLI used the private `processor._engine` field instead of the public `engine` getter.
+- **CLI `xsl:include`, `xsl:import` and `document()`** did not work: no loaders and no base URI were set. They now resolve relative to the referencing stylesheet, confined to the base directory; `http:`/`https:` URIs are refused, and a `document()` that cannot be loaded yields an empty node-set with a one-line warning.
+- **CLI input decoding** always assumed UTF-8, so an ISO-8859-1 document came out as `caf�`. Files are now decoded per XML 1.0 Appendix F: byte order mark, then the XML declaration's `encoding`, else UTF-8 (new `bin/lib/decode.js`).
+
+### Performance
+
+- Trimming XML whitespace in `normalize-space()` and `number()` used a regular expression that backtracks quadratically on long whitespace runs; it is now a linear scan (400,000 spaces: 4 ms).
+- Template matching is linear: `apply-templates` over 8,000 children with `match="item[@id]"` dropped from 90 s to 0.1 s, Muenchian grouping over 8,000 items from 8.5 s to 0.3 s, key lookups from 7 s to 0.2 s.
+- The transformation from issue #9 (3.4 MB of HTML output) dropped from 28 s to 8 s. Axes walk `firstChild`/`nextSibling` instead of indexing jsdom `NodeList`s (each index access crosses a Proxy), step results are merged without quadratic `concat`/`unshift`, sort keys are computed once per node instead of once per comparison, and name tests only read `namespaceURI` and the document content type when the result depends on them.
+
+### Added
+
+- `src/xpath/axes.js` (axis traversal) and `src/xslt/sort.js` (xsl:sort), each with a full test suite, plus `src/regressions.test.js` for reported issues.
+- `XSLT_MAX_RESULT_SIZE` and `XSLT_MAX_EXPRESSION_DEPTH` exports and the `maxResultSize` / `maxRecursionDepth` / `documentLoader` engine options in the TypeScript declarations.
+- New modules: `src/xpath/strings.js`, `src/xslt/{patterns,patternCompiler,variables,stylesheetNamespaces,resultNamespaces,copying,avt}.js`, `bin/lib/{decode,loaders,output}.js`.
+
+### Changed
+
+- CLI stdout no longer gets an extra trailing newline when piped or redirected, so it is byte-identical to `-o`; a newline is only added for an interactive terminal.
+- Stylesheets without `xsl:output method` whose result root is `<html>` are now serialized as HTML (no XML declaration, `<br>`); `engine.outputSettings.method` is `null` unless declared.
+- Behaviour that relied on the fixed bugs changes accordingly: `/` no longer matches the document element, equal-priority templates pick the last one, `number('1e3')` is NaN, `@*` skips `xmlns` declarations.
+- Templates no longer see their caller's local variables, and variables declared inside `xsl:if`/`xsl:choose`/`xsl:for-each` are not visible after them; stylesheets that relied on this now fail with `Undefined variable`, as they do in libxslt.
+- Namespace declarations in scope in the stylesheet now appear on result elements (list them in `exclude-result-prefixes` to suppress them), matching libxslt.
+- `XsltContext` gained `globals` and `xpathVariables`; the internal `processElement`/`processXsltElement` methods were replaced by an instruction dispatch table.
+- `engine.keys[name]` is now an array of `{ match, use }` definitions.
+- `xsl:sort` without `lang`/`case-order` orders `B` before `a` (code point order), matching Chrome's native `XSLTProcessor`; previously the order was case-insensitive. Add `lang="en"` to get locale collation.
+
+### Dependencies
+
+- `eslint` 10.10.0 -> 10.11.0, `prettier` 3.9.6 -> 3.9.9, `jsdom` 29.1.1 -> 30.1.1 (dev; jsdom is also an optional peer dependency `>=25.0.0` for the CLI).
+- GitHub Actions: `docker/setup-buildx-action` 4.4.1; the Pages workflow moved from `checkout@v4`, `configure-pages@v5`, `upload-pages-artifact@v3`, `deploy-pages@v4` to the current releases, all pinned to commit SHAs, with `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`.
+
 ## [1.1.1] - 2026-09-10
 
 ### Fixed

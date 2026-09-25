@@ -9,8 +9,47 @@
 
 "use strict";
 
+import { isTextContinuation, isTextNode } from "../xpath/axes.js";
+
 /** Node type of a document type declaration, which cannot be imported. */
 const DOCUMENT_TYPE_NODE = 10;
+
+/** Text made only of XML whitespace: #x20, #x9, #xD and #xA (not NBSP). */
+const XML_WHITESPACE_ONLY = /^[ \t\r\n]*$/;
+
+/**
+ * Whether a string consists of XML whitespace only (XML 1.0 production S).
+ * Unlike `trim()` and `\s`, a no-break space is not whitespace.
+ *
+ * @param {string} text - Any string
+ * @returns {boolean} True for "" and strings of #x20 #x9 #xD #xA
+ *
+ * @example
+ * isXmlWhitespace(" \n"); // true
+ * isXmlWhitespace("\u00a0"); // false
+ */
+export function isXmlWhitespace(text) {
+  return XML_WHITESPACE_ONLY.test(text);
+}
+
+/**
+ * The DOM nodes of the text run starting at a node: the node and every
+ * directly following Text/CDATA sibling (one XPath text node).
+ *
+ * @param {Node} first - The first node of the run
+ * @returns {Node[]} The nodes of the run
+ */
+export function textRun(first) {
+  const run = [first];
+  for (
+    let next = first.nextSibling;
+    isTextNode(next);
+    next = next.nextSibling
+  ) {
+    run.push(next);
+  }
+  return run;
+}
 
 /**
  * Compute the XSLT default priority of an element name test.
@@ -121,7 +160,8 @@ function hasXmlSpacePreserve(node) {
 }
 
 /**
- * Remove whitespace-only text nodes from a subtree.
+ * Remove whitespace-only text nodes from a subtree. Adjacent Text/CDATA
+ * nodes form one text node and are only removed together.
  *
  * @param {Node} root - The root of the subtree to prune
  * @param {WhitespaceFilter} filter - The configured filter
@@ -135,14 +175,16 @@ function pruneWhitespace(root, filter) {
     const current = stack.pop();
 
     if (
-      (current.nodeType === 3 || current.nodeType === 4) &&
-      current.nodeValue !== null &&
-      current.nodeValue.trim() === "" &&
+      isTextNode(current) &&
+      !isTextContinuation(current) &&
       current.parentNode?.nodeType === 1 &&
       filter.isStripped(current.parentNode) &&
       !hasXmlSpacePreserve(current.parentNode)
     ) {
-      doomed.push(current);
+      const run = textRun(current);
+      if (run.every((node) => isXmlWhitespace(node.nodeValue))) {
+        doomed.push(...run);
+      }
     }
 
     const children = current.childNodes;

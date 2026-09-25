@@ -10,7 +10,7 @@
 
 "use strict";
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import {
   CLI_OPTIONS,
@@ -19,6 +19,8 @@ import {
   printVersion,
 } from "./lib/options.js";
 import { createDomEnvironment, runTransformation } from "./lib/transform.js";
+import { decodeXml } from "./lib/decode.js";
+import { writeResult } from "./lib/output.js";
 import {
   resolveBaseDir,
   resolveInputPath,
@@ -37,22 +39,6 @@ function readArguments() {
     console.error(`Error: ${err.message}`);
     process.exit(1);
   }
-}
-
-/**
- * Write the transformation result to a file or to stdout.
- *
- * @param {string} output - Serialized transformation result
- * @param {string|undefined} target - Validated absolute output path, if any
- * @returns {Promise<void>} Resolves once the result has been written
- */
-async function writeOutput(output, target) {
-  if (target) {
-    await writeFile(target, output, "utf-8");
-    console.error(`Output written to ${target}`);
-    return;
-  }
-  console.log(output);
 }
 
 /**
@@ -81,9 +67,8 @@ async function main() {
     process.exit(1);
   }
 
-  const dom = createDomEnvironment();
-
   try {
+    const dom = await createDomEnvironment();
     const baseDir = resolveBaseDir();
     const xmlFile = resolveInputPath(xmlPath, "XML", baseDir);
     const xsltFile = resolveInputPath(xsltPath, "XSLT", baseDir);
@@ -91,20 +76,22 @@ async function main() {
       ? resolveOutputPath(args.values.output, baseDir)
       : undefined;
 
-    const [xmlContent, xsltContent] = await Promise.all([
-      readFile(xmlFile, "utf-8"),
-      readFile(xsltFile, "utf-8"),
+    const [xmlBytes, xsltBytes] = await Promise.all([
+      readFile(xmlFile),
+      readFile(xsltFile),
     ]);
 
     const output = runTransformation({
       dom,
-      xmlContent,
-      xsltContent,
+      xmlContent: decodeXml(xmlBytes, xmlFile),
+      xsltContent: decodeXml(xsltBytes, xsltFile),
       params: parseParameters(args.values.param),
       values: args.values,
+      xsltFile,
+      baseDir,
     });
 
-    await writeOutput(output, outputFile);
+    await writeResult(output, outputFile);
   } catch (err) {
     console.error(`Error: ${err.message}`);
     process.exit(1);

@@ -13,20 +13,96 @@ import { KeyIndexRegistry } from "./keys.js";
 import { countXsltNumber } from "./number.js";
 import { formatXsltNumber, toRoman } from "./numberFormat.js";
 import { resolveUri, stripFragment } from "./uri.js";
-import { WhitespaceFilter, stripWhitespaceNodes } from "./whitespace.js";
+import {
+  WhitespaceFilter,
+  isXmlWhitespace,
+  stripWhitespaceNodes,
+} from "./whitespace.js";
 import {
   NamespaceAliasMap,
   getXsltAttribute,
   shouldCopyAttribute,
 } from "./literalResult.js";
-import { createResultDocument, importResultFragment } from "./resultTree.js";
+import {
+  createResultDocument,
+  importResultFragment,
+  wrapTextResult,
+} from "./resultTree.js";
+import { childAxis, isTextContinuation } from "../xpath/axes.js";
+import { evaluateAvt } from "./avt.js";
+import {
+  cloneNode,
+  copyAttribute,
+  copyOf,
+  shallowCopyElement,
+} from "./copying.js";
+import {
+  attributeName,
+  copyLiteralNamespaces,
+  elementName,
+  setResultAttribute,
+} from "./resultNamespaces.js";
+import { inScopeNamespaces } from "./stylesheetNamespaces.js";
+import {
+  GlobalBindings,
+  createVariableView,
+  lookupVariable,
+} from "./variables.js";
 import { calculatePriority } from "./templatePriority.js";
+import { PatternMatcher } from "./patterns.js";
+import { sortNodes } from "./sort.js";
 import { serializeResult } from "./serializer.js";
 
 const XSLT_NS = XSLT_NAMESPACE;
 
 /**
+ * Largest node-set a single XPath step may produce inside a transformation.
+ *
+ * The standalone XPath API keeps its low default (XPathLimits.MAX_RESULT_SIZE)
+ * as a guard against untrusted expressions. A stylesheet is trusted program
+ * code and commonly walks documents with tens of thousands of nodes, which the
+ * native XSLTProcessor handles without any limit, so the engine uses a much
+ * higher bound. Override it with the `maxResultSize` engine option.
+ */
+export const XSLT_MAX_RESULT_SIZE = 5000000;
+
+/**
+ * Deepest XPath expression nesting allowed inside a transformation.
+ *
+ * Like XSLT_MAX_RESULT_SIZE, this is higher than the standalone XPath default
+ * (XPathLimits.MAX_RECURSION_DEPTH = 100) because stylesheets are trusted and
+ * generated ones often contain long chains such as `a + b + c + ...`.
+ * Override it with the `maxRecursionDepth` engine option.
+ */
+export const XSLT_MAX_EXPRESSION_DEPTH = 1000;
+
+/**
+ * Engine method handling each top-level XSLT element (xsl:import is handled
+ * first, separately, because imports must precede everything else).
+ */
+const TOP_LEVEL_HANDLERS = Object.freeze({
+  template: "registerTemplate",
+  output: "processOutput",
+  variable: "processGlobalVariable",
+  param: "processGlobalParam",
+  key: "processKey",
+  "decimal-format": "processDecimalFormat",
+  "namespace-alias": "processNamespaceAlias",
+  "attribute-set": "processAttributeSet",
+  "strip-space": "processStripSpace",
+  "preserve-space": "processPreserveSpace",
+  include: "processInclude",
+});
+
+/**
  * XSLT Processing Context
+ *
+ * `variables` and `parameters` hold the local bindings in scope; the global
+ * variables and parameters of the transformation are in `globals`. The engine
+ * starts every template invocation with empty local bindings (and the
+ * template's own parameters), so local variables are lexically scoped.
+ * `namespaces` holds the prefixes in scope on the stylesheet element being
+ * instantiated.
  */
 export class XsltContext {
   constructor(options = {}) {
@@ -35,9 +111,10 @@ export class XsltContext {
     this.position = options.position || 1;
     this.variables = { ...options.variables };
     this.parameters = { ...options.parameters };
+    this.globals = options.globals ?? null;
     this.outputDocument = options.outputDocument;
     this.stylesheet = options.stylesheet;
-    this.namespaces = { ...options.namespaces };
+    this.namespaces = options.namespaces ?? {};
     this.templates = options.templates || [];
     this.keys = options.keys || {};
     this.decimalFormats = options.decimalFormats || {};
@@ -45,24 +122,32 @@ export class XsltContext {
     this.xpathEvaluator = options.xpathEvaluator || new XPathEvaluator();
     this.currentTemplate = options.currentTemplate || null;
     this.currentMode = options.currentMode ?? null;
+    this.variableView = null;
   }
 
+  /**
+   * Copy the context, changing some of its properties.
+   *
+   * `variables`, `parameters` and `namespaces` overrides are merged into the
+   * current ones; with `fresh: true` the copy starts without local bindings
+   * (a new template invocation).
+   *
+   * @param {object} [overrides] - Properties to change
+   * @returns {XsltContext} The copy
+   */
   clone(overrides = {}) {
+    const fresh = overrides.fresh === true;
+    const merge = (own, extra) => (extra ? { ...own, ...extra } : own);
     return new XsltContext({
       currentNode: overrides.currentNode ?? this.currentNode,
       currentNodeList: overrides.currentNodeList ?? this.currentNodeList,
       position: overrides.position ?? this.position,
-      variables: overrides.variables
-        ? { ...this.variables, ...overrides.variables }
-        : { ...this.variables },
-      parameters: overrides.parameters
-        ? { ...this.parameters, ...overrides.parameters }
-        : { ...this.parameters },
+      variables: fresh ? null : merge(this.variables, overrides.variables),
+      parameters: fresh ? null : merge(this.parameters, overrides.parameters),
+      globals: this.globals,
       outputDocument: this.outputDocument,
       stylesheet: this.stylesheet,
-      namespaces: overrides.namespaces
-        ? { ...this.namespaces, ...overrides.namespaces }
-        : { ...this.namespaces },
+      namespaces: merge(this.namespaces, overrides.namespaces),
       templates: this.templates,
       keys: this.keys,
       decimalFormats: this.decimalFormats,
@@ -73,14 +158,27 @@ export class XsltContext {
     });
   }
 
+  /**
+   * The variables in scope, as the object view the XPath evaluator reads.
+   *
+   * @returns {object} A live, read-only view (see createVariableView)
+   */
+  get xpathVariables() {
+    this.variableView ??= createVariableView(this);
+    return this.variableView;
+  }
+
+  /**
+   * The value of a variable or parameter in scope.
+   *
+   * @param {string} name - The variable name
+   * @returns {*} The value
+   * @throws {Error} When no such variable is in scope
+   */
   getVariable(name) {
-    if (name in this.variables) {
-      return this.variables[name];
-    }
-    if (name in this.parameters) {
-      return this.parameters[name];
-    }
-    throw new Error(`Undefined variable: $${name}`);
+    const { found, value } = lookupVariable(this, name);
+    if (!found) throw new Error(`Undefined variable: $${name}`);
+    return value;
   }
 
   setVariable(name, value) {
@@ -89,17 +187,73 @@ export class XsltContext {
 }
 
 /**
+ * Turn a JavaScript stack overflow into a clear transformation error; any
+ * other error is returned unchanged.
+ *
+ * @param {Error} error - The error thrown by a transformation
+ * @returns {Error} The error to report
+ */
+function recursionError(error) {
+  const isStackOverflow =
+    (error instanceof RangeError && /call stack/i.test(error.message)) ||
+    // Firefox reports "InternalError: too much recursion"
+    (error?.name === "InternalError" && /recursion/i.test(error.message));
+  if (!isStackOverflow) return error;
+
+  return new Error(
+    "Template recursion too deep: the transformation exceeded the JavaScript " +
+      "call stack (infinite recursion, or recursion deeper than the runtime allows)",
+    { cause: error },
+  );
+}
+
+/**
+ * Engine method instantiating each XSLT element that may occur in a sequence
+ * constructor; null marks elements that produce nothing there.
+ */
+const INSTRUCTION_METHODS = Object.freeze({
+  "apply-templates": "xslApplyTemplates",
+  "apply-imports": "xslApplyImports",
+  "call-template": "xslCallTemplate",
+  "value-of": "xslValueOf",
+  text: "xslText",
+  element: "xslElement",
+  attribute: "xslAttribute",
+  if: "xslIf",
+  choose: "xslChoose",
+  "for-each": "xslForEach",
+  copy: "xslCopy",
+  "copy-of": "xslCopyOf",
+  variable: "xslVariable",
+  comment: "xslComment",
+  "processing-instruction": "xslProcessingInstruction",
+  number: "xslNumber",
+  message: "xslMessage",
+  // Handled by their parent instruction, or at template start
+  param: null,
+  sort: null,
+  "with-param": null,
+  // Used for forward compatibility
+  fallback: null,
+});
+
+/**
  * XSLT Engine
  */
 export class XsltEngine {
   constructor(options = {}) {
-    this.xpathEvaluator = new XPathEvaluator();
+    this.xpathEvaluator = new XPathEvaluator({
+      maxResultSize: options.maxResultSize ?? XSLT_MAX_RESULT_SIZE,
+      maxRecursionDepth: options.maxRecursionDepth ?? XSLT_MAX_EXPRESSION_DEPTH,
+    });
     this.templates = [];
     this.keys = {};
     this.globalVariables = {};
     this.globalParameters = {};
+    // A null method means "not declared": the serializer then picks html or
+    // xml from the result tree (XSLT 1.0 section 16).
     this.outputSettings = {
-      method: "xml",
+      method: null,
       version: "1.0",
       encoding: "UTF-8",
       standalone: null,
@@ -121,7 +275,8 @@ export class XsltEngine {
     // Import/Include support
     this.stylesheetLoader = options.stylesheetLoader || null;
     this.currentImportPrecedence = 0;
-    this.processedStylesheets = new Set();
+    // URIs of the stylesheets being loaded, used to detect import cycles
+    this.stylesheetStack = [];
     this.baseUri = options.baseUri || "";
 
     // document() support
@@ -132,15 +287,26 @@ export class XsltEngine {
     this.generatedIds = new WeakMap();
     this.generatedIdCount = 0;
 
+    // Compiled XSLT patterns (template match, xsl:key, xsl:number)
+    this.patternMatcher = new PatternMatcher(this.xpathEvaluator);
+
     // key() support
     this.rootContext = null;
     this.keyRegistry = new KeyIndexRegistry({
       keys: this.keys,
-      matchesPattern: (node, pattern) =>
-        this.matchesPattern(node, pattern, this.rootContext),
-      evaluateUse: (node, expression) =>
-        this.evaluateKeyValues(node, expression),
+      matchesPattern: (node, pattern, definition) =>
+        this.matchesPattern(
+          node,
+          pattern,
+          this.rootContext,
+          definition?.namespaces,
+        ),
+      evaluateUse: (node, expression, definition) =>
+        this.evaluateKeyValues(node, expression, definition?.namespaces),
     });
+
+    // Whether the "attribute after children" warning was already given
+    this.warnedLateAttribute = false;
 
     this.xpathEvaluator.registerFunctions(createXsltFunctions(this));
   }
@@ -220,14 +386,16 @@ export class XsltEngine {
    *
    * @param {Node} node - The node being indexed
    * @param {string} expression - The `use` expression
+   * @param {Object<string, string>} [namespaces] - Prefixes in scope on the xsl:key
    * @returns {string[]} The key values contributed by the node
    */
-  evaluateKeyValues(node, expression) {
+  evaluateKeyValues(node, expression, namespaces) {
     const context = this.rootContext.clone({
       currentNode: node,
       currentNodeList: [node],
       position: 1,
     });
+    if (namespaces) context.namespaces = namespaces;
     const value = this.evaluateXPath(expression, context);
 
     if (Array.isArray(value)) {
@@ -299,10 +467,8 @@ export class XsltEngine {
 
     if (isMainStylesheet) {
       this.stylesheetDoc = stylesheetNode.ownerDocument || stylesheetNode;
-      if (stylesheetUri) {
-        this.baseUri = stylesheetUri;
-        this.processedStylesheets.add(stylesheetUri);
-      }
+      if (stylesheetUri) this.baseUri = stylesheetUri;
+      if (this.baseUri) this.stylesheetStack.push(this.baseUri);
     }
 
     const root = stylesheetNode.documentElement || stylesheetNode;
@@ -322,55 +488,7 @@ export class XsltEngine {
       );
     }
 
-    // Collect namespaces from root
-    this.collectNamespaces(root);
-
-    // XSLT 1.0: xsl:import elements MUST come first and are processed with lower precedence
-    // Process imports first (they have lower precedence than the importing stylesheet)
-    const imports = [];
-    const otherElements = [];
-
-    for (const child of root.childNodes) {
-      if (child.nodeType !== 1) continue;
-
-      if (this.isXsltElement(child, "import")) {
-        imports.push(child);
-      } else {
-        otherElements.push(child);
-      }
-    }
-
-    // Process imports (lower precedence - process before current stylesheet)
-    for (const importNode of imports) {
-      this.processImport(importNode, stylesheetUri || this.baseUri);
-    }
-
-    // Process other top-level elements (including includes)
-    for (const child of otherElements) {
-      if (this.isXsltElement(child, "template")) {
-        this.registerTemplate(child);
-      } else if (this.isXsltElement(child, "output")) {
-        this.processOutput(child);
-      } else if (this.isXsltElement(child, "variable")) {
-        this.processGlobalVariable(child);
-      } else if (this.isXsltElement(child, "param")) {
-        this.processGlobalParam(child);
-      } else if (this.isXsltElement(child, "key")) {
-        this.processKey(child);
-      } else if (this.isXsltElement(child, "decimal-format")) {
-        this.processDecimalFormat(child);
-      } else if (this.isXsltElement(child, "namespace-alias")) {
-        this.processNamespaceAlias(child);
-      } else if (this.isXsltElement(child, "attribute-set")) {
-        this.processAttributeSet(child);
-      } else if (this.isXsltElement(child, "strip-space")) {
-        this.processStripSpace(child);
-      } else if (this.isXsltElement(child, "preserve-space")) {
-        this.processPreserveSpace(child);
-      } else if (this.isXsltElement(child, "include")) {
-        this.processInclude(child, stylesheetUri || this.baseUri);
-      }
-    }
+    this.processTopLevelElements(root, stylesheetUri || this.baseUri);
 
     // Increment import precedence after processing this stylesheet
     if (isMainStylesheet) {
@@ -379,84 +497,69 @@ export class XsltEngine {
   }
 
   /**
-   * Process xsl:include element
-   * Includes are merged at the same import precedence level
+   * Process an xsl:include element: the included stylesheet is merged at the
+   * import precedence of the including stylesheet.
+   *
+   * @param {Element} node - The xsl:include element
+   * @param {string} baseUri - URI of the including stylesheet
+   * @returns {void}
    */
   processInclude(node, baseUri) {
-    const href = node.getAttribute("href");
-    if (!href) {
-      throw new Error("xsl:include requires an href attribute");
-    }
-
-    const resolvedUri = this.resolveUri(href, baseUri);
-
-    // Check for circular includes
-    if (this.processedStylesheets.has(resolvedUri)) {
-      throw new Error(`Circular stylesheet reference detected: ${resolvedUri}`);
-    }
-
-    this.processedStylesheets.add(resolvedUri);
-
-    try {
-      const { document: stylesheetDoc } = this.loadStylesheet(href, baseUri);
-
-      // Parse if string
-      let doc = stylesheetDoc;
-      if (typeof stylesheetDoc === "string") {
-        doc = this.parseXmlString(stylesheetDoc);
-      }
-
-      // Process the included stylesheet at the same import precedence
-      const savedPrecedence = this.currentImportPrecedence;
-      this.processIncludedStylesheet(doc, resolvedUri);
-      this.currentImportPrecedence = savedPrecedence;
-    } catch (error) {
-      throw new Error(
-        `Failed to include stylesheet "${href}": ${error.message}`,
-        { cause: error },
-      );
-    }
+    const savedPrecedence = this.currentImportPrecedence;
+    this.loadStylesheetModule(node, baseUri, "include");
+    this.currentImportPrecedence = savedPrecedence;
   }
 
   /**
-   * Process xsl:import element
-   * Imports have lower precedence than the importing stylesheet
+   * Process an xsl:import element: the imported stylesheet gets a lower import
+   * precedence than everything processed after it.
+   *
+   * @param {Element} node - The xsl:import element
+   * @param {string} baseUri - URI of the importing stylesheet
+   * @returns {void}
    */
   processImport(node, baseUri) {
+    this.loadStylesheetModule(node, baseUri, "import");
+    this.currentImportPrecedence++;
+  }
+
+  /**
+   * Load and process the stylesheet referenced by xsl:import or xsl:include.
+   *
+   * Only a stylesheet that (directly or indirectly) references itself is an
+   * error; the same stylesheet may be reached through several branches of the
+   * import tree ("diamond" imports), as in libxslt.
+   *
+   * @param {Element} node - The xsl:import or xsl:include element
+   * @param {string} baseUri - URI of the referencing stylesheet
+   * @param {"import"|"include"} kind - The referencing instruction
+   * @returns {void}
+   * @throws {Error} When href is missing, loading fails or a cycle is found
+   */
+  loadStylesheetModule(node, baseUri, kind) {
     const href = node.getAttribute("href");
     if (!href) {
-      throw new Error("xsl:import requires an href attribute");
+      throw new Error(`xsl:${kind} requires an href attribute`);
     }
 
     const resolvedUri = this.resolveUri(href, baseUri);
-
-    // Check for circular imports
-    if (this.processedStylesheets.has(resolvedUri)) {
+    if (this.stylesheetStack.includes(resolvedUri)) {
       throw new Error(`Circular stylesheet reference detected: ${resolvedUri}`);
     }
 
-    this.processedStylesheets.add(resolvedUri);
-
+    this.stylesheetStack.push(resolvedUri);
     try {
-      const { document: stylesheetDoc } = this.loadStylesheet(href, baseUri);
-
-      // Parse if string
-      let doc = stylesheetDoc;
-      if (typeof stylesheetDoc === "string") {
-        doc = this.parseXmlString(stylesheetDoc);
-      }
-
-      // Process the imported stylesheet (imports have lower precedence)
-      // Don't increment precedence yet - imported templates get current (lower) precedence
+      const { document: loaded } = this.loadStylesheet(href, baseUri);
+      const doc =
+        typeof loaded === "string" ? this.parseXmlString(loaded) : loaded;
       this.processIncludedStylesheet(doc, resolvedUri);
-
-      // After processing import, increment precedence for next imports and main stylesheet
-      this.currentImportPrecedence++;
     } catch (error) {
       throw new Error(
-        `Failed to import stylesheet "${href}": ${error.message}`,
+        `Failed to ${kind} stylesheet "${href}": ${error.message}`,
         { cause: error },
       );
+    } finally {
+      this.stylesheetStack.pop();
     }
   }
 
@@ -476,10 +579,22 @@ export class XsltEngine {
       );
     }
 
-    // Collect namespaces
+    this.processTopLevelElements(root, stylesheetUri);
+  }
+
+  /**
+   * Process the top-level elements of a stylesheet module.
+   *
+   * xsl:import elements are processed first, so imported declarations get a
+   * lower import precedence than the ones of the importing stylesheet.
+   *
+   * @param {Element} root - The xsl:stylesheet element
+   * @param {string} stylesheetUri - URI used to resolve imports and includes
+   * @returns {void}
+   */
+  processTopLevelElements(root, stylesheetUri) {
     this.collectNamespaces(root);
 
-    // Process imports first (they have lower precedence)
     const imports = [];
     const otherElements = [];
 
@@ -493,61 +608,59 @@ export class XsltEngine {
       }
     }
 
-    // Process nested imports
     for (const importNode of imports) {
       this.processImport(importNode, stylesheetUri);
     }
 
-    // Process other elements
     for (const child of otherElements) {
-      if (this.isXsltElement(child, "template")) {
-        this.registerTemplate(child);
-      } else if (this.isXsltElement(child, "output")) {
-        this.processOutput(child);
-      } else if (this.isXsltElement(child, "variable")) {
-        this.processGlobalVariable(child);
-      } else if (this.isXsltElement(child, "param")) {
-        this.processGlobalParam(child);
-      } else if (this.isXsltElement(child, "key")) {
-        this.processKey(child);
-      } else if (this.isXsltElement(child, "decimal-format")) {
-        this.processDecimalFormat(child);
-      } else if (this.isXsltElement(child, "namespace-alias")) {
-        this.processNamespaceAlias(child);
-      } else if (this.isXsltElement(child, "attribute-set")) {
-        this.processAttributeSet(child);
-      } else if (this.isXsltElement(child, "strip-space")) {
-        this.processStripSpace(child);
-      } else if (this.isXsltElement(child, "preserve-space")) {
-        this.processPreserveSpace(child);
-      } else if (this.isXsltElement(child, "include")) {
-        this.processInclude(child, stylesheetUri);
-      }
+      const method = this.isXsltNamespace(child)
+        ? TOP_LEVEL_HANDLERS[child.localName]
+        : undefined;
+      if (method) this[method](child, stylesheetUri);
     }
   }
 
+  /**
+   * Register a simplified stylesheet (XSLT 1.0 section 2.3): the literal result
+   * root element is the body of a template rule matching "/", so the root
+   * element itself is instantiated, not only its children.
+   *
+   * @param {Element} root - The literal result root element
+   * @returns {void}
+   */
   processLiteralResultStylesheet(root) {
-    // Simplified stylesheet - entire document is one template matching /
+    this.collectNamespaces(root);
     this.templates.push({
       match: "/",
       name: null,
       mode: null,
       priority: 0.5,
-      node: root,
+      importPrecedence: this.currentImportPrecedence,
+      namespaces: inScopeNamespaces(root),
+      node: { firstChild: root, childNodes: [root] },
     });
   }
 
+  /**
+   * Record the namespace declarations of a stylesheet document element in
+   * the stylesheet-wide fallback table. Instructions resolve prefixes against
+   * their own in-scope namespaces; this table only serves contexts without a
+   * stylesheet element. The first binding of a prefix wins, so a module
+   * loaded later cannot rebind the main stylesheet's prefixes.
+   *
+   * @param {Element} node - The stylesheet element
+   * @returns {void}
+   */
   collectNamespaces(node) {
     if (!node.attributes) return;
 
     for (const attr of node.attributes) {
-      if (attr.name.startsWith("xmlns:")) {
-        const prefix = attr.name.substring(6);
-        if (attr.value !== XSLT_NS) {
-          this.namespaces[prefix] = attr.value;
-        }
-      } else if (attr.name === "xmlns" && attr.value !== XSLT_NS) {
-        this.namespaces[""] = attr.value;
+      let prefix = null;
+      if (attr.name.startsWith("xmlns:")) prefix = attr.name.substring(6);
+      else if (attr.name === "xmlns") prefix = "";
+
+      if (prefix !== null && attr.value !== XSLT_NS) {
+        this.namespaces[prefix] ??= attr.value;
       }
     }
   }
@@ -570,11 +683,13 @@ export class XsltEngine {
       ? this.splitUnionPattern(match).map((p) => p.trim())
       : [null];
 
+    const namespaces = inScopeNamespaces(node);
     for (const alternative of alternatives) {
       this.templates.push({
         match: alternative,
         name,
         mode,
+        namespaces,
         priority: priorityAttr
           ? parseFloat(priorityAttr)
           : this.calculatePriority(alternative),
@@ -713,12 +828,23 @@ export class XsltEngine {
     }
   }
 
+  /**
+   * Register an xsl:key declaration. Declarations sharing a name all
+   * contribute to the same key (XSLT 1.0 section 12.2); a declaration seen
+   * again through another import branch is only kept once.
+   *
+   * @param {Element} node - The xsl:key element
+   * @returns {void}
+   */
   processKey(node) {
     const name = node.getAttribute("name");
     const match = node.getAttribute("match");
     const use = node.getAttribute("use");
+    const definitions = (this.keys[name] ??= []);
 
-    this.keys[name] = { match, use };
+    if (!definitions.some((d) => d.match === match && d.use === use)) {
+      definitions.push({ match, use, namespaces: inScopeNamespaces(node) });
+    }
     this.keyRegistry.clear();
   }
 
@@ -784,7 +910,7 @@ export class XsltEngine {
     // in an HTML owner document would lower case names and force the XHTML
     // namespace on every element.
     const resultDocument = createResultDocument(doc);
-    const source = this.prepareSource(sourceNode, doc);
+    const source = this.initialNode(this.prepareSource(sourceNode, doc));
 
     // Create context - use document node as initial context for "/" template matching
     // XPath paths like "RootElement/child" expect to start from document node
@@ -794,7 +920,7 @@ export class XsltEngine {
       position: 1,
       outputDocument: resultDocument,
       stylesheet: this.stylesheetDoc,
-      namespaces: { ...this.namespaces },
+      namespaces: this.namespaces,
       templates: this.templates,
       keys: this.keys,
       decimalFormats: this.decimalFormats,
@@ -803,27 +929,68 @@ export class XsltEngine {
     });
 
     this.rootContext = context;
-
-    // Evaluate global variables
-    for (const [name, def] of Object.entries(this.globalParameters)) {
-      if (!(name in context.parameters)) {
-        context.parameters[name] = this.evaluateVariable(def, context);
-      }
-    }
-
-    for (const [name, def] of Object.entries(this.globalVariables)) {
-      context.variables[name] = this.evaluateVariable(def, context);
-    }
+    // The source tree may have changed since the previous transformation
+    this.keyRegistry.clear();
+    this.patternMatcher.reset();
 
     // Create result document fragment
     const fragment = resultDocument.createDocumentFragment();
 
-    // Apply templates to document node (not documentElement)
-    // This ensures "/" template has document as context, so paths like
-    // "RootElement/child" work correctly
-    this.applyTemplates([source], null, context, fragment);
+    try {
+      context.globals = this.createGlobals(context);
+      context.globals.evaluateAll();
+
+      // Apply templates to document node (not documentElement)
+      // This ensures "/" template has document as context, so paths like
+      // "RootElement/child" work correctly
+      this.applyTemplates([source], null, context, fragment);
+    } catch (error) {
+      throw recursionError(error);
+    }
 
     return importResultFragment(fragment, doc);
+  }
+
+  /**
+   * Declare the global variables and parameters of the stylesheet for one
+   * transformation. They are evaluated lazily with the root node as context
+   * node (XSLT 1.0 section 11.4), so they may refer to each other in any
+   * order; a variable wins over a parameter of the same name.
+   *
+   * @param {XsltContext} rootContext - The initial context
+   * @returns {GlobalBindings} The global bindings
+   */
+  createGlobals(rootContext) {
+    const globals = new GlobalBindings((def) => {
+      const context = rootContext.clone();
+      if (def.node) context.namespaces = inScopeNamespaces(def.node);
+      return this.evaluateVariable(def, context);
+    });
+
+    for (const [name, def] of Object.entries(this.globalParameters)) {
+      globals.define(name, def);
+    }
+    for (const [name, def] of Object.entries(this.globalVariables)) {
+      globals.define(name, def);
+    }
+    return globals;
+  }
+
+  /**
+   * Choose the node the transformation starts from.
+   *
+   * A document element is transformed through its document, so that the "/"
+   * template rule applies as for a whole document (as browsers do); any other
+   * node is transformed as is.
+   *
+   * @param {Node} source - The (prepared) source node
+   * @returns {Node} The initial context node
+   */
+  initialNode(source) {
+    const owner = source.ownerDocument;
+    return source.nodeType === 1 && owner?.documentElement === source
+      ? owner
+      : source;
   }
 
   /**
@@ -850,10 +1017,24 @@ export class XsltEngine {
   /**
    * Transform to a complete document
    */
+  /**
+   * Transform to a complete document.
+   *
+   * With `xsl:output method="text"` the result is not a tree, so it is
+   * returned the way Chrome's XSLTProcessor does: as an XHTML page holding
+   * the text in a `pre` element (see wrapTextResult).
+   *
+   * @param {Node} sourceNode - Source document or element to transform
+   * @returns {Document} The result document
+   */
   transformToDocument(sourceNode) {
     // For Node.js environments, we need a document implementation
     const doc = this.createDocument(sourceNode);
     const fragment = this.transform(sourceNode, doc);
+
+    if (this.outputSettings.method === "text") {
+      return wrapTextResult(doc, fragment.textContent);
+    }
 
     // Move fragment contents to document
     while (fragment.firstChild) {
@@ -934,9 +1115,16 @@ export class XsltEngine {
   }
 
   /**
-   * Apply templates to a node list
+   * Apply templates to a node list.
+   *
+   * @param {Node|Node[]} nodes - The nodes to process, in order
+   * @param {string|null} mode - The mode
+   * @param {XsltContext} context - Context of the invoking instruction
+   * @param {Node} output - The result node receiving the output
+   * @param {Object<string, *>|null} [params] - Values of xsl:with-param by name
+   * @returns {void}
    */
-  applyTemplates(nodes, mode, context, output) {
+  applyTemplates(nodes, mode, context, output, params = null) {
     const nodeList = Array.isArray(nodes) ? nodes : [nodes];
 
     for (let i = 0; i < nodeList.length; i++) {
@@ -944,20 +1132,38 @@ export class XsltEngine {
       const template = this.findMatchingTemplate(node, mode, context);
 
       if (template) {
-        const newContext = context.clone({
+        const newContext = this.invocationContext(context, template, {
           currentNode: node,
           currentNodeList: nodeList,
           position: i + 1,
-          currentTemplate: template,
           currentMode: mode,
         });
 
-        this.processTemplate(template.node, newContext, output);
+        this.processTemplate(template.node, newContext, output, params);
       } else {
         // Built-in templates
-        this.applyBuiltinTemplate(node, mode, context, output);
+        this.applyBuiltinTemplate(node, mode, context, output, params);
       }
     }
+  }
+
+  /**
+   * Context of a template invocation: no local bindings, the template as
+   * current template and the prefixes in scope on the xsl:template element.
+   *
+   * @param {XsltContext} context - Context of the invoking instruction
+   * @param {object} template - The template record
+   * @param {object} [overrides] - Further properties to change
+   * @returns {XsltContext} The invocation context
+   */
+  invocationContext(context, template, overrides = {}) {
+    const invocation = context.clone({
+      currentTemplate: template,
+      ...overrides,
+      fresh: true,
+    });
+    invocation.namespaces = template.namespaces ?? context.namespaces;
+    return invocation;
   }
 
   /**
@@ -973,13 +1179,18 @@ export class XsltEngine {
       if (!template.match) continue;
       if ((template.importPrecedence || 0) >= maxImportPrecedence) continue;
 
-      if (this.matchesPattern(node, template.match, context)) {
+      if (
+        this.matchesPattern(node, template.match, context, template.namespaces)
+      ) {
         const priority = template.priority;
         const importPrecedence = template.importPrecedence || 0;
 
+        // On equal precedence and priority the last template in stylesheet
+        // order wins (the XSLT 1.0 section 5.5 recovery, as in libxslt)
         if (
           importPrecedence > bestImportPrecedence ||
-          (importPrecedence === bestImportPrecedence && priority > bestPriority)
+          (importPrecedence === bestImportPrecedence &&
+            priority >= bestPriority)
         ) {
           bestMatch = template;
           bestPriority = priority;
@@ -992,19 +1203,24 @@ export class XsltEngine {
   }
 
   /**
-   * Check if a node matches an XSLT pattern
+   * Check whether a node matches an XSLT pattern (see patterns.js).
+   *
+   * Errors raised while evaluating a predicate make the pattern not match,
+   * as before the compiled matcher existed.
+   *
+   * @param {Node} node - The candidate node
+   * @param {string} pattern - The XSLT pattern
+   * @param {XsltContext|null} context - Context supplying variables and namespaces
+   * @param {Object<string, string>} [namespaces] - Prefixes in scope on the
+   *   element holding the pattern, when they differ from the context's
+   * @returns {boolean} Whether the node matches
    */
-  matchesPattern(node, pattern, context) {
-    // Split union patterns
-    const patterns = this.splitUnionPattern(pattern);
-
-    for (const p of patterns) {
-      if (this.matchesSinglePattern(node, p.trim(), context)) {
-        return true;
-      }
+  matchesPattern(node, pattern, context, namespaces) {
+    try {
+      return this.patternMatcher.matches(node, pattern, context, namespaces);
+    } catch {
+      return false;
     }
-
-    return false;
   }
 
   splitUnionPattern(pattern) {
@@ -1048,157 +1264,137 @@ export class XsltEngine {
     return parts;
   }
 
-  matchesSinglePattern(node, pattern, context) {
-    try {
-      // Handle root pattern
-      if (pattern === "/") {
-        return (
-          node.nodeType === 9 || node === node.ownerDocument?.documentElement
-        );
-      }
-
-      // Handle patterns like "item" (child match)
-      // Need to check if node would be selected by pattern from parent
-      const ast = parseXPath(pattern);
-
-      // For patterns starting with /, evaluate from root
-      if (pattern.startsWith("/")) {
-        const doc = node.ownerDocument || node;
-        const xpathContext = new XPathContext(
-          doc,
-          1,
-          1,
-          { ...context.variables, ...context.parameters },
-          context.namespaces,
-          context,
-        );
-        const result = this.xpathEvaluator.evaluate(ast, xpathContext);
-        const nodes = Array.isArray(result) ? result : [result];
-        return nodes.includes(node);
-      }
-
-      // For relative patterns, check if this node matches when evaluated from
-      // its parent; attribute nodes are reached through their owner element
-      const parent = node.nodeType === 2 ? node.ownerElement : node.parentNode;
-      if (parent) {
-        const xpathContext = new XPathContext(
-          parent,
-          1,
-          1,
-          { ...context.variables, ...context.parameters },
-          context.namespaces,
-          context,
-        );
-        const result = this.xpathEvaluator.evaluate(ast, xpathContext);
-        const nodes = Array.isArray(result) ? result : [result];
-        return nodes.includes(node);
-      }
-
-      // For document node without parent
-      const xpathContext = new XPathContext(
-        node,
-        1,
-        1,
-        { ...context.variables, ...context.parameters },
-        context.namespaces,
-        context,
-      );
-      const result = this.xpathEvaluator.evaluate(ast, xpathContext);
-      const nodes = Array.isArray(result) ? result : [result];
-      return nodes.includes(node);
-    } catch {
-      return false;
-    }
-  }
-
   /**
-   * Apply built-in template rules
+   * Apply the built-in template rules (XSLT 1.0 section 5.8). Parameters are
+   * passed on to the templates applied to the children, as libxslt does.
+   *
+   * @param {Node} node - The node without a matching template
+   * @param {string|null} mode - The mode
+   * @param {XsltContext} context - Context of the invoking instruction
+   * @param {Node} output - The result node receiving the output
+   * @param {Object<string, *>|null} [params] - Values of xsl:with-param by name
+   * @returns {void}
    */
-  applyBuiltinTemplate(node, mode, context, output) {
+  applyBuiltinTemplate(node, mode, context, output, params = null) {
     switch (node.nodeType) {
       case 1: // Element
       case 9: // Document
       case 11: // Document Fragment
-        // Process children
-        this.applyTemplates(Array.from(node.childNodes), mode, context, output);
+        this.applyTemplates(childAxis(node), mode, context, output, params);
         break;
 
+      case 2: // Attribute
       case 3: // Text
-      case 4: {
-        // CDATA
-        // Copy text value
-        const text = context.outputDocument.createTextNode(
-          node.nodeValue || "",
+      case 4: // CDATA
+        // Copy the string value; a text node stands for its whole text run
+        output.appendChild(
+          context.outputDocument.createTextNode(
+            this.xpathEvaluator.getStringValue(node),
+          ),
         );
-        output.appendChild(text);
         break;
-      }
-
-      case 2: {
-        // Attribute
-        // Copy attribute value as text
-        const attrText = context.outputDocument.createTextNode(
-          node.nodeValue || "",
-        );
-        output.appendChild(attrText);
-        break;
-      }
 
       // Comments and PIs have no built-in template
     }
   }
 
   /**
-   * Process template content
+   * Instantiate a template. Each `xsl:param` takes the value of the
+   * `xsl:with-param` of the same name, else its default, evaluated after the
+   * preceding parameters were bound (XSLT 1.0 section 11.6).
+   *
+   * @param {Element|object} templateNode - The xsl:template element
+   * @param {XsltContext} context - A fresh invocation context
+   * @param {Node} output - The result node receiving the output
+   * @param {Object<string, *>|null} [params] - Values of xsl:with-param by name
+   * @returns {void}
    */
-  processTemplate(templateNode, context, output) {
-    // Process template parameters first
-    const localContext = context.clone();
+  processTemplate(templateNode, context, output, params = null) {
+    for (
+      let child = templateNode.firstChild;
+      child;
+      child = child.nextSibling
+    ) {
+      if (child.nodeType !== 1 || !this.isXsltElement(child, "param")) continue;
 
-    for (const child of templateNode.childNodes) {
-      if (child.nodeType === 1 && this.isXsltElement(child, "param")) {
-        const name = child.getAttribute("name");
-        if (!(name in localContext.parameters)) {
-          localContext.parameters[name] = this.evaluateVariable(
-            { node: child, select: child.getAttribute("select") },
-            localContext,
-          );
-        }
-      }
+      const name = child.getAttribute("name");
+      context.parameters[name] =
+        params && Object.hasOwn(params, name)
+          ? params[name]
+          : this.evaluateVariable(
+              { node: child, select: child.getAttribute("select") },
+              context,
+            );
     }
 
-    this.processChildren(templateNode, localContext, output);
+    this.processChildren(templateNode, context, output);
   }
 
   /**
-   * Process child nodes of an XSLT element
+   * Instantiate the children of a stylesheet element (a sequence
+   * constructor). A variable declared among them is visible to its following
+   * siblings and their descendants only, so a body declaring variables gets
+   * its own copy of the local bindings.
+   *
+   * @param {Element|object} node - The parent stylesheet element
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result node receiving the output
+   * @returns {void}
    */
   processChildren(node, context, output) {
-    for (const child of node.childNodes) {
-      this.processNode(child, context, output);
+    const scope = this.declaresVariables(node) ? context.clone() : context;
+    const saved = scope.namespaces;
+
+    // Children are dispatched inline, without a per-node helper, to keep the
+    // JavaScript stack shallow: each template recursion level costs frames.
+    for (let child = node.firstChild; child; child = child.nextSibling) {
+      const type = child.nodeType;
+      if (type === 1) {
+        // Prefixes resolve against the namespaces in scope on the element
+        scope.namespaces = inScopeNamespaces(child);
+        const method = this.instructionMethod(child);
+        if (method) this[method](child, scope, output);
+      } else if (type === 3 || type === 4) {
+        this.processText(child, scope, output);
+      }
     }
+    scope.namespaces = saved;
   }
 
   /**
-   * Process a single node in the stylesheet
+   * Whether an element has an xsl:variable child. Cached per element.
+   *
+   * @param {Element|object} node - A stylesheet element
+   * @returns {boolean} True when a child declares a variable
    */
-  processNode(node, context, output) {
-    switch (node.nodeType) {
-      case 1: // Element
-        this.processElement(node, context, output);
-        break;
-
-      case 3: // Text
-      case 4: {
-        // CDATA
-        // Output text if not whitespace only (or if preserving space)
-        const text = node.nodeValue;
-        if (text && (text.trim() || this.shouldPreserveSpace(node))) {
-          const textNode = context.outputDocument.createTextNode(text);
-          output.appendChild(textNode);
-        }
-        break;
+  declaresVariables(node) {
+    this.variableDeclarations ??= new WeakMap();
+    let declares = this.variableDeclarations.get(node);
+    if (declares === undefined) {
+      declares = false;
+      for (let child = node.firstChild; child; child = child.nextSibling) {
+        if (this.isXsltElement(child, "variable")) declares = true;
       }
+      this.variableDeclarations.set(node, declares);
+    }
+    return declares;
+  }
+
+  /**
+   * Instantiate a stylesheet text node. Adjacent text and CDATA nodes form
+   * one text node, which is dropped when it only holds XML whitespace (unless
+   * xml:space="preserve" is in scope, XSLT 1.0 section 3.4).
+   *
+   * @param {Text} node - A text or CDATA node of the stylesheet
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result node receiving the output
+   * @returns {void}
+   */
+  processText(node, context, output) {
+    if (isTextContinuation(node)) return;
+    const text = this.xpathEvaluator.getStringValue(node);
+    if (text && (!isXmlWhitespace(text) || this.shouldPreserveSpace(node))) {
+      output.appendChild(context.outputDocument.createTextNode(text));
     }
   }
 
@@ -1215,112 +1411,23 @@ export class XsltEngine {
   }
 
   /**
-   * Process an element in the stylesheet
+   * Name of the engine method instantiating a stylesheet element: the
+   * handler of an XSLT instruction, or processLiteralResultElement. Returns
+   * null for elements that are not instructions (xsl:param, xsl:sort,
+   * xsl:with-param, xsl:fallback) and, with a warning, for unknown ones.
+   *
+   * @param {Element} node - A stylesheet element in a sequence constructor
+   * @returns {string|null} The method name
    */
-  processElement(node, context, output) {
-    // Check if XSLT element
-    if (this.isXsltNamespace(node)) {
-      this.processXsltElement(node, context, output);
-    } else {
-      // Literal result element
-      this.processLiteralResultElement(node, context, output);
-    }
-  }
+  instructionMethod(node) {
+    if (!this.isXsltNamespace(node)) return "processLiteralResultElement";
 
-  /**
-   * Process an XSLT instruction element
-   */
-  processXsltElement(node, context, output) {
     const localName = node.localName || node.nodeName.replace(/^xsl:/, "");
-
-    switch (localName) {
-      case "apply-templates":
-        this.xslApplyTemplates(node, context, output);
-        break;
-
-      case "apply-imports":
-        this.xslApplyImports(node, context, output);
-        break;
-
-      case "call-template":
-        this.xslCallTemplate(node, context, output);
-        break;
-
-      case "value-of":
-        this.xslValueOf(node, context, output);
-        break;
-
-      case "text":
-        this.xslText(node, context, output);
-        break;
-
-      case "element":
-        this.xslElement(node, context, output);
-        break;
-
-      case "attribute":
-        this.xslAttribute(node, context, output);
-        break;
-
-      case "if":
-        this.xslIf(node, context, output);
-        break;
-
-      case "choose":
-        this.xslChoose(node, context, output);
-        break;
-
-      case "for-each":
-        this.xslForEach(node, context, output);
-        break;
-
-      case "copy":
-        this.xslCopy(node, context, output);
-        break;
-
-      case "copy-of":
-        this.xslCopyOf(node, context, output);
-        break;
-
-      case "variable":
-        this.xslVariable(node, context, output);
-        break;
-
-      case "param":
-        // Params are processed at template start
-        break;
-
-      case "comment":
-        this.xslComment(node, context, output);
-        break;
-
-      case "processing-instruction":
-        this.xslProcessingInstruction(node, context, output);
-        break;
-
-      case "number":
-        this.xslNumber(node, context, output);
-        break;
-
-      case "sort":
-        // Handled by apply-templates and for-each
-        break;
-
-      case "with-param":
-        // Handled by call-template and apply-templates
-        break;
-
-      case "message":
-        this.xslMessage(node, context, output);
-        break;
-
-      case "fallback":
-        // Used for forward compatibility
-        break;
-
-      default:
-        console.warn(`Unknown XSLT element: ${localName}`);
+    if (Object.hasOwn(INSTRUCTION_METHODS, localName)) {
+      return INSTRUCTION_METHODS[localName];
     }
+    console.warn(`Unknown XSLT element: ${localName}`);
+    return null;
   }
 
   /**
@@ -1335,6 +1442,31 @@ export class XsltEngine {
    * @param {Node} output - The result tree node receiving the element
    * @returns {void}
    */
+  /**
+   * Copy one attribute of a literal result element to the result, evaluating
+   * it as an attribute value template and applying xsl:namespace-alias.
+   *
+   * @param {Attr} attr - Attribute of the literal result element
+   * @param {XsltContext} context - The current XSLT context
+   * @param {Element} outputElement - The result element
+   * @returns {void}
+   */
+  copyLiteralAttribute(attr, context, outputElement) {
+    const value = this.processAttributeValueTemplate(attr.value, context);
+    const alias = this.namespaceAliases.resolve(
+      attr.namespaceURI,
+      attr.localName || attr.name,
+    );
+
+    if (alias) {
+      outputElement.setAttributeNS(alias.namespaceUri, alias.qname, value);
+    } else if (attr.namespaceURI) {
+      outputElement.setAttributeNS(attr.namespaceURI, attr.name, value);
+    } else {
+      outputElement.setAttribute(attr.name, value);
+    }
+  }
+
   processLiteralResultElement(node, context, output) {
     const localName = node.localName || node.nodeName;
     const alias = this.namespaceAliases.resolve(node.namespaceURI, localName);
@@ -1345,6 +1477,11 @@ export class XsltEngine {
       namespaceUri && context.outputDocument.createElementNS
         ? context.outputDocument.createElementNS(namespaceUri, qname)
         : context.outputDocument.createElement(qname);
+    // Attached first, so namespace lookups see the result ancestors
+    output.appendChild(outputElement);
+    copyLiteralNamespaces(outputElement, node, output, (uri) =>
+      this.namespaceAliases.isAliased(uri),
+    );
 
     // Attribute sets come first so literal attributes take precedence
     const useAttributeSets = getXsltAttribute(
@@ -1356,79 +1493,83 @@ export class XsltEngine {
       this.applyAttributeSets(useAttributeSets, context, outputElement);
     }
 
-    if (node.attributes) {
-      for (const attr of node.attributes) {
-        if (!shouldCopyAttribute(attr, XSLT_NS)) continue;
-
-        const value = this.processAttributeValueTemplate(attr.value, context);
-        const attrAlias = this.namespaceAliases.resolve(
-          attr.namespaceURI,
-          attr.localName || attr.name,
-        );
-
-        if (attrAlias) {
-          outputElement.setAttributeNS(
-            attrAlias.namespaceUri,
-            attrAlias.qname,
-            value,
-          );
-        } else {
-          outputElement.setAttribute(attr.name, value);
-        }
+    for (const attr of node.attributes) {
+      if (shouldCopyAttribute(attr, XSLT_NS)) {
+        this.copyLiteralAttribute(attr, context, outputElement);
       }
     }
 
     // Process children
     this.processChildren(node, context, outputElement);
-
-    output.appendChild(outputElement);
   }
 
   /**
-   * Process attribute value templates (expressions in curly braces)
+   * Evaluate an attribute value template (see avt.js).
+   *
+   * @param {string} value - The attribute value
+   * @param {XsltContext} context - The current context
+   * @returns {string} The resulting text
    */
   processAttributeValueTemplate(value, context) {
-    if (!value.includes("{")) return value;
+    return evaluateAvt(value, (expr) =>
+      this.xpathEvaluator.toString(this.evaluateXPath(expr, context)),
+    );
+  }
 
-    let result = "";
-    let i = 0;
+  /**
+   * Evaluate an optional attribute value template attribute.
+   *
+   * @param {Element} node - The instruction
+   * @param {string} name - The attribute name
+   * @param {XsltContext} context - The current context
+   * @returns {string|null} The value, or null when the attribute is absent
+   */
+  optionalAvt(node, name, context) {
+    const raw = node.getAttribute(name);
+    return raw === null
+      ? null
+      : this.processAttributeValueTemplate(raw, context);
+  }
 
-    while (i < value.length) {
-      if (value[i] === "{") {
-        if (value[i + 1] === "{") {
-          // Escaped brace
-          result += "{";
-          i += 2;
-        } else {
-          // Find closing brace
-          let depth = 1;
-          let j = i + 1;
-          while (j < value.length && depth > 0) {
-            if (value[j] === "{") depth++;
-            else if (value[j] === "}") depth--;
-            j++;
-          }
-
-          const expr = value.substring(i + 1, j - 1);
-          const evalResult = this.evaluateXPath(expr, context);
-          result += this.xpathEvaluator.toString(evalResult);
-          i = j;
-        }
-      } else if (value[i] === "}") {
-        if (value[i + 1] === "}") {
-          // Escaped brace
-          result += "}";
-          i += 2;
-        } else {
-          throw new Error("Unmatched } in attribute value template");
-        }
-      } else {
-        result += value[i];
-        i++;
+  /**
+   * Evaluate the xsl:with-param children of an apply-templates or
+   * call-template instruction.
+   *
+   * @param {Element} node - The invoking instruction
+   * @param {XsltContext} context - Its context
+   * @returns {Object<string, *>} Values by parameter name
+   */
+  withParams(node, context) {
+    const params = {};
+    for (let child = node.firstChild; child; child = child.nextSibling) {
+      if (this.isXsltElement(child, "with-param")) {
+        params[child.getAttribute("name")] = this.evaluateVariable(
+          { node: child, select: child.getAttribute("select") },
+          context,
+        );
       }
     }
+    return params;
+  }
 
-    return result;
+  /**
+   * Whether an attribute may still be added to a result node: it must be an
+   * element without children. Attributes added after children are ignored
+   * (as libxslt does), with a single warning per engine.
+   *
+   * @param {Node} target - The result node
+   * @returns {boolean} True when the attribute can be added
+   */
+  canAddAttribute(target) {
+    if (target.nodeType !== 1) return false;
+    if (!target.firstChild) return true;
+    if (!this.warnedLateAttribute) {
+      this.warnedLateAttribute = true;
+      console.warn(
+        "XSLT: an attribute created after the children of an element is ignored (XSLT 1.0 section 7.1.3)",
+      );
+    }
+    return false;
   }
 
   // XSLT Instructions
@@ -1442,46 +1583,10 @@ export class XsltEngine {
       nodes = nodes ? [nodes] : [];
     }
 
-    // Collect sort specifications
-    const sortSpecs = [];
-    for (const child of node.childNodes) {
-      if (child.nodeType === 1 && this.isXsltElement(child, "sort")) {
-        sortSpecs.push({
-          select: child.getAttribute("select") || ".",
-          order: child.getAttribute("order") || "ascending",
-          dataType: child.getAttribute("data-type") || "text",
-          caseOrder: child.getAttribute("case-order") || "upper-first",
-          lang: child.getAttribute("lang"),
-        });
-      }
-    }
+    nodes = this.sortNodes(nodes, this.sortElementsOf(node), context);
 
-    // Apply sorting
-    if (sortSpecs.length > 0) {
-      nodes = this.sortNodes(nodes, sortSpecs, context);
-    }
-
-    // Collect with-param values
-    const params = {};
-    for (const child of node.childNodes) {
-      if (child.nodeType === 1 && this.isXsltElement(child, "with-param")) {
-        const name = child.getAttribute("name");
-        const selectAttr = child.getAttribute("select");
-        if (selectAttr) {
-          params[name] = this.evaluateXPath(selectAttr, context);
-        } else {
-          const fragment = context.outputDocument.createDocumentFragment();
-          this.processChildren(child, context, fragment);
-          params[name] = fragment;
-        }
-      }
-    }
-
-    // Apply templates with new context including params
-    const newContext = context.clone({
-      parameters: { ...context.parameters, ...params },
-    });
-    this.applyTemplates(nodes, mode, newContext, output);
+    const params = this.withParams(node, context);
+    this.applyTemplates(nodes, mode, context, output, params);
   }
 
   /**
@@ -1515,43 +1620,52 @@ export class XsltEngine {
       return;
     }
 
+    // xsl:apply-imports passes no parameters (XSLT 1.0 section 5.6)
     this.processTemplate(
       template.node,
-      context.clone({ currentTemplate: template }),
+      this.invocationContext(context, template),
       output,
     );
   }
 
+  /**
+   * Find the named template with the highest import precedence; among equal
+   * precedences the last one in stylesheet order wins.
+   *
+   * @param {string} name - The template name
+   * @returns {object|null} The template, or null when none has that name
+   */
+  findNamedTemplate(name) {
+    let best = null;
+    for (const template of this.templates) {
+      if (
+        template.name === name &&
+        (!best ||
+          (template.importPrecedence || 0) >= (best.importPrecedence || 0))
+      ) {
+        best = template;
+      }
+    }
+    return best;
+  }
+
   xslCallTemplate(node, context, output) {
     const name = node.getAttribute("name");
-
-    // Find named template
-    const template = this.templates.find((t) => t.name === name);
+    const template = this.findNamedTemplate(name);
     if (!template) {
       throw new Error(`Template not found: ${name}`);
     }
 
-    // Collect with-param values
-    const params = {};
-    for (const child of node.childNodes) {
-      if (child.nodeType === 1 && this.isXsltElement(child, "with-param")) {
-        const paramName = child.getAttribute("name");
-        const selectAttr = child.getAttribute("select");
-        if (selectAttr) {
-          params[paramName] = this.evaluateXPath(selectAttr, context);
-        } else {
-          const fragment = context.outputDocument.createDocumentFragment();
-          this.processChildren(child, context, fragment);
-          params[paramName] = fragment;
-        }
-      }
-    }
-
-    // Call template with params
-    const newContext = context.clone({
-      parameters: { ...context.parameters, ...params },
+    // A named template does not become the current template rule
+    const invocation = this.invocationContext(context, template, {
+      currentTemplate: context.currentTemplate,
     });
-    this.processTemplate(template.node, newContext, output);
+    this.processTemplate(
+      template.node,
+      invocation,
+      output,
+      this.withParams(node, context),
+    );
   }
 
   xslValueOf(node, context, output) {
@@ -1591,64 +1705,68 @@ export class XsltEngine {
     }
   }
 
+  /**
+   * Instantiate `xsl:element`. The name's prefix, or the default namespace
+   * for an unprefixed name, resolves against the namespaces in scope on the
+   * instruction; a `namespace` attribute wins (XSLT 1.0 section 7.1.2).
+   *
+   * @param {Element} node - The xsl:element instruction
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result node receiving the element
+   * @returns {void}
+   */
   xslElement(node, context, output) {
-    const name = this.processAttributeValueTemplate(
-      node.getAttribute("name"),
-      context,
+    const { namespaceUri, qname } = elementName(
+      this.processAttributeValueTemplate(node.getAttribute("name"), context),
+      this.optionalAvt(node, "namespace", context),
+      context.namespaces,
     );
-    const namespace = node.getAttribute("namespace");
+    const element = namespaceUri
+      ? context.outputDocument.createElementNS(namespaceUri, qname)
+      : context.outputDocument.createElement(qname);
+    output.appendChild(element);
+
     const useAttributeSets = node.getAttribute("use-attribute-sets");
-
-    let element;
-    if (namespace) {
-      const ns = this.processAttributeValueTemplate(namespace, context);
-      element = context.outputDocument.createElementNS(ns, name);
-    } else {
-      element = context.outputDocument.createElement(name);
-    }
-
-    // Apply attribute sets
     if (useAttributeSets) {
       this.applyAttributeSets(useAttributeSets, context, element);
     }
 
     this.processChildren(node, context, element);
-    output.appendChild(element);
   }
 
+  /**
+   * Instantiate `xsl:attribute` (XSLT 1.0 section 7.1.3): a prefixed name
+   * uses the namespace bound in scope, `namespace` wins, and a namespaced
+   * attribute without a usable prefix gets a generated one.
+   *
+   * @param {Element} node - The xsl:attribute instruction
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result element receiving the attribute
+   * @returns {void}
+   */
   xslAttribute(node, context, output) {
-    const name = this.processAttributeValueTemplate(
-      node.getAttribute("name"),
-      context,
-    );
-    const namespace = node.getAttribute("namespace");
+    if (!this.canAddAttribute(output)) return;
 
-    // Collect content
+    const name = attributeName(
+      this.processAttributeValueTemplate(node.getAttribute("name"), context),
+      this.optionalAvt(node, "namespace", context),
+      context.namespaces,
+    );
+    setResultAttribute(output, name, this.instantiateText(node, context));
+  }
+
+  /**
+   * Instantiate the content of an instruction and return its string value,
+   * for instructions whose result is text (attribute, comment, PI, message).
+   *
+   * @param {Element} node - The instruction
+   * @param {XsltContext} context - The current context
+   * @returns {string} The text of the instantiated content
+   */
+  instantiateText(node, context) {
     const fragment = context.outputDocument.createDocumentFragment();
     this.processChildren(node, context, fragment);
-
-    // Get text content
-    let value = "";
-    const getText = (n) => {
-      if (n.nodeType === 3 || n.nodeType === 4) {
-        value += n.nodeValue || "";
-      } else if (n.childNodes) {
-        for (const child of n.childNodes) {
-          getText(child);
-        }
-      }
-    };
-    getText(fragment);
-
-    // Add attribute to parent element
-    if (output.nodeType === 1) {
-      if (namespace) {
-        const ns = this.processAttributeValueTemplate(namespace, context);
-        output.setAttributeNS(ns, name, value);
-      } else {
-        output.setAttribute(name, value);
-      }
-    }
+    return this.xpathEvaluator.getStringValue(fragment);
   }
 
   xslIf(node, context, output) {
@@ -1687,24 +1805,7 @@ export class XsltEngine {
       nodes = nodes ? [nodes] : [];
     }
 
-    // Collect sort specifications
-    const sortSpecs = [];
-    for (const child of node.childNodes) {
-      if (child.nodeType === 1 && this.isXsltElement(child, "sort")) {
-        sortSpecs.push({
-          select: child.getAttribute("select") || ".",
-          order: child.getAttribute("order") || "ascending",
-          dataType: child.getAttribute("data-type") || "text",
-          caseOrder: child.getAttribute("case-order") || "upper-first",
-          lang: child.getAttribute("lang"),
-        });
-      }
-    }
-
-    // Apply sorting
-    if (sortSpecs.length > 0) {
-      nodes = this.sortNodes(nodes, sortSpecs, context);
-    }
+    nodes = this.sortNodes(nodes, this.sortElementsOf(node), context);
 
     // Process each node
     for (let i = 0; i < nodes.length; i++) {
@@ -1724,37 +1825,29 @@ export class XsltEngine {
 
     switch (currentNode.nodeType) {
       case 1: {
-        // Element
-        let copy;
-        if (currentNode.namespaceURI) {
-          copy = context.outputDocument.createElementNS(
-            currentNode.namespaceURI,
-            currentNode.nodeName,
-          );
-        } else {
-          copy = context.outputDocument.createElement(currentNode.nodeName);
-        }
+        // Element, with its namespace declarations (XSLT 1.0 section 7.5)
+        const copy = shallowCopyElement(currentNode, context.outputDocument);
+        output.appendChild(copy);
 
         if (useAttributeSets) {
           this.applyAttributeSets(useAttributeSets, context, copy);
         }
 
         this.processChildren(node, context, copy);
-        output.appendChild(copy);
         break;
       }
 
       case 2: // Attribute
-        if (output.nodeType === 1) {
-          output.setAttribute(currentNode.name, currentNode.value);
-        }
+        copyAttribute(currentNode, output, (target) =>
+          this.canAddAttribute(target),
+        );
         break;
 
       case 3: // Text
       case 4: {
-        // CDATA
+        // CDATA; a text node stands for its whole text run
         const textCopy = context.outputDocument.createTextNode(
-          currentNode.nodeValue || "",
+          this.xpathEvaluator.getStringValue(currentNode),
         );
         output.appendChild(textCopy);
         break;
@@ -1793,110 +1886,53 @@ export class XsltEngine {
     this.copyToOutput(result, context, output);
   }
 
+  /**
+   * Copy a value to the result tree as `xsl:copy-of` does (see copying.js).
+   *
+   * @param {*} value - The value to copy
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result node receiving the copy
+   * @returns {void}
+   */
   copyToOutput(value, context, output) {
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        this.copyToOutput(item, context, output);
-      }
-      return;
-    }
-
-    if (value && value.nodeType) {
-      // Deep copy node
-      const clone = this.deepCloneNode(value, context.outputDocument);
-      output.appendChild(clone);
-    } else if (
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
-      const text = context.outputDocument.createTextNode(String(value));
-      output.appendChild(text);
-    }
+    copyOf(value, output, {
+      doc: context.outputDocument,
+      stringValue: (node) => this.xpathEvaluator.getStringValue(node),
+      toString: (item) => this.xpathEvaluator.toString(item),
+      canAddAttribute: (target) => this.canAddAttribute(target),
+    });
   }
 
+  /**
+   * Deep copy of a node for the result tree (see copying.js); nodes that
+   * cannot be children become an empty text node.
+   *
+   * @param {Node} node - The node to copy
+   * @param {Document} targetDoc - The result document
+   * @returns {Node} The copy
+   */
   deepCloneNode(node, targetDoc) {
-    switch (node.nodeType) {
-      case 1: {
-        // Element
-        let clone;
-        if (node.namespaceURI && targetDoc.createElementNS) {
-          clone = targetDoc.createElementNS(node.namespaceURI, node.nodeName);
-        } else {
-          clone = targetDoc.createElement(node.nodeName);
-        }
-
-        if (node.attributes) {
-          for (const attr of node.attributes) {
-            clone.setAttribute(attr.name, attr.value);
-          }
-        }
-
-        for (const child of node.childNodes) {
-          clone.appendChild(this.deepCloneNode(child, targetDoc));
-        }
-
-        return clone;
-      }
-
-      case 3: // Text
-      case 4: // CDATA
-        return targetDoc.createTextNode(node.nodeValue || "");
-
-      case 7: // Processing Instruction
-        return targetDoc.createProcessingInstruction(node.target, node.data);
-
-      case 8: // Comment
-        return targetDoc.createComment(node.nodeValue || "");
-
-      case 11: {
-        // Document Fragment
-        const frag = targetDoc.createDocumentFragment();
-        for (const child of node.childNodes) {
-          frag.appendChild(this.deepCloneNode(child, targetDoc));
-        }
-        return frag;
-      }
-
-      default:
-        return targetDoc.createTextNode("");
-    }
+    return (
+      cloneNode(node, targetDoc, (text) =>
+        this.xpathEvaluator.getStringValue(text),
+      ) ?? targetDoc.createTextNode("")
+    );
   }
 
   xslVariable(node, context, _output) {
-    const name = node.getAttribute("name");
-    const select = node.getAttribute("select");
-
-    let value;
-    if (select) {
-      value = this.evaluateXPath(select, context);
-    } else {
-      const fragment = context.outputDocument.createDocumentFragment();
-      this.processChildren(node, context, fragment);
-      value = fragment;
-    }
-
-    context.setVariable(name, value);
+    context.setVariable(
+      node.getAttribute("name"),
+      this.evaluateVariable(
+        { node, select: node.getAttribute("select") },
+        context,
+      ),
+    );
   }
 
   xslComment(node, context, output) {
-    const fragment = context.outputDocument.createDocumentFragment();
-    this.processChildren(node, context, fragment);
-
-    let text = "";
-    const getText = (n) => {
-      if (n.nodeType === 3 || n.nodeType === 4) {
-        text += n.nodeValue || "";
-      } else if (n.childNodes) {
-        for (const child of n.childNodes) {
-          getText(child);
-        }
-      }
-    };
-    getText(fragment);
-
-    const comment = context.outputDocument.createComment(text);
-    output.appendChild(comment);
+    // "--" and a trailing "-" are made safe by the serializer (section 7.4)
+    const text = this.instantiateText(node, context);
+    output.appendChild(context.outputDocument.createComment(text));
   }
 
   xslProcessingInstruction(node, context, output) {
@@ -1904,29 +1940,30 @@ export class XsltEngine {
       node.getAttribute("name"),
       context,
     );
-
-    const fragment = context.outputDocument.createDocumentFragment();
-    this.processChildren(node, context, fragment);
-
-    let data = "";
-    const getText = (n) => {
-      if (n.nodeType === 3 || n.nodeType === 4) {
-        data += n.nodeValue || "";
-      } else if (n.childNodes) {
-        for (const child of n.childNodes) {
-          getText(child);
-        }
-      }
-    };
-    getText(fragment);
+    // Error recovery of XSLT 1.0 section 7.3: "?>" cannot end the data early
+    const data = this.instantiateText(node, context).replaceAll("?>", "? >");
 
     const pi = context.outputDocument.createProcessingInstruction(name, data);
     output.appendChild(pi);
   }
 
+  /**
+   * Instantiate `xsl:number` (XSLT 1.0 section 7.7). The formatting
+   * attributes format, grouping-separator and grouping-size are attribute
+   * value templates; lang and letter-value have no effect.
+   *
+   * @param {Element} node - The xsl:number instruction
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result node receiving the number
+   * @returns {void}
+   */
   xslNumber(node, context, output) {
     const value = node.getAttribute("value");
-    const format = node.getAttribute("format") || "1";
+    const format = this.optionalAvt(node, "format", context) || "1";
+    const grouping = {
+      separator: this.optionalAvt(node, "grouping-separator", context),
+      size: Number(this.optionalAvt(node, "grouping-size", context)),
+    };
 
     let numbers;
     if (value) {
@@ -1949,7 +1986,7 @@ export class XsltEngine {
     }
 
     const text = context.outputDocument.createTextNode(
-      formatXsltNumber(numbers, format),
+      formatXsltNumber(numbers, format, grouping),
     );
     output.appendChild(text);
   }
@@ -1977,21 +2014,7 @@ export class XsltEngine {
 
   xslMessage(node, context, _output) {
     const terminate = node.getAttribute("terminate") === "yes";
-
-    const fragment = context.outputDocument.createDocumentFragment();
-    this.processChildren(node, context, fragment);
-
-    let text = "";
-    const getText = (n) => {
-      if (n.nodeType === 3 || n.nodeType === 4) {
-        text += n.nodeValue || "";
-      } else if (n.childNodes) {
-        for (const child of n.childNodes) {
-          getText(child);
-        }
-      }
-    };
-    getText(fragment);
+    const text = this.instantiateText(node, context);
 
     console.log("XSLT Message:", text);
 
@@ -2015,59 +2038,51 @@ export class XsltEngine {
           );
         }
 
-        // Apply attributes from this set
-        for (const child of attrSet.node.childNodes) {
-          if (child.nodeType === 1 && this.isXsltElement(child, "attribute")) {
-            this.xslAttribute(child, context, element);
-          }
-        }
+        // Apply the xsl:attribute children, with the prefixes in scope there
+        this.processChildren(attrSet.node, context, element);
       }
     }
   }
 
-  sortNodes(nodes, sortSpecs, context) {
-    return [...nodes].sort((a, b) => {
-      for (const spec of sortSpecs) {
-        const contextA = context.clone({ currentNode: a });
-        const contextB = context.clone({ currentNode: b });
+  /**
+   * The xsl:sort children of a sorting instruction, in document order.
+   *
+   * @param {Element} instruction - xsl:for-each or xsl:apply-templates
+   * @returns {Element[]} The xsl:sort elements
+   */
+  sortElementsOf(instruction) {
+    return Array.from(instruction.childNodes).filter((child) =>
+      this.isXsltElement(child, "sort"),
+    );
+  }
 
-        let valueA = this.evaluateXPath(spec.select, contextA);
-        let valueB = this.evaluateXPath(spec.select, contextB);
+  /**
+   * Sort a node list by xsl:sort elements (see sort.js).
+   *
+   * @param {Node[]} nodes - Nodes in document order
+   * @param {Element[]} sortElements - The xsl:sort elements
+   * @param {XsltContext} context - Context of the sorting instruction
+   * @returns {Node[]} The sorted nodes
+   */
+  sortNodes(nodes, sortElements, context) {
+    return sortNodes(nodes, sortElements, context, this.sortHost);
+  }
 
-        // Convert to string for comparison (ensure non-null values)
-        valueA = this.xpathEvaluator.toString(valueA) || "";
-        valueB = this.xpathEvaluator.toString(valueB) || "";
-
-        if (spec.dataType === "number") {
-          valueA = parseFloat(valueA) || 0;
-          valueB = parseFloat(valueB) || 0;
-        } else {
-          // Text comparison
-          if (spec.caseOrder === "lower-first") {
-            valueA = valueA.toLowerCase();
-            valueB = valueB.toLowerCase();
-          } else {
-            valueA = valueA.toUpperCase();
-            valueB = valueB.toUpperCase();
-          }
-        }
-
-        let cmp;
-        if (typeof valueA === "number") {
-          cmp = valueA - valueB;
-        } else {
-          cmp = valueA.localeCompare(valueB, spec.lang || undefined);
-        }
-
-        if (spec.order === "descending") {
-          cmp = -cmp;
-        }
-
-        if (cmp !== 0) return cmp;
-      }
-
-      return 0;
-    });
+  /**
+   * Engine callbacks used by the sort module, created once per engine.
+   *
+   * @returns {import('./sort.js').SortHost} The callbacks
+   */
+  get sortHost() {
+    if (!this._sortHost) {
+      this._sortHost = {
+        evaluate: (expr, ctx) => this.evaluateXPath(expr, ctx),
+        avt: (value, ctx) => this.processAttributeValueTemplate(value, ctx),
+        toString: (value) => this.xpathEvaluator.toString(value),
+        toNumber: (value) => this.xpathEvaluator.toNumber(value),
+      };
+    }
+    return this._sortHost;
   }
 
   evaluateXPath(expr, context) {
@@ -2076,7 +2091,7 @@ export class XsltEngine {
       context.currentNode,
       context.position,
       context.currentNodeList.length,
-      { ...context.variables, ...context.parameters },
+      context.xpathVariables,
       context.namespaces,
       context,
     );
