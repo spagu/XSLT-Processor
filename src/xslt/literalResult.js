@@ -93,6 +93,19 @@ export class NamespaceAliasMap {
   }
 
   /**
+   * Whether a namespace is the stylesheet side of an alias.
+   *
+   * @param {string} uri - A namespace URI
+   * @returns {boolean} True when literal result names in it are aliased
+   *
+   * @example
+   * aliases.isAliased('http://www.w3.org/1999/XSL/TransformAlias'); // true
+   */
+  isAliased(uri) {
+    return this.byUri.has(uri);
+  }
+
+  /**
    * Apply aliasing to a literal result name.
    *
    * @param {string|null} namespaceUri - The namespace of the stylesheet node

@@ -10,14 +10,27 @@
 "use strict";
 
 /**
+ * @typedef {Object} KeyDefinition
+ * @property {string} match - Pattern of the nodes to index
+ * @property {string} use - Expression computing the key values
+ * @property {Object<string, string>} [namespaces] - Prefixes in scope on the xsl:key element
+ */
+
+/**
+ * @typedef {Object} KeyIndex
+ * @property {Map<string, Node[]>} buckets - Key value to nodes, in document order
+ * @property {Map<Node, number>} order - Document order position of every node
+ */
+
+/**
  * Lazily built, per-document indexes for all declared keys.
  */
 export class KeyIndexRegistry {
   /**
    * @param {Object} options - Registry configuration
-   * @param {Object<string, {match: string, use: string}>} options.keys - Declared keys by name
-   * @param {(node: Node, pattern: string) => boolean} options.matchesPattern - XSLT pattern matcher
-   * @param {(node: Node, expression: string) => string[]} options.evaluateUse - `use` evaluator returning key values
+   * @param {Object<string, (KeyDefinition|KeyDefinition[])>} options.keys - Declared keys by name; several xsl:key elements may share a name
+   * @param {(node: Node, pattern: string, definition: KeyDefinition) => boolean} options.matchesPattern - XSLT pattern matcher
+   * @param {(node: Node, expression: string, definition: KeyDefinition) => string[]} options.evaluateUse - `use` evaluator returning key values
    */
   constructor({ keys, matchesPattern, evaluateUse }) {
     this.keys = keys;
@@ -55,17 +68,15 @@ export class KeyIndexRegistry {
       throw new Error(`Undefined key: ${name}`);
     }
 
-    const index = this.getIndex(name, doc);
+    const { buckets, order } = this.getIndex(name, doc);
     const wanted = Array.isArray(values) ? values : [values];
-    const result = [];
+    if (wanted.length === 1) return [...(buckets.get(wanted[0]) || [])];
 
+    const found = new Set();
     for (const value of wanted) {
-      for (const node of index.get(value) || []) {
-        if (!result.includes(node)) result.push(node);
-      }
+      for (const node of buckets.get(value) || []) found.add(node);
     }
-
-    return result;
+    return [...found].sort((a, b) => order.get(a) - order.get(b));
   }
 
   /**
@@ -73,7 +84,7 @@ export class KeyIndexRegistry {
    *
    * @param {string} name - The key name
    * @param {Document} doc - The document being indexed
-   * @returns {Map<string, Node[]>} Key value to nodes
+   * @returns {KeyIndex} The index
    */
   getIndex(name, doc) {
     let byName = this.cache.get(doc);
@@ -92,27 +103,37 @@ export class KeyIndexRegistry {
   }
 
   /**
-   * Build the index of one key for one document.
+   * Build the index of one key for one document, merging every declaration
+   * of that key name.
    *
    * @param {string} name - The key name
    * @param {Document} doc - The document being indexed
-   * @returns {Map<string, Node[]>} Key value to nodes
+   * @returns {KeyIndex} The index
    */
   buildIndex(name, doc) {
-    const { match, use } = this.keys[name];
-    const index = new Map();
+    const definitions = [].concat(this.keys[name]);
+    const buckets = new Map();
+    const order = new Map();
 
     for (const node of documentOrderNodes(doc)) {
-      if (!this.matchesPattern(node, match)) continue;
+      order.set(node, order.size);
 
-      for (const value of this.evaluateUse(node, use)) {
-        const bucket = index.get(value);
-        if (bucket) bucket.push(node);
-        else index.set(value, [node]);
+      for (const definition of definitions) {
+        if (!this.matchesPattern(node, definition.match, definition)) continue;
+
+        for (const value of this.evaluateUse(
+          node,
+          definition.use,
+          definition,
+        )) {
+          const bucket = buckets.get(value);
+          if (!bucket) buckets.set(value, [node]);
+          else if (bucket[bucket.length - 1] !== node) bucket.push(node);
+        }
       }
     }
 
-    return index;
+    return { buckets, order };
   }
 }
 

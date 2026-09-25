@@ -137,7 +137,8 @@ describe("XsltEngine", () => {
 
   describe("constructor", () => {
     it("should initialize with default settings", () => {
-      assert.strictEqual(engine.outputSettings.method, "xml");
+      // No declared method: the serializer detects html or xml
+      assert.strictEqual(engine.outputSettings.method, null);
       assert.strictEqual(engine.outputSettings.encoding, "UTF-8");
       assert.strictEqual(engine.outputSettings.indent, "no");
       assert.deepStrictEqual(engine.templates, []);
@@ -235,8 +236,13 @@ describe("XsltEngine", () => {
       engine.importStylesheet(xslt);
 
       assert.ok("itemById" in engine.keys);
-      assert.strictEqual(engine.keys.itemById.match, "item");
-      assert.strictEqual(engine.keys.itemById.use, "@id");
+      assert.deepStrictEqual(engine.keys.itemById, [
+        {
+          match: "item",
+          use: "@id",
+          namespaces: { xsl: "http://www.w3.org/1999/XSL/Transform" },
+        },
+      ]);
     });
 
     it("should process xsl:decimal-format", () => {
@@ -1477,7 +1483,19 @@ describe("XsltEngine", () => {
     });
   });
 
-  describe("matchesSinglePattern catch block", () => {
+  describe("matchesPattern error handling", () => {
+    it("should return false when a predicate fails to evaluate", () => {
+      const context = new XsltContext({ variables: {}, parameters: {} });
+
+      const result = engine.matchesPattern(
+        parseXML("<root/>").documentElement,
+        "root[$undefined]",
+        context,
+      );
+
+      assert.strictEqual(result, false);
+    });
+
     it("should return false on pattern matching error", () => {
       const context = new XsltContext({
         currentNode: parseXML("<root/>").documentElement,
@@ -3431,7 +3449,10 @@ describe("XSLT 1.0 conformance", () => {
       const element = engine.transform(parseXML("<r/>"), document).firstChild;
 
       assert.strictEqual(element.getAttributeNS("urn:result", "flag"), "on");
-      assert.strictEqual(element.attributes[0].prefix, "b");
+      assert.strictEqual(
+        element.getAttributeNodeNS("urn:result", "flag").prefix,
+        "b",
+      );
     });
   });
 

@@ -3,7 +3,8 @@
  *
  * These cover the functions XSLT 1.0 adds to the XPath library: document(),
  * key(), format-number(), current(), generate-id(), system-property(),
- * function-available(), element-available() and unparsed-entity-uri().
+ * function-available(), element-available() and unparsed-entity-uri(), plus
+ * the EXSLT / msxsl node-set() extension function.
  */
 
 import { describe, it, beforeEach } from "node:test";
@@ -502,7 +503,7 @@ describe("function-available() and element-available()", () => {
 
     const xslDoc = stylesheet(
       `<xsl:template match="/"><out><xsl:value-of select="element-available('foo:if')"/></out></xsl:template>`,
-      'xmlns:foo="urn:foo"',
+      'xmlns:foo="urn:foo" exclude-result-prefixes="foo"',
     );
     assert.strictEqual(
       transform(xslDoc, parseXML("<root/>")),
@@ -536,6 +537,19 @@ describe("function-available() and element-available()", () => {
       true,
     );
   });
+
+  it("should treat an unbound xsl prefix as the XSLT namespace", () => {
+    const engine = new XsltEngine();
+    const context = new XPathContext(parseXML("<root/>"), 1, 1, {}, {});
+
+    assert.strictEqual(
+      engine.xpathEvaluator.evaluate(
+        parseXPath("element-available('xsl:if')"),
+        context,
+      ),
+      true,
+    );
+  });
 });
 
 describe("unparsed-entity-uri()", () => {
@@ -562,6 +576,8 @@ describe("createXsltFunctions", () => {
       "key",
       "system-property",
       "unparsed-entity-uri",
+      "{http://exslt.org/common}node-set",
+      "{urn:schemas-microsoft-com:xslt}node-set",
     ]);
   });
 });
@@ -591,6 +607,99 @@ describe("recursive templates", () => {
     assert.strictEqual(
       transform(xslDoc, parseXML("<root/>")),
       "<out>120</out>",
+    );
+  });
+});
+
+describe("node-set() extension functions", () => {
+  beforeEach(setupDOM);
+
+  const EXSL = 'xmlns:exsl="http://exslt.org/common"';
+  const MSXSL = 'xmlns:msxsl="urn:schemas-microsoft-com:xslt"';
+
+  /**
+   * Run a template body with the EXSLT and msxsl prefixes declared.
+   *
+   * @param {string} body - Template content
+   * @param {string} [xml] - The source document
+   * @returns {string} The serialized result
+   */
+  function run(body, xml = "<root/>") {
+    const xslDoc = stylesheet(
+      `<xsl:template match="/"><out>${body}</out></xsl:template>`,
+      `${EXSL} ${MSXSL} exclude-result-prefixes="exsl msxsl"`,
+    );
+    return transform(xslDoc, parseXML(xml));
+  }
+
+  it("should turn a result tree fragment into a navigable node-set", () => {
+    assert.strictEqual(
+      run(
+        `<xsl:variable name="v"><i>1</i><i>2</i>t</xsl:variable>` +
+          `<xsl:value-of select="count(exsl:node-set($v)/i)"/>,` +
+          `<xsl:value-of select="exsl:node-set($v)/i[2]"/>,` +
+          `<xsl:value-of select="count(exsl:node-set($v))"/>,` +
+          `<xsl:value-of select="exsl:node-set($v)"/>`,
+      ),
+      "<out>2,2,1,12t</out>",
+    );
+  });
+
+  it("should return a node-set argument unchanged", () => {
+    assert.strictEqual(
+      run(
+        `<xsl:value-of select="count(exsl:node-set(//a))"/>`,
+        "<root><a/><a/></root>",
+      ),
+      "<out>2</out>",
+    );
+  });
+
+  it("should wrap other values in a single text node", () => {
+    assert.strictEqual(
+      run(
+        `<xsl:value-of select="exsl:node-set('abc')"/>|` +
+          `<xsl:value-of select="count(exsl:node-set(1 + 1)/self::text())"/>|` +
+          `<xsl:value-of select="exsl:node-set(true())"/>`,
+      ),
+      "<out>abc|1|true</out>",
+    );
+  });
+
+  it("should support the msxsl:node-set() alias", () => {
+    assert.strictEqual(
+      run(
+        `<xsl:variable name="v"><i>x</i></xsl:variable>` +
+          `<xsl:value-of select="msxsl:node-set($v)/i"/>`,
+      ),
+      "<out>x</out>",
+    );
+  });
+
+  it("should resolve node-set() through any prefix bound to the namespace", () => {
+    const xslDoc = stylesheet(
+      `<xsl:template match="/"><out><xsl:value-of select="ext:node-set('y')"/></out></xsl:template>`,
+      'xmlns:ext="http://exslt.org/common" extension-element-prefixes="ext"',
+    );
+    assert.strictEqual(transform(xslDoc, parseXML("<root/>")), "<out>y</out>");
+  });
+
+  it("should report node-set() through function-available()", () => {
+    assert.strictEqual(
+      run(
+        `<xsl:value-of select="function-available('exsl:node-set')"/>,` +
+          `<xsl:value-of select="function-available('msxsl:node-set')"/>,` +
+          `<xsl:value-of select="function-available('exsl:nonesuch')"/>,` +
+          `<xsl:value-of select="function-available('undeclared:node-set')"/>`,
+      ),
+      "<out>true,true,false,false</out>",
+    );
+  });
+
+  it("should still reject unknown prefixed functions", () => {
+    assert.throws(
+      () => run(`<xsl:value-of select="exsl:nonesuch()"/>`),
+      /Unknown function: exsl:nonesuch/,
     );
   });
 });

@@ -3,7 +3,7 @@
  *
  * Single source of truth for the XSLT namespace URI and for the element names
  * the engine can instantiate. `element-available()` reports against this table,
- * so it stays in step with what {@link XsltEngine#processXsltElement} handles.
+ * so it stays in step with what {@link XsltEngine#instructionMethod} dispatches.
  */
 
 "use strict";

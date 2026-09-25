@@ -316,8 +316,26 @@ export class XsltContext {
 /**
  * XSLT processing engine.
  */
+/**
+ * Default node-set limit of an XSLT transformation (5,000,000).
+ */
+export const XSLT_MAX_RESULT_SIZE: number;
+
+/**
+ * Default XPath expression depth limit of an XSLT transformation (1000).
+ */
+export const XSLT_MAX_EXPRESSION_DEPTH: number;
+
 export class XsltEngine {
-  constructor(options?: { stylesheetLoader?: StylesheetLoader | null; baseUri?: string });
+  constructor(options?: {
+    stylesheetLoader?: StylesheetLoader | null;
+    documentLoader?: ((uri: string, baseUri?: string) => Document | string | null) | null;
+    baseUri?: string;
+    /** Largest node-set one XPath step may produce (default XSLT_MAX_RESULT_SIZE). */
+    maxResultSize?: number;
+    /** Deepest XPath expression nesting (default XSLT_MAX_EXPRESSION_DEPTH). */
+    maxRecursionDepth?: number;
+  });
 
   setStylesheetLoader(loader: StylesheetLoader | null): void;
   importStylesheet(stylesheetNode: Node, stylesheetUri?: string): void;

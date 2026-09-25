@@ -1,9 +1,11 @@
 /**
  * XSLT-defined XPath functions.
  *
- * XSLT 1.0 section 12 adds functions to the XPath function library. They live
- * here rather than in `src/xpath` so that module stays a pure XPath 1.0
- * implementation; the engine registers this map on its evaluator through
+ * XSLT 1.0 section 12 adds functions to the XPath function library, and the
+ * EXSLT `node-set()` extension (also under the msxsl namespace) is registered
+ * by expanded name next to them. They live here rather than in `src/xpath` so
+ * that module stays a pure XPath 1.0 implementation; the engine registers this
+ * map on its evaluator through
  * {@link XPathEvaluator#registerFunctions}.
  */
 
@@ -11,6 +13,13 @@
 
 import { formatNumber, DEFAULT_DECIMAL_FORMAT } from "./formatNumber.js";
 import { isXsltElementAvailable, XSLT_NAMESPACE } from "./elements.js";
+import { expandedFunctionName } from "../xpath/evaluator.js";
+
+/** Namespace of the EXSLT common module (`exsl:node-set()`). */
+export const EXSLT_COMMON_NAMESPACE = "http://exslt.org/common";
+
+/** Namespace of the MSXML extension functions (`msxsl:node-set()`). */
+export const MSXSL_NAMESPACE = "urn:schemas-microsoft-com:xslt";
 
 /** Vendor identification reported by `system-property()`. */
 export const VENDOR = "@tradik/xslt-processor";
@@ -96,7 +105,29 @@ export function createXsltFunctions(engine) {
   const evaluate = (arg, ctx) => evaluator.evaluate(arg, ctx);
   const asString = (arg, ctx) => stringify(evaluate(arg, ctx));
 
+  /**
+   * `exsl:node-set(object)` - EXSLT common, also known as `msxsl:node-set()`.
+   *
+   * A result tree fragment (a DocumentFragment in this engine) becomes a
+   * node-set holding its root node, so `exsl:node-set($rtf)/item` selects the
+   * fragment's top-level `item` elements. A node-set is returned unchanged; any
+   * other value becomes a node-set holding one text node with its string value.
+   *
+   * @param {Array} args - Argument expressions
+   * @param {import('../xpath/evaluator.js').XPathContext} ctx - Evaluation context
+   * @returns {Node[]} The node-set
+   */
+  const nodeSet = (args, ctx) => {
+    const value = evaluate(args[0], ctx);
+    if (Array.isArray(value)) return value;
+    if (value?.nodeType) return [value];
+    return [ownerDocumentOf(ctx.node).createTextNode(stringify(value))];
+  };
+
   return {
+    [expandedFunctionName(EXSLT_COMMON_NAMESPACE, "node-set")]: nodeSet,
+    [expandedFunctionName(MSXSL_NAMESPACE, "node-set")]: nodeSet,
+
     /**
      * `document(object, base?)` - load external XML documents.
      *
@@ -160,10 +191,16 @@ export function createXsltFunctions(engine) {
         : "";
     },
 
-    /** `function-available(name)` - reflects the evaluator function table. */
+    /**
+     * `function-available(name)` - reflects the evaluator function table. A
+     * prefixed name is resolved through the stylesheet's namespace bindings,
+     * just as a call of that function would be.
+     */
     "function-available": (args, ctx) => {
-      const name = asString(args[0], ctx);
-      return Object.hasOwn(evaluator.functions, name);
+      const { prefix, localName } = splitQName(asString(args[0], ctx));
+      return (
+        evaluator.resolveFunction(localName, prefix, ctx.namespaces) !== null
+      );
     },
 
     /** `element-available(name)` - reflects the XSLT elements the engine runs. */
