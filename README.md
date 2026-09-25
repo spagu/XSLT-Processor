@@ -29,7 +29,7 @@ This library ensures your XSLT-based applications continue to work regardless of
 - **Full XSLT 1.0 Support**: Implements the complete W3C XSLT 1.0 specification
 - **XPath 1.0 Engine**: Built-in XPath evaluator with all core functions
 - **`xsl:output` Serialization**: `transformToString()` honors method, indent, doctype, CDATA sections and `disable-output-escaping`
-- **Zero Dependencies**: Standalone implementation with no external dependencies
+- **Zero Dependencies**: The library has no runtime dependencies; only the `xslt` command line tool needs `jsdom` (an optional peer dependency)
 - **Multiple Formats**: ESM, CommonJS, and browser IIFE bundles
 - **TypeScript Support**: Includes TypeScript declarations
 - **WCAG 2.2 Compliant**: Designed with accessibility in mind
@@ -128,9 +128,13 @@ const processor = new XSLTProcessor();
 
 The package includes a command-line tool for transforming XML documents:
 
+The command line tool needs a DOM implementation, so install `jsdom` next to
+the package. It is an optional peer dependency: library users do not need it.
+Without it, `xslt` exits with an explanation instead of a stack trace.
+
 ```bash
 # Global installation
-npm install -g @tradik/xslt-processor
+npm install -g @tradik/xslt-processor jsdom
 
 # Transform XML with XSLT
 xslt data.xml template.xsl
@@ -160,6 +164,23 @@ that directory or point `XSLT_BASE_DIR` at it:
 ```bash
 XSLT_BASE_DIR=/srv/data xslt /srv/data/in.xml /srv/data/t.xsl -o /srv/data/out.html
 ```
+
+`xsl:include`, `xsl:import` and `document()` are resolved relative to the
+stylesheet that references them (relative paths, absolute paths and `file:`
+URLs). The files they load must stay inside the same base directory; anything
+outside it, and any `http:`/`https:` URI, is refused. A stylesheet include that
+cannot be loaded stops the run with an error, while a `document()` that cannot
+be loaded yields an empty node-set and a one-line warning on stderr.
+
+Input files (the XML document, the stylesheet, included stylesheets and
+`document()` files) are decoded following XML 1.0 Appendix F: a byte order mark
+(UTF-8, UTF-16LE, UTF-16BE) wins, then the `encoding` of the XML declaration,
+otherwise UTF-8. Any WHATWG encoding label is accepted, e.g. `ISO-8859-1`,
+`windows-1252`, `ISO-8859-2`, `Shift_JIS`; an unknown label is reported as an
+error.
+
+The result is written to stdout byte for byte, exactly as with `-o`; only when
+stdout is an interactive terminal is a final newline added if missing.
 
 #### CLI Options
 
@@ -542,6 +563,14 @@ The XPath evaluator includes comprehensive security hardening to prevent common 
 | `MAX_RESULT_SIZE` | 10,000 | Prevents memory exhaustion from large result sets |
 | `MAX_STRING_LENGTH` | 1,000,000 | Limits string processing to prevent memory issues |
 
+These limits apply to the standalone XPath API (`evaluateXPath`, `selectXPath`,
+`XPathEvaluator`), where expressions may come from untrusted input. Inside an
+XSLT transformation the stylesheet is trusted program code, so `XsltEngine`
+allows up to 5,000,000 nodes per location step (`XSLT_MAX_RESULT_SIZE`), which
+lets stylesheets process large catalogs and exports, and allows XPath
+expressions nested up to 1000 levels deep (`XSLT_MAX_EXPRESSION_DEPTH`). Pass
+`new XsltEngine({ maxResultSize, maxRecursionDepth })` to choose other bounds.
+
 ### Prototype Pollution Protection
 
 The following variable names are blocked:
@@ -630,8 +659,15 @@ const result = evaluator.evaluate(ast, context);
 - `system-property(name)` - `xsl:version`, `xsl:vendor`, `xsl:vendor-url`
 - `unparsed-entity-uri(name)` - always returns `''` (unparsed entities are not exposed by the DOM)
 
+### Extension Functions
+- `exsl:node-set(value)` (namespace `http://exslt.org/common`) and `msxsl:node-set(value)` (namespace `urn:schemas-microsoft-com:xslt`) - turn a result tree fragment into a node-set, so `exsl:node-set($rtf)/item` works; `function-available('exsl:node-set')` is true
+
 ### Conformance Notes
-- CDATA sections count as text everywhere (string-value, `text()`, `xsl:value-of`, `xsl:copy-of`)
+- CDATA sections count as text everywhere (string-value, `text()`, `xsl:value-of`, `xsl:copy-of`); a run of adjacent text and CDATA nodes is a single text node
+- Patterns (`match`, `count`, `from`, `xsl:key`) support every XSLT 1.0 form, including multi-step paths, `//`, positional predicates, `id()` and `key()`, and are matched in time proportional to the node's depth
+- Template conflicts with equal priority and import precedence resolve to the last template, like libxslt
+- Without `xsl:output method`, a result whose root element is `<html>` is serialized as HTML
+- XML whitespace means space, tab, CR and LF only; a non-breaking space is ordinary text
 - The identity transform `<xsl:template match="@*|node()"><xsl:copy><xsl:apply-templates select="@*|node()"/></xsl:copy></xsl:template>` round-trips a document exactly
 - `xsl:number` supports `level="single|multiple|any"` with `count`, `from` and the `1`, `01`, `a`, `A`, `i`, `I` format tokens
 - The result tree is built in a neutral XML document and imported into the output
@@ -796,13 +832,13 @@ This implementation follows these W3C specifications with comprehensive test cov
 | 7.6.2 | Namespace Aliases | Supported | `xsl:namespace-alias` |
 | 8 | Repetition | Supported | `xsl:for-each` |
 | 9 | Conditional Processing | Supported | `xsl:if`, `xsl:choose`, `xsl:when`, `xsl:otherwise` |
-| 10 | Sorting | Supported | `xsl:sort` with multiple keys, data-types, order |
+| 10 | Sorting | Supported | `xsl:sort` with multiple keys, `data-type`, `order`, `case-order`, `lang` (all attribute value templates). Text sorts by Unicode code point like libxslt/Chrome; `lang` or `case-order` switch to locale collation. Numbers sort with NaN first. |
 | 11 | Variables/Parameters | Supported | `xsl:variable`, `xsl:param`, scoping rules |
 | 11.1 | Result Tree Fragments | Supported | RTF handling as per spec |
 | 12 | Additional Functions | Supported | `document()`, `key()`, `format-number()`, `current()`, `generate-id()`, `system-property()` |
 | 12.3 | Number Formatting | Supported | `xsl:number` with all formatting options |
 | 13 | Messages | Supported | `xsl:message` with `terminate` attribute |
-| 14 | Extensions | Partial | `xsl:fallback` supported |
+| 14 | Extensions | Partial | `xsl:fallback` supported; EXSLT `exsl:node-set()` and `msxsl:node-set()` |
 | 15 | Fallback | Supported | `xsl:fallback` element |
 | 16 | Output | Supported | `xsl:output` honored by `transformToString()` / `serializeResult()` |
 | 16.1 | XML Output Method | Supported | XML declaration (`encoding`, `version`, `standalone`), `omit-xml-declaration`, `doctype-public`/`doctype-system`, namespace declarations, `indent="yes"` for element-only content |
