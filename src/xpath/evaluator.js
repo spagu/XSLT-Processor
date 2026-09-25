@@ -8,6 +8,62 @@
 "use strict";
 
 import { NodeType } from "./parser.js";
+import {
+  REVERSE_AXES,
+  ancestorAxis,
+  attributeAxis,
+  childAxis,
+  descendantAxis,
+  followingAxis,
+  followingSiblingAxis,
+  precedingAxis,
+  precedingSiblingAxis,
+  isTextNode,
+} from "./axes.js";
+import {
+  codePointLength,
+  formatXPathNumber,
+  normalizeXmlSpace,
+  parseXPathNumber,
+  splitXmlSpace,
+  xpathSubstring,
+  xpathTranslate,
+} from "./strings.js";
+
+/**
+ * Namespace the `xml` prefix is bound to in every context; it cannot be
+ * undeclared or rebound (Namespaces in XML 1.0, section 3).
+ */
+export const XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
+
+/**
+ * Resolve a namespace prefix: `xml` is predeclared, every other prefix comes
+ * from the context bindings.
+ *
+ * @param {string} prefix - The prefix
+ * @param {Object<string, string>} namespaces - Bindings by prefix
+ * @returns {string|null} The namespace URI, or null when undeclared
+ */
+export function resolveNamespacePrefix(prefix, namespaces) {
+  if (prefix === "xml") return XML_NAMESPACE;
+  return Object.hasOwn(namespaces, prefix) ? namespaces[prefix] : null;
+}
+
+/**
+ * Key of a function registered by expanded name, as used by
+ * {@link XPathEvaluator#registerFunctions}: `{namespace-uri}local-name`.
+ *
+ * @param {string} namespaceUri - The function's namespace
+ * @param {string} localName - The function's local name
+ * @returns {string} The registry key
+ *
+ * @example
+ * expandedFunctionName("http://exslt.org/common", "node-set");
+ * // "{http://exslt.org/common}node-set"
+ */
+export function expandedFunctionName(namespaceUri, localName) {
+  return `{${namespaceUri}}${localName}`;
+}
 
 /**
  * XPath result types matching W3C spec
@@ -213,8 +269,8 @@ export class XPathEvaluator {
   evalEqualityExpr(ast, context) {
     const left = this.evaluate(ast.left, context);
     const right = this.evaluate(ast.right, context);
-    const isEqual = this.compareValues(left, right, "=");
-    return ast.operator === "=" ? isEqual : !isEqual;
+    // `!=` is existential on node-sets too, so it is not `not(=)` (3.4)
+    return this.compareValues(left, right, ast.operator);
   }
 
   evalRelationalExpr(ast, context) {
@@ -314,24 +370,41 @@ export class XPathEvaluator {
     return nodes;
   }
 
+  /**
+   * Apply one location step to every node of a node-set.
+   *
+   * The result is in document order without duplicates. With a single context
+   * node the axis output is already duplicate free, so it only needs to be
+   * reversed for reverse axes; merging several context nodes needs a sort.
+   *
+   * @param {object} step - Step AST node
+   * @param {Node|Node[]} nodes - Context nodes
+   * @param {XPathContext} context - Evaluation context
+   * @returns {Node[]} The selected nodes in document order
+   */
   evalStepOnNodes(step, nodes, context) {
     const allNodes = Array.isArray(nodes) ? nodes : [nodes];
-    let result = [];
+    const reverse = REVERSE_AXES.has(step.axis);
 
-    for (const node of allNodes) {
-      const stepNodes = this.evalStep(step, context.clone({ node }));
-      result = result.concat(stepNodes);
-
-      // Early validation to prevent excessive memory use
-      if (result.length > this.maxResultSize * 2) {
-        this.validateResultSize(result);
-      }
+    if (allNodes.length === 1) {
+      const single = this.evalStep(step, context.clone({ node: allNodes[0] }));
+      this.validateResultSize(single);
+      return reverse ? single.reverse() : single;
     }
 
-    // Remove duplicates and sort by document order
-    const uniqueResult = [...new Set(result)];
-    this.validateResultSize(uniqueResult);
-    return this.sortByDocumentOrder(uniqueResult);
+    const seen = new Set();
+    const result = [];
+    for (const node of allNodes) {
+      for (const found of this.evalStep(step, context.clone({ node }))) {
+        if (!seen.has(found)) {
+          seen.add(found);
+          result.push(found);
+        }
+      }
+      this.validateResultSize(result);
+    }
+
+    return this.sortByDocumentOrder(result);
   }
 
   evalStep(step, context) {
@@ -349,151 +422,48 @@ export class XPathEvaluator {
     return nodes;
   }
 
+  /**
+   * Nodes on an axis (see axes.js). Reverse axes are returned nearest first,
+   * so predicates see proximity positions.
+   *
+   * @param {string} axis - Axis name
+   * @param {Node} node - Context node
+   * @returns {Node[]} The nodes on the axis
+   */
   getAxisNodes(axis, node) {
     switch (axis) {
       case "child":
-        return Array.from(node.childNodes || []);
-
-      case "parent":
-        return node.parentNode ? [node.parentNode] : [];
-
+        return childAxis(node);
+      case "parent": {
+        const parent =
+          node.nodeType === 2 ? node.ownerElement : node.parentNode;
+        return parent ? [parent] : [];
+      }
       case "self":
         return [node];
-
       case "descendant":
-        return this.getDescendants(node, false);
-
+        return descendantAxis(node, false);
       case "descendant-or-self":
-        return this.getDescendants(node, true);
-
+        return descendantAxis(node, true);
       case "ancestor":
-        return this.getAncestors(node, false);
-
+        return ancestorAxis(node, false);
       case "ancestor-or-self":
-        return this.getAncestors(node, true);
-
+        return ancestorAxis(node, true);
       case "following-sibling":
-        return this.getFollowingSiblings(node);
-
+        return node.nodeType === 2 ? [] : followingSiblingAxis(node);
       case "preceding-sibling":
-        return this.getPrecedingSiblings(node);
-
+        return node.nodeType === 2 ? [] : precedingSiblingAxis(node);
       case "following":
-        return this.getFollowing(node);
-
+        return followingAxis(node);
       case "preceding":
-        return this.getPreceding(node);
-
+        return precedingAxis(node);
       case "attribute":
-        if (node.attributes) {
-          return Array.from(node.attributes);
-        }
-        return [];
-
+        return attributeAxis(node);
       case "namespace":
-        // Namespace axis - not commonly used
         return [];
-
       default:
         throw new Error(`Unknown axis: ${axis}`);
     }
-  }
-
-  getDescendants(node, includeSelf) {
-    const result = includeSelf ? [node] : [];
-    const stack = Array.from(node.childNodes || []).reverse();
-
-    while (stack.length > 0) {
-      const current = stack.pop();
-      result.push(current);
-      if (current.childNodes) {
-        for (let i = current.childNodes.length - 1; i >= 0; i--) {
-          stack.push(current.childNodes[i]);
-        }
-      }
-    }
-
-    return result;
-  }
-
-  getAncestors(node, includeSelf) {
-    const result = includeSelf ? [node] : [];
-    let current = node.parentNode;
-
-    while (current) {
-      result.push(current);
-      current = current.parentNode;
-    }
-
-    return result;
-  }
-
-  getFollowingSiblings(node) {
-    const result = [];
-    if (!node) return result;
-    let current = node.nextSibling;
-
-    while (current) {
-      result.push(current);
-      current = current.nextSibling;
-    }
-
-    return result;
-  }
-
-  getPrecedingSiblings(node) {
-    const result = [];
-    if (!node) return result;
-    let current = node.previousSibling;
-
-    while (current) {
-      result.push(current);
-      current = current.previousSibling;
-    }
-
-    return result.reverse();
-  }
-
-  getFollowing(node) {
-    const result = [];
-    let current = node;
-
-    // Go to next sibling, or ancestor's next sibling
-    while (current) {
-      if (current.nextSibling) {
-        current = current.nextSibling;
-        result.push(current);
-        // Add all descendants
-        result.push(...this.getDescendants(current, false));
-      } else {
-        current = current.parentNode;
-      }
-    }
-
-    return result;
-  }
-
-  getPreceding(node) {
-    const result = [];
-    let current = node;
-
-    while (current) {
-      if (current.previousSibling) {
-        current = current.previousSibling;
-        // Add descendants in reverse order, then the node
-        const descendants = this.getDescendants(current, false);
-        result.unshift(...descendants.reverse());
-        result.unshift(current);
-      } else {
-        current = current.parentNode;
-        if (current && current.nodeType !== 9) {
-          // Not document
-          // Don't add ancestors
-        }
-      }
-    }
-
-    return result;
   }
 
   matchNodeTest(nodeTest, node, context) {
@@ -512,43 +482,42 @@ export class XPathEvaluator {
     }
   }
 
+  /**
+   * Match a name test against a node.
+   *
+   * Cheap checks run first: in jsdom every DOM getter crosses a wrapper, so
+   * `namespaceURI` and the owner document's content type are only read when
+   * the outcome depends on them.
+   *
+   * @param {object} nodeTest - Name test AST node
+   * @param {Node} node - Candidate node
+   * @param {XPathContext} context - Evaluation context (for prefixes)
+   * @returns {boolean} Whether the node matches
+   */
   matchNameTest(nodeTest, node, context) {
+    const type = node.nodeType;
     // Only element and attribute nodes have names
-    if (node.nodeType !== 1 && node.nodeType !== 2) {
+    if (type !== 1 && type !== 2) return false;
+
+    const { name, prefix } = nodeTest;
+
+    if (!prefix) {
+      if (name === "*") return true;
+      const nodeName = node.localName || node.nodeName;
+      if (nodeName === name) return true;
+      // HTML documents match element names case-insensitively
+      return (
+        type === 1 &&
+        nodeName.toLowerCase() === name.toLowerCase() &&
+        node.ownerDocument?.contentType === "text/html"
+      );
+    }
+
+    const nodeNs = node.namespaceURI || null;
+    if (nodeNs !== resolveNamespacePrefix(prefix, context.namespaces)) {
       return false;
     }
-
-    const name = nodeTest.name;
-    const prefix = nodeTest.prefix;
-
-    // Wildcard
-    if (name === "*" && !prefix) {
-      return true;
-    }
-
-    // Get node's local name and namespace
-    const nodeName = node.localName || node.nodeName;
-    const nodeNs = node.namespaceURI || null;
-
-    // Prefix:* matches all nodes in namespace
-    if (name === "*" && prefix) {
-      const ns = context.namespaces[prefix];
-      return nodeNs === ns;
-    }
-
-    // Simple name match
-    if (!prefix) {
-      // For elements, match local name (case-insensitive for HTML)
-      const doc = node.ownerDocument;
-      if (doc && doc.contentType === "text/html" && node.nodeType === 1) {
-        return nodeName.toLowerCase() === name.toLowerCase();
-      }
-      return nodeName === name;
-    }
-
-    // Prefixed name match
-    const ns = context.namespaces[prefix];
-    return nodeName === name && nodeNs === ns;
+    return name === "*" || (node.localName || node.nodeName) === name;
   }
 
   matchNodeTypeTest(nodeType, node) {
@@ -619,11 +588,17 @@ export class XPathEvaluator {
    * core function. Each function is called as `fn(args, context)` with the
    * evaluator as `this`.
    *
+   * Extension functions are keyed by expanded name, `{namespace-uri}local`
+   * (see {@link expandedFunctionName}), and are found through whatever prefix
+   * the expression binds to that namespace. A literal `prefix:local` key is
+   * still honoured when the prefix does not resolve to a registered function.
+   *
    * @param {Object<string, Function>} functions - Functions by name
    * @returns {XPathEvaluator} This evaluator, to allow chaining
    *
    * @example
-   * evaluator.registerFunctions({ 'my:double': (args, ctx) => 2 });
+   * evaluator.registerFunctions({ '{urn:my}double': (args, ctx) => 2 });
+   * // callable as my:double() when my is bound to urn:my
    */
   registerFunctions(functions) {
     for (const [name, fn] of Object.entries(functions)) {
@@ -632,14 +607,58 @@ export class XPathEvaluator {
     return this;
   }
 
-  evalFunctionCall(ast, context) {
-    const name = ast.prefix ? `${ast.prefix}:${ast.name}` : ast.name;
+  /**
+   * Find the implementation of a possibly prefixed function name.
+   *
+   * @param {string} localName - The local part of the function name
+   * @param {string|null} prefix - The prefix, or null for core functions
+   * @param {Object<string, string>} namespaces - Prefix bindings
+   * @returns {Function|null} The function, or null when none is registered
+   */
+  resolveFunction(localName, prefix, namespaces) {
+    if (!prefix) return this.getFunction(localName);
 
-    if (!Object.hasOwn(this.functions, name)) {
+    const namespaceUri = resolveNamespacePrefix(prefix, namespaces);
+    const byUri =
+      namespaceUri === null
+        ? null
+        : this.getFunction(expandedFunctionName(namespaceUri, localName));
+    return byUri ?? this.getFunction(`${prefix}:${localName}`);
+  }
+
+  /**
+   * Whether a function is registered under an expanded name.
+   *
+   * @param {string} localName - The local part of the function name
+   * @param {string|null} [namespaceUri] - The namespace, null for core functions
+   * @returns {boolean} True when the function exists
+   */
+  hasFunction(localName, namespaceUri = null) {
+    const key = namespaceUri
+      ? expandedFunctionName(namespaceUri, localName)
+      : localName;
+    return this.getFunction(key) !== null;
+  }
+
+  /**
+   * Own entry of the function table, never an inherited property.
+   *
+   * @param {string} key - Registry key
+   * @returns {Function|null} The function, or null
+   */
+  getFunction(key) {
+    return Object.hasOwn(this.functions, key) ? this.functions[key] : null;
+  }
+
+  evalFunctionCall(ast, context) {
+    const fn = this.resolveFunction(ast.name, ast.prefix, context.namespaces);
+
+    if (!fn) {
+      const name = ast.prefix ? `${ast.prefix}:${ast.name}` : ast.name;
       throw new Error(`Unknown function: ${name}`);
     }
 
-    return this.functions[name].call(this, ast.args, context);
+    return fn.call(this, ast.args, context);
   }
 
   // Type conversion functions
@@ -655,12 +674,7 @@ export class XPathEvaluator {
   toNumber(value) {
     if (typeof value === "number") return value;
     if (typeof value === "boolean") return value ? 1 : 0;
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (trimmed === "") return NaN;
-      const num = Number(trimmed);
-      return num;
-    }
+    if (typeof value === "string") return parseXPathNumber(value);
     if (Array.isArray(value)) {
       return this.toNumber(this.toString(value));
     }
@@ -672,13 +686,7 @@ export class XPathEvaluator {
 
   toString(value) {
     if (typeof value === "string") return value;
-    if (typeof value === "number") {
-      if (isNaN(value)) return "NaN";
-      if (value === Infinity) return "Infinity";
-      if (value === -Infinity) return "-Infinity";
-      if (value === 0) return "0";
-      return String(value);
-    }
+    if (typeof value === "number") return formatXPathNumber(value);
     if (typeof value === "boolean") return value ? "true" : "false";
     if (Array.isArray(value)) {
       if (value.length === 0) return "";
@@ -712,9 +720,18 @@ export class XPathEvaluator {
         return text;
       }
 
-      case 2: // Attribute
       case 3: // Text
-      case 4: // CDATA
+      case 4: {
+        // CDATA. A run of adjacent text nodes is one XPath text node (5.7)
+        let text = node.nodeValue;
+        for (let next = node.nextSibling; isTextNode(next);) {
+          text += next.nodeValue;
+          next = next.nextSibling;
+        }
+        return text;
+      }
+
+      case 2: // Attribute
       case 7: // Processing Instruction
       case 8: // Comment
         return node.nodeValue || "";
@@ -728,6 +745,18 @@ export class XPathEvaluator {
   compareValues(left, right, operator) {
     const leftIsNodeSet = Array.isArray(left);
     const rightIsNodeSet = Array.isArray(right);
+
+    // A node-set compared with a boolean is converted with boolean() (3.4)
+    if (
+      (leftIsNodeSet && typeof right === "boolean") ||
+      (rightIsNodeSet && typeof left === "boolean")
+    ) {
+      return this.comparePrimitive(
+        this.toBoolean(left),
+        this.toBoolean(right),
+        operator,
+      );
+    }
 
     // Node-set comparisons
     if (leftIsNodeSet && rightIsNodeSet) {
@@ -861,7 +890,7 @@ export class XPathEvaluator {
       id: (args, ctx) => {
         const value = this.toString(this.evaluate(args[0], ctx));
         const doc = ctx.node.ownerDocument || ctx.node;
-        const ids = value.split(/\s+/).filter((id) => id);
+        const ids = splitXmlSpace(value);
         const result = [];
         for (const id of ids) {
           const el = doc.getElementById(id);
@@ -939,61 +968,32 @@ export class XPathEvaluator {
       },
       substring: (args, ctx) => {
         const str = this.toString(this.evaluate(args[0], ctx));
-        let start = Math.round(this.toNumber(this.evaluate(args[1], ctx)));
-        let length;
-
-        if (args.length > 2) {
-          length = Math.round(this.toNumber(this.evaluate(args[2], ctx)));
-        }
-
-        // XPath uses 1-based indexing
-        start = start - 1;
-
-        if (isNaN(start)) return "";
-        if (start < 0) {
-          if (length !== undefined) {
-            length = length + start;
-          }
-          start = 0;
-        }
-
-        if (length !== undefined) {
-          if (isNaN(length) || length <= 0) return "";
-          return str.substring(start, start + length);
-        }
-
-        return str.substring(start);
+        const start = this.toNumber(this.evaluate(args[1], ctx));
+        const length =
+          args.length > 2
+            ? this.toNumber(this.evaluate(args[2], ctx))
+            : undefined;
+        return xpathSubstring(str, start, length);
       },
       "string-length": (args, ctx) => {
         const str =
           args.length === 0
             ? this.toString([ctx.node])
             : this.toString(this.evaluate(args[0], ctx));
-        return str.length;
+        return codePointLength(str);
       },
       "normalize-space": (args, ctx) => {
         const str =
           args.length === 0
             ? this.toString([ctx.node])
             : this.toString(this.evaluate(args[0], ctx));
-        return str.trim().replace(/\s+/g, " ");
+        return normalizeXmlSpace(str);
       },
       translate: (args, ctx) => {
         const str = this.toString(this.evaluate(args[0], ctx));
         const from = this.toString(this.evaluate(args[1], ctx));
         const to = this.toString(this.evaluate(args[2], ctx));
-
-        let result = "";
-        for (const char of str) {
-          const idx = from.indexOf(char);
-          if (idx === -1) {
-            result += char;
-          } else if (idx < to.length) {
-            result += to[idx];
-          }
-          // If idx >= to.length, character is removed
-        }
-        return result;
+        return xpathTranslate(str, from, to);
       },
 
       // Boolean functions

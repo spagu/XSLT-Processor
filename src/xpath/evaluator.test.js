@@ -1752,12 +1752,13 @@ describe("XPath Evaluator", () => {
       });
     });
 
-    it("should throw for invalid prefixed function syntax", () => {
-      // Lines 458-464 are hard to reach - the tokenizer distinguishes functions
-      // by checking for '(' after name. prefix:fn() is tokenized as NAME:NAME()
-      // This hits the name test error path instead
+    it("should parse prefixed function calls and reject a bad name test", () => {
+      const ast = parse("fn:custom-function()");
+      assert.strictEqual(ast.type, "FunctionCall");
+      assert.strictEqual(ast.prefix, "fn");
+      assert.strictEqual(ast.name, "custom-function");
       assert.throws(() => {
-        parse("fn:custom-function()");
+        parse("fn:'x'");
       }, /Expected name or/);
     });
 
