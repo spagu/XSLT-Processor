@@ -200,9 +200,8 @@ export class XPathEvaluator {
       case NodeType.AND_EXPR:
         return this.evalAndExpr(ast, context);
       case NodeType.EQUALITY_EXPR:
-        return this.evalEqualityExpr(ast, context);
       case NodeType.RELATIONAL_EXPR:
-        return this.evalRelationalExpr(ast, context);
+        return this.evalComparisonExpr(ast, context);
       case NodeType.ADDITIVE_EXPR:
         return this.evalAdditiveExpr(ast, context);
       case NodeType.MULTIPLICATIVE_EXPR:
@@ -266,14 +265,15 @@ export class XPathEvaluator {
     );
   }
 
-  evalEqualityExpr(ast, context) {
-    const left = this.evaluate(ast.left, context);
-    const right = this.evaluate(ast.right, context);
-    // `!=` is existential on node-sets too, so it is not `not(=)` (3.4)
-    return this.compareValues(left, right, ast.operator);
-  }
-
-  evalRelationalExpr(ast, context) {
+  /**
+   * Evaluate `=`, `!=`, `<`, `<=`, `>` or `>=`. Comparisons involving
+   * node-sets are existential, so `!=` is not `not(=)` (XPath 3.4).
+   *
+   * @param {object} ast - Equality or relational expression node
+   * @param {XPathContext} context - Evaluation context
+   * @returns {boolean} The comparison result
+   */
+  evalComparisonExpr(ast, context) {
     const left = this.evaluate(ast.left, context);
     const right = this.evaluate(ast.right, context);
     return this.compareValues(left, right, ast.operator);

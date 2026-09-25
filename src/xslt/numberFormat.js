@@ -77,7 +77,7 @@ export function toRoman(value) {
  * @returns {string} The grouped digits
  */
 function groupDigits(digits, { separator, size }) {
-  if (!separator || !(size > 0)) return digits;
+  if (!separator || Number.isNaN(size) || size <= 0) return digits;
 
   let result = "";
   for (let end = digits.length; end > 0; end -= size) {

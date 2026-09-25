@@ -88,3 +88,17 @@ describe("long XPath expressions", () => {
     assert.strictEqual(result, "300");
   });
 });
+
+describe("top-level elements", () => {
+  it("ignores user data elements and unknown XSLT elements at the top level", () => {
+    const result = run(
+      "<r/>",
+      `<my:months xmlns:my="urn:my"><my:m>Jan</my:m></my:months>
+       <xsl:unknown-declaration/>
+       <xsl:template match="/">
+         <xsl:value-of select="document('')/*/*[local-name() = 'months']/*"/>
+       </xsl:template>`,
+    );
+    assert.strictEqual(result, "Jan");
+  });
+});

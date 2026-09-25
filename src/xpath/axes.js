@@ -115,8 +115,7 @@ export function attributeAxis(node) {
   const result = [];
   const attributes = node.attributes;
   if (!attributes) return result;
-  for (let i = 0; i < attributes.length; i++) {
-    const attr = attributes[i];
+  for (const attr of attributes) {
     if (!isNamespaceDeclaration(attr)) result.push(attr);
   }
   return result;

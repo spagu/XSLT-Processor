@@ -111,7 +111,7 @@ export class KeyIndexRegistry {
    * @returns {KeyIndex} The index
    */
   buildIndex(name, doc) {
-    const definitions = [].concat(this.keys[name]);
+    const definitions = [this.keys[name]].flat();
     const buckets = new Map();
     const order = new Map();
 

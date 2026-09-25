@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
+- Trimming XML whitespace in `normalize-space()` and `number()` used a regular expression that backtracks quadratically on long whitespace runs; it is now a linear scan (400,000 spaces: 4 ms).
 - Template matching is linear: `apply-templates` over 8,000 children with `match="item[@id]"` dropped from 90 s to 0.1 s, Muenchian grouping over 8,000 items from 8.5 s to 0.3 s, key lookups from 7 s to 0.2 s.
 - The transformation from issue #9 (3.4 MB of HTML output) dropped from 28 s to 8 s. Axes walk `firstChild`/`nextSibling` instead of indexing jsdom `NodeList`s (each index access crosses a Proxy), step results are merged without quadratic `concat`/`unshift`, sort keys are computed once per node instead of once per comparison, and name tests only read `namespaceURI` and the document content type when the result depends on them.
 

@@ -16,7 +16,8 @@ import { isXsltElementAvailable, XSLT_NAMESPACE } from "./elements.js";
 import { expandedFunctionName } from "../xpath/evaluator.js";
 
 /** Namespace of the EXSLT common module (`exsl:node-set()`). */
-export const EXSLT_COMMON_NAMESPACE = "http://exslt.org/common";
+// A namespace name is an identifier, not a URL that is fetched; EXSLT defines it with http.
+export const EXSLT_COMMON_NAMESPACE = "http://exslt.org/common"; // NOSONAR
 
 /** Namespace of the MSXML extension functions (`msxsl:node-set()`). */
 export const MSXSL_NAMESPACE = "urn:schemas-microsoft-com:xslt";

@@ -77,6 +77,24 @@ export const XSLT_MAX_RESULT_SIZE = 5000000;
 export const XSLT_MAX_EXPRESSION_DEPTH = 1000;
 
 /**
+ * Engine method handling each top-level XSLT element (xsl:import is handled
+ * first, separately, because imports must precede everything else).
+ */
+const TOP_LEVEL_HANDLERS = Object.freeze({
+  template: "registerTemplate",
+  output: "processOutput",
+  variable: "processGlobalVariable",
+  param: "processGlobalParam",
+  key: "processKey",
+  "decimal-format": "processDecimalFormat",
+  "namespace-alias": "processNamespaceAlias",
+  "attribute-set": "processAttributeSet",
+  "strip-space": "processStripSpace",
+  "preserve-space": "processPreserveSpace",
+  include: "processInclude",
+});
+
+/**
  * XSLT Processing Context
  *
  * `variables` and `parameters` hold the local bindings in scope; the global
@@ -595,29 +613,10 @@ export class XsltEngine {
     }
 
     for (const child of otherElements) {
-      if (this.isXsltElement(child, "template")) {
-        this.registerTemplate(child);
-      } else if (this.isXsltElement(child, "output")) {
-        this.processOutput(child);
-      } else if (this.isXsltElement(child, "variable")) {
-        this.processGlobalVariable(child);
-      } else if (this.isXsltElement(child, "param")) {
-        this.processGlobalParam(child);
-      } else if (this.isXsltElement(child, "key")) {
-        this.processKey(child);
-      } else if (this.isXsltElement(child, "decimal-format")) {
-        this.processDecimalFormat(child);
-      } else if (this.isXsltElement(child, "namespace-alias")) {
-        this.processNamespaceAlias(child);
-      } else if (this.isXsltElement(child, "attribute-set")) {
-        this.processAttributeSet(child);
-      } else if (this.isXsltElement(child, "strip-space")) {
-        this.processStripSpace(child);
-      } else if (this.isXsltElement(child, "preserve-space")) {
-        this.processPreserveSpace(child);
-      } else if (this.isXsltElement(child, "include")) {
-        this.processInclude(child, stylesheetUri);
-      }
+      const method = this.isXsltNamespace(child)
+        ? TOP_LEVEL_HANDLERS[child.localName]
+        : undefined;
+      if (method) this[method](child, stylesheetUri);
     }
   }
 
@@ -1443,6 +1442,31 @@ export class XsltEngine {
    * @param {Node} output - The result tree node receiving the element
    * @returns {void}
    */
+  /**
+   * Copy one attribute of a literal result element to the result, evaluating
+   * it as an attribute value template and applying xsl:namespace-alias.
+   *
+   * @param {Attr} attr - Attribute of the literal result element
+   * @param {XsltContext} context - The current XSLT context
+   * @param {Element} outputElement - The result element
+   * @returns {void}
+   */
+  copyLiteralAttribute(attr, context, outputElement) {
+    const value = this.processAttributeValueTemplate(attr.value, context);
+    const alias = this.namespaceAliases.resolve(
+      attr.namespaceURI,
+      attr.localName || attr.name,
+    );
+
+    if (alias) {
+      outputElement.setAttributeNS(alias.namespaceUri, alias.qname, value);
+    } else if (attr.namespaceURI) {
+      outputElement.setAttributeNS(attr.namespaceURI, attr.name, value);
+    } else {
+      outputElement.setAttribute(attr.name, value);
+    }
+  }
+
   processLiteralResultElement(node, context, output) {
     const localName = node.localName || node.nodeName;
     const alias = this.namespaceAliases.resolve(node.namespaceURI, localName);
@@ -1469,27 +1493,9 @@ export class XsltEngine {
       this.applyAttributeSets(useAttributeSets, context, outputElement);
     }
 
-    if (node.attributes) {
-      for (const attr of node.attributes) {
-        if (!shouldCopyAttribute(attr, XSLT_NS)) continue;
-
-        const value = this.processAttributeValueTemplate(attr.value, context);
-        const attrAlias = this.namespaceAliases.resolve(
-          attr.namespaceURI,
-          attr.localName || attr.name,
-        );
-
-        if (attrAlias) {
-          outputElement.setAttributeNS(
-            attrAlias.namespaceUri,
-            attrAlias.qname,
-            value,
-          );
-        } else if (attr.namespaceURI) {
-          outputElement.setAttributeNS(attr.namespaceURI, attr.name, value);
-        } else {
-          outputElement.setAttribute(attr.name, value);
-        }
+    for (const attr of node.attributes) {
+      if (shouldCopyAttribute(attr, XSLT_NS)) {
+        this.copyLiteralAttribute(attr, context, outputElement);
       }
     }
 

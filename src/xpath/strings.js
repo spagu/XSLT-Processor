@@ -14,11 +14,33 @@
 /** A run of XML whitespace characters. */
 const XML_WHITESPACE_RUN = /[ \t\r\n]+/g;
 
-/** XML whitespace at the start or end of a string. */
-const XML_WHITESPACE_EDGES = /^[ \t\r\n]+|[ \t\r\n]+$/g;
+/**
+ * Whether a character is XML whitespace (#x20, #x9, #xD, #xA).
+ *
+ * @param {string} char - A single character
+ * @returns {boolean} True for XML whitespace
+ */
+function isXmlSpace(char) {
+  return char === " " || char === "\t" || char === "\r" || char === "\n";
+}
+
+/**
+ * Strip leading and trailing XML whitespace in linear time (a regular
+ * expression such as `/\s+$/` backtracks quadratically on long runs).
+ *
+ * @param {string} str - Any string
+ * @returns {string} The trimmed string
+ */
+export function trimXmlSpace(str) {
+  let start = 0;
+  let end = str.length;
+  while (start < end && isXmlSpace(str[start])) start++;
+  while (end > start && isXmlSpace(str[end - 1])) end--;
+  return str.slice(start, end);
+}
 
 /** `S? '-'? (Digits ('.' Digits?)? | '.' Digits) S?` (XPath 4.4 number()). */
-const XPATH_NUMBER = /^[ \t\r\n]*-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)[ \t\r\n]*$/;
+const XPATH_NUMBER = /^-?(?:\d+(?:\.\d*)?|\.\d+)$/;
 
 /** Any UTF-16 surrogate code unit. */
 const SURROGATE = /[\uD800-\uDFFF]/;
@@ -34,7 +56,7 @@ const SURROGATE = /[\uD800-\uDFFF]/;
  * normalizeXmlSpace(" a \n b "); // "a b" - a no-break space is kept
  */
 export function normalizeXmlSpace(str) {
-  return str.replace(XML_WHITESPACE_EDGES, "").replace(XML_WHITESPACE_RUN, " ");
+  return trimXmlSpace(str).replace(XML_WHITESPACE_RUN, " ");
 }
 
 /**
@@ -60,8 +82,9 @@ export function splitXmlSpace(str) {
  * parseXPathNumber("1e3"); // NaN
  */
 export function parseXPathNumber(str) {
-  if (!XPATH_NUMBER.test(str)) return NaN;
-  return Number(str.replace(XML_WHITESPACE_EDGES, ""));
+  const trimmed = trimXmlSpace(str);
+  if (!XPATH_NUMBER.test(trimmed)) return Number.NaN;
+  return Number(trimmed);
 }
 
 /**
@@ -107,9 +130,7 @@ export function formatXPathNumber(value) {
  */
 export function codePointLength(str) {
   if (!SURROGATE.test(str)) return str.length;
-  let length = 0;
-  for (const _char of str) length++;
-  return length;
+  return Array.from(str).length;
 }
 
 /**
@@ -129,8 +150,7 @@ export function xpathSubstring(str, start, length) {
   const first = Math.round(start);
   const end = length === undefined ? Infinity : first + Math.round(length);
   const from = Math.max(first, 1);
-  // Also false when either bound is NaN
-  if (!(end > from)) return "";
+  if (Number.isNaN(end) || Number.isNaN(from) || end <= from) return "";
 
   const chars = SURROGATE.test(str) ? Array.from(str) : null;
   if (chars === null) return str.slice(from - 1, end - 1);
