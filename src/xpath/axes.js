@@ -89,19 +89,57 @@ export const REVERSE_AXES = new Set([
 ]);
 
 /**
+ * An axis walker calls `visit` for every node of an axis, in axis order
+ * (proximity order for reverse axes), and stops as soon as `visit` returns
+ * true. It returns whether the walk was stopped, so walkers can be nested.
+ * Walking lets the evaluator stop after the n-th node of `axis::test[n]`
+ * instead of materializing the whole axis.
+ *
+ * @callback AxisVisitor
+ * @param {Node} node - A node on the axis
+ * @returns {boolean} True to stop the walk
+ */
+
+/**
+ * Collect every node an axis walker visits.
+ *
+ * @param {(node: Node, visit: AxisVisitor) => boolean} walk - Axis walker
+ * @param {Node} node - Context node
+ * @returns {Node[]} The nodes, in axis order
+ */
+function collect(walk, node) {
+  const result = [];
+  walk(node, (found) => {
+    result.push(found);
+    return false;
+  });
+  return result;
+}
+
+/**
+ * Walk the children of a node in document order.
+ *
+ * @param {Node} node - Context node
+ * @param {AxisVisitor} visit - Visitor
+ * @returns {boolean} True when the visitor stopped the walk
+ */
+export function walkChildren(node, visit) {
+  let previous = null;
+  for (let child = node.firstChild; child; child = child.nextSibling) {
+    if (!continuesRun(previous, child) && visit(child)) return true;
+    previous = child;
+  }
+  return false;
+}
+
+/**
  * Child nodes in document order.
  *
  * @param {Node} node - Context node
  * @returns {Node[]} The children
  */
 export function childAxis(node) {
-  const result = [];
-  let previous = null;
-  for (let child = node.firstChild; child; child = child.nextSibling) {
-    if (!continuesRun(previous, child)) result.push(child);
-    previous = child;
-  }
-  return result;
+  return collect(walkChildren, node);
 }
 
 /**
@@ -122,20 +160,21 @@ export function attributeAxis(node) {
 }
 
 /**
- * Descendants in document order (pre-order), optionally with the node itself.
+ * Walk the descendants of a node in document order (pre-order), optionally
+ * starting with the node itself.
  *
  * @param {Node} node - Context node
- * @param {boolean} includeSelf - Whether to start with the node itself
- * @param {Node[]} [result] - Array to append to
- * @returns {Node[]} The descendants
+ * @param {boolean} includeSelf - Whether to visit the node itself first
+ * @param {AxisVisitor} visit - Visitor
+ * @returns {boolean} True when the visitor stopped the walk
  */
-export function descendantAxis(node, includeSelf, result = []) {
-  if (includeSelf) result.push(node);
+export function walkDescendants(node, includeSelf, visit) {
+  if (includeSelf && visit(node)) return true;
 
   let current = node.firstChild;
   let previous = null;
   while (current) {
-    if (!continuesRun(previous, current)) result.push(current);
+    if (!continuesRun(previous, current) && visit(current)) return true;
     if (current.firstChild) {
       current = current.firstChild;
       previous = null;
@@ -147,32 +186,65 @@ export function descendantAxis(node, includeSelf, result = []) {
     previous = current;
     current = current && current !== node ? current.nextSibling : null;
   }
+  return false;
+}
+
+/**
+ * Descendants in document order (pre-order), optionally with the node itself.
+ *
+ * @param {Node} node - Context node
+ * @param {boolean} includeSelf - Whether to start with the node itself
+ * @param {Node[]} [result] - Array to append to
+ * @returns {Node[]} The descendants
+ */
+export function descendantAxis(node, includeSelf, result = []) {
+  walkDescendants(node, includeSelf, (found) => {
+    result.push(found);
+    return false;
+  });
   return result;
 }
 
 /**
- * Descendants in reverse document order (reverse pre-order): the last
- * descendant first and the node's first child last.
+ * Walk the descendants of a node in reverse document order (reverse
+ * pre-order): the last descendant first and the node's first child last.
  *
- * @param {Node} node - Subtree root, not included
- * @param {Node[]} result - Array to append to
- * @returns {Node[]} The same array
+ * @param {Node} node - Subtree root, not visited
+ * @param {AxisVisitor} visit - Visitor
+ * @returns {boolean} True when the visitor stopped the walk
  */
-function reverseDescendants(node, result) {
+function walkReverseDescendants(node, visit) {
   let current = node.lastChild;
   while (current) {
     if (current.lastChild) {
       current = current.lastChild;
       continue;
     }
-    if (!isTextContinuation(current)) result.push(current);
+    if (!isTextContinuation(current) && visit(current)) return true;
     while (current !== node && !current.previousSibling) {
       current = current.parentNode;
-      if (current !== node) result.push(current);
+      if (current !== node && visit(current)) return true;
     }
     current = current === node ? null : current.previousSibling;
   }
-  return result;
+  return false;
+}
+
+/**
+ * Walk the ancestors of a node, nearest first, optionally starting with the
+ * node itself.
+ *
+ * @param {Node} node - Context node
+ * @param {boolean} includeSelf - Whether to visit the node itself first
+ * @param {AxisVisitor} visit - Visitor
+ * @returns {boolean} True when the visitor stopped the walk
+ */
+export function walkAncestors(node, includeSelf, visit) {
+  if (includeSelf && visit(node)) return true;
+  for (let current = parentOf(node); current; current = current.parentNode) {
+    if (visit(current)) return true;
+  }
+  return false;
 }
 
 /**
@@ -183,11 +255,28 @@ function reverseDescendants(node, result) {
  * @returns {Node[]} The ancestors
  */
 export function ancestorAxis(node, includeSelf) {
-  const result = includeSelf ? [node] : [];
-  for (let current = parentOf(node); current; current = current.parentNode) {
-    result.push(current);
+  return collect(
+    (start, visit) => walkAncestors(start, includeSelf, visit),
+    node,
+  );
+}
+
+/**
+ * Walk the following siblings of a node in document order. Attributes have
+ * no siblings.
+ *
+ * @param {Node} node - Context node
+ * @param {AxisVisitor} visit - Visitor
+ * @returns {boolean} True when the visitor stopped the walk
+ */
+export function walkFollowingSiblings(node, visit) {
+  if (node.nodeType === 2) return false;
+  let previous = node;
+  for (let current = node.nextSibling; current; current = current.nextSibling) {
+    if (!continuesRun(previous, current) && visit(current)) return true;
+    previous = current;
   }
-  return result;
+  return false;
 }
 
 /**
@@ -197,13 +286,27 @@ export function ancestorAxis(node, includeSelf) {
  * @returns {Node[]} The siblings
  */
 export function followingSiblingAxis(node) {
-  const result = [];
-  let previous = node;
-  for (let current = node.nextSibling; current; current = current.nextSibling) {
-    if (!continuesRun(previous, current)) result.push(current);
-    previous = current;
+  return collect(walkFollowingSiblings, node);
+}
+
+/**
+ * Walk the preceding siblings of a node, nearest first. Attributes have no
+ * siblings.
+ *
+ * @param {Node} node - Context node
+ * @param {AxisVisitor} visit - Visitor
+ * @returns {boolean} True when the visitor stopped the walk
+ */
+export function walkPrecedingSiblings(node, visit) {
+  if (node.nodeType === 2) return false;
+  for (
+    let current = node.previousSibling;
+    current;
+    current = current.previousSibling
+  ) {
+    if (!isTextContinuation(current) && visit(current)) return true;
   }
-  return result;
+  return false;
 }
 
 /**
@@ -213,15 +316,43 @@ export function followingSiblingAxis(node) {
  * @returns {Node[]} The siblings
  */
 export function precedingSiblingAxis(node) {
-  const result = [];
-  for (
-    let current = node.previousSibling;
-    current;
-    current = current.previousSibling
+  return collect(walkPrecedingSiblings, node);
+}
+
+/**
+ * Walk the nodes after the context node in document order, excluding its
+ * descendants.
+ *
+ * @param {Node} node - Context node
+ * @param {AxisVisitor} visit - Visitor
+ * @returns {boolean} True when the visitor stopped the walk
+ */
+export function walkFollowing(node, visit) {
+  // An attribute precedes the children of its owner element.
+  if (
+    node.nodeType === 2 &&
+    node.ownerElement &&
+    walkDescendants(node.ownerElement, false, visit)
   ) {
-    if (!isTextContinuation(current)) result.push(current);
+    return true;
   }
-  return result;
+  for (let current = startOf(node); current; current = current.parentNode) {
+    let previous = current;
+    for (
+      let sibling = current.nextSibling;
+      sibling;
+      sibling = sibling.nextSibling
+    ) {
+      if (
+        !continuesRun(previous, sibling) &&
+        walkDescendants(sibling, true, visit)
+      ) {
+        return true;
+      }
+      previous = sibling;
+    }
+  }
+  return false;
 }
 
 /**
@@ -231,25 +362,29 @@ export function precedingSiblingAxis(node) {
  * @returns {Node[]} The following nodes in document order
  */
 export function followingAxis(node) {
-  const result = [];
-  if (node.nodeType === 2 && node.ownerElement) {
-    // An attribute precedes the children of its owner element.
-    descendantAxis(node.ownerElement, false, result);
-  }
+  return collect(walkFollowing, node);
+}
+
+/**
+ * Walk the nodes before the context node, excluding its ancestors, nearest
+ * first.
+ *
+ * @param {Node} node - Context node
+ * @param {AxisVisitor} visit - Visitor
+ * @returns {boolean} True when the visitor stopped the walk
+ */
+export function walkPreceding(node, visit) {
   for (let current = startOf(node); current; current = current.parentNode) {
-    let previous = current;
     for (
-      let sibling = current.nextSibling;
+      let sibling = current.previousSibling;
       sibling;
-      sibling = sibling.nextSibling
+      sibling = sibling.previousSibling
     ) {
-      if (!continuesRun(previous, sibling)) {
-        descendantAxis(sibling, true, result);
-      }
-      previous = sibling;
+      if (walkReverseDescendants(sibling, visit)) return true;
+      if (!isTextContinuation(sibling) && visit(sibling)) return true;
     }
   }
-  return result;
+  return false;
 }
 
 /**
@@ -259,18 +394,43 @@ export function followingAxis(node) {
  * @returns {Node[]} The preceding nodes in reverse document order
  */
 export function precedingAxis(node) {
-  const result = [];
-  for (let current = startOf(node); current; current = current.parentNode) {
-    for (
-      let sibling = current.previousSibling;
-      sibling;
-      sibling = sibling.previousSibling
-    ) {
-      reverseDescendants(sibling, result);
-      if (!isTextContinuation(sibling)) result.push(sibling);
-    }
-  }
-  return result;
+  return collect(walkPreceding, node);
+}
+
+/**
+ * Walkers of the axes that can be walked lazily, by axis name.
+ *
+ * @type {Readonly<Object<string, (node: Node, visit: AxisVisitor) => boolean>>}
+ */
+export const AXIS_WALKERS = Object.freeze({
+  child: walkChildren,
+  descendant: (node, visit) => walkDescendants(node, false, visit),
+  "descendant-or-self": (node, visit) => walkDescendants(node, true, visit),
+  ancestor: (node, visit) => walkAncestors(node, false, visit),
+  "ancestor-or-self": (node, visit) => walkAncestors(node, true, visit),
+  "following-sibling": walkFollowingSiblings,
+  "preceding-sibling": walkPrecedingSiblings,
+  following: walkFollowing,
+  preceding: walkPreceding,
+});
+
+/**
+ * The root node of the tree containing a node (XPath 2.1): the topmost
+ * ancestor when that is a Document or a DocumentFragment (a result tree
+ * fragment converted with `exsl:node-set()`), otherwise, for a node that is
+ * not attached to any such tree, its owner document.
+ *
+ * @param {Node} node - Any node
+ * @returns {Node} The root node
+ *
+ * @example
+ * rootNodeOf(fragment.firstChild); // fragment
+ */
+export function rootNodeOf(node) {
+  let top = parentOf(node) ?? node;
+  while (top.parentNode) top = top.parentNode;
+  const type = top.nodeType;
+  return type === 9 || type === 11 ? top : node.ownerDocument || top;
 }
 
 /**

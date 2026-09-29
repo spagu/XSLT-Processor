@@ -9,6 +9,7 @@
 
 import { NodeType } from "./parser.js";
 import {
+  AXIS_WALKERS,
   REVERSE_AXES,
   ancestorAxis,
   attributeAxis,
@@ -19,13 +20,14 @@ import {
   precedingAxis,
   precedingSiblingAxis,
   isTextNode,
+  rootNodeOf,
 } from "./axes.js";
+import { createNodeSetFunctions } from "./nodeSetFunctions.js";
 import {
   codePointLength,
   formatXPathNumber,
   normalizeXmlSpace,
   parseXPathNumber,
-  splitXmlSpace,
   xpathSubstring,
   xpathTranslate,
 } from "./strings.js";
@@ -63,6 +65,21 @@ export function resolveNamespacePrefix(prefix, namespaces) {
  */
 export function expandedFunctionName(namespaceUri, localName) {
   return `{${namespaceUri}}${localName}`;
+}
+
+/**
+ * Whether an expression is a call of the core `position()` function.
+ *
+ * @param {object} expr - Expression AST node
+ * @returns {boolean} True for `position()`
+ */
+function isPositionCall(expr) {
+  return (
+    expr.type === NodeType.FUNCTION_CALL &&
+    expr.name === "position" &&
+    !expr.prefix &&
+    expr.args.length === 0
+  );
 }
 
 /**
@@ -354,10 +371,9 @@ export class XPathEvaluator {
     let nodes;
 
     if (ast.absolute) {
-      // Start from document root node (not document element)
-      // XPath absolute paths start from the document node
-      const doc = context.node.ownerDocument || context.node;
-      nodes = [doc];
+      // The root node of the tree containing the context node: a document,
+      // or the fragment of a result tree fragment turned into a node-set
+      nodes = [rootNodeOf(context.node)];
     } else {
       nodes = [context.node];
     }
@@ -407,19 +423,86 @@ export class XPathEvaluator {
     return this.sortByDocumentOrder(result);
   }
 
+  /**
+   * Apply one location step to a single context node.
+   *
+   * When the first predicate selects one position (`[n]` or
+   * `[position() = n]`) and the axis can be walked lazily, the walk stops at
+   * the n-th node that passes the node test instead of materializing the
+   * whole axis: `following-sibling::x[1]` in a loop is then linear.
+   *
+   * @param {object} step - Step AST node
+   * @param {XPathContext} context - Evaluation context
+   * @returns {Node[]} The selected nodes in axis order
+   */
   evalStep(step, context) {
-    // Get nodes along axis
-    let nodes = this.getAxisNodes(step.axis, context.node);
+    const { predicates } = step;
+    const position = this.positionalPredicate(step);
+    let nodes;
+    let first = 0;
 
-    // Filter by node test
-    nodes = nodes.filter((n) => this.matchNodeTest(step.nodeTest, n, context));
+    if (position !== null && Object.hasOwn(AXIS_WALKERS, step.axis)) {
+      nodes = this.nthOnAxis(step, context, position);
+      first = 1;
+    } else {
+      nodes = this.getAxisNodes(step.axis, context.node).filter((n) =>
+        this.matchNodeTest(step.nodeTest, n, context),
+      );
+    }
 
-    // Apply predicates
-    for (const predicate of step.predicates) {
-      nodes = this.filterByPredicate(nodes, predicate, context);
+    for (let i = first; i < predicates.length; i++) {
+      nodes = this.filterByPredicate(nodes, predicates[i], context);
     }
 
     return nodes;
+  }
+
+  /**
+   * The position selected by the first predicate of a step, when that
+   * predicate is a number literal `[n]` or `[position() = n]`.
+   *
+   * @param {object} step - Step AST node
+   * @returns {number|null} The position, or null for any other predicate
+   */
+  positionalPredicate(step) {
+    const expr = step.predicates[0]?.expr;
+    if (!expr) return null;
+    if (expr.type === NodeType.NUMBER) return expr.value;
+    if (expr.type !== NodeType.EQUALITY_EXPR || expr.operator !== "=") {
+      return null;
+    }
+    const { left, right } = expr;
+    if (isPositionCall(left) && right.type === NodeType.NUMBER) {
+      return right.value;
+    }
+    if (isPositionCall(right) && left.type === NodeType.NUMBER) {
+      return left.value;
+    }
+    return null;
+  }
+
+  /**
+   * The n-th node of an axis passing the node test of a step, found by
+   * walking the axis only as far as needed.
+   *
+   * @param {object} step - Step AST node
+   * @param {XPathContext} context - Evaluation context
+   * @param {number} position - The wanted proximity position
+   * @returns {Node[]} The node, or an empty node-set
+   */
+  nthOnAxis(step, context, position) {
+    // Positions are whole numbers from 1: [0], [1.5] or [NaN] select nothing
+    if (!Number.isInteger(position) || position < 1) return [];
+    let remaining = position;
+    let found = null;
+    AXIS_WALKERS[step.axis](context.node, (node) => {
+      if (!this.matchNodeTest(step.nodeTest, node, context)) return false;
+      remaining--;
+      if (remaining > 0) return false;
+      found = node;
+      return true;
+    });
+    return found ? [found] : [];
   }
 
   /**
@@ -450,9 +533,9 @@ export class XPathEvaluator {
       case "ancestor-or-self":
         return ancestorAxis(node, true);
       case "following-sibling":
-        return node.nodeType === 2 ? [] : followingSiblingAxis(node);
+        return followingSiblingAxis(node);
       case "preceding-sibling":
-        return node.nodeType === 2 ? [] : precedingSiblingAxis(node);
+        return precedingSiblingAxis(node);
       case "following":
         return followingAxis(node);
       case "preceding":
@@ -883,54 +966,7 @@ export class XPathEvaluator {
       // Node set functions
       last: (args, ctx) => ctx.size,
       position: (args, ctx) => ctx.position,
-      count: (args, ctx) => {
-        const nodeSet = this.evaluate(args[0], ctx);
-        return Array.isArray(nodeSet) ? nodeSet.length : 1;
-      },
-      id: (args, ctx) => {
-        const value = this.toString(this.evaluate(args[0], ctx));
-        const doc = ctx.node.ownerDocument || ctx.node;
-        const ids = splitXmlSpace(value);
-        const result = [];
-        for (const id of ids) {
-          const el = doc.getElementById(id);
-          if (el) result.push(el);
-        }
-        return result;
-      },
-      "local-name": (args, ctx) => {
-        let node;
-        if (args.length === 0) {
-          node = ctx.node;
-        } else {
-          const nodeSet = this.evaluate(args[0], ctx);
-          node = Array.isArray(nodeSet) ? nodeSet[0] : nodeSet;
-        }
-        if (!node) return "";
-        return node.localName || node.nodeName || "";
-      },
-      "namespace-uri": (args, ctx) => {
-        let node;
-        if (args.length === 0) {
-          node = ctx.node;
-        } else {
-          const nodeSet = this.evaluate(args[0], ctx);
-          node = Array.isArray(nodeSet) ? nodeSet[0] : nodeSet;
-        }
-        if (!node) return "";
-        return node.namespaceURI || "";
-      },
-      name: (args, ctx) => {
-        let node;
-        if (args.length === 0) {
-          node = ctx.node;
-        } else {
-          const nodeSet = this.evaluate(args[0], ctx);
-          node = Array.isArray(nodeSet) ? nodeSet[0] : nodeSet;
-        }
-        if (!node) return "";
-        return node.nodeName || "";
-      },
+      ...createNodeSetFunctions(this),
 
       // String functions
       string: (args, ctx) => {
@@ -1005,21 +1041,6 @@ export class XPathEvaluator {
       },
       true: () => true,
       false: () => false,
-      lang: (args, ctx) => {
-        const lang = this.toString(this.evaluate(args[0], ctx)).toLowerCase();
-        let node = ctx.node;
-
-        while (node && node.nodeType === 1) {
-          const xmlLang =
-            node.getAttribute("xml:lang") || node.getAttribute("lang");
-          if (xmlLang) {
-            const nodeLang = xmlLang.toLowerCase();
-            return nodeLang === lang || nodeLang.startsWith(lang + "-");
-          }
-          node = node.parentNode;
-        }
-        return false;
-      },
 
       // Number functions
       number: (args, ctx) => {
@@ -1027,14 +1048,6 @@ export class XPathEvaluator {
           return this.toNumber([ctx.node]);
         }
         return this.toNumber(this.evaluate(args[0], ctx));
-      },
-      sum: (args, ctx) => {
-        const nodeSet = this.evaluate(args[0], ctx);
-        if (!Array.isArray(nodeSet)) return NaN;
-        return nodeSet.reduce(
-          (sum, node) => sum + this.toNumber(this.getStringValue(node)),
-          0,
-        );
       },
       floor: (args, ctx) => {
         return Math.floor(this.toNumber(this.evaluate(args[0], ctx)));
