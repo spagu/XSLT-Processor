@@ -1,0 +1,2 @@
+{{/* The site publishes no posts; ssg still expects the role template. */}}
+{{define "post.html"}}<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>{{ .Post.Title }}</title></head><body><main>{{ .Post.Content | safeHTML }}</main></body></html>{{end}}

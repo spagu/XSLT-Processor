@@ -117,3 +117,21 @@ differential test compares its output with this library's and prints a summary
 table; it is informational and never fails the run. `BROWSER_DIFF_CORPUS=1`
 adds the libxslt conformance corpus (`npm run conformance:fetch`), and
 `BROWSER_DIFF_OUT=<dir>` writes the differences as JSON.
+
+## Website
+
+The project website (documentation, changelog and playground) lives in
+`site/` and is built with [spagu/ssg](https://github.com/spagu/ssg). Pages are
+generated from README.md, CHANGELOG.md and `docs/*.md`, so documentation is
+edited in those files only.
+
+```sh
+make site                      # build into site/public and check links, meta tags and contrast
+make site SSG=/path/to/ssg     # use a specific ssg binary
+make site-serve                # preview on http://localhost:8888 with rebuilds
+make site-test                 # unit tests of the content generator and checks
+```
+
+The Google Tag Manager container id is a placeholder (`variables.gtm_id` in
+`site/ssg.yaml`). The GitHub Pages source must be set to "GitHub Actions".
+

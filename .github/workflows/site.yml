@@ -1,0 +1,95 @@
+# Project website: README.md, CHANGELOG.md and docs/*.md built with spagu/ssg
+# (site/ssg.yaml) and deployed to GitHub Pages. Repository setting required:
+# Settings > Pages > Source = GitHub Actions.
+name: Site
+
+on:
+  push:
+    branches: [main]
+  # Pull requests build and check the site without deploying it
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Pinned ssg release and the SHA-256 of its linux-amd64 archive, taken from
+  # the release's checksums.sha256. Update both together.
+  SSG_VERSION: "1.8.63"
+  SSG_SHA256: "776e555b1e89e97d02ae03c0fe808788bfe4fc82400f304c9262e7161219f212"
+
+# Nothing by default; each job asks for what it needs.
+permissions: {}
+
+# One deployment at a time; a queued run replaces an older queued one, but a
+# deployment in progress is allowed to finish.
+concurrency:
+  group: pages-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          cache: "npm"
+
+      - name: Install ssg
+        run: |
+          set -euo pipefail
+          archive="ssg-linux-amd64.tar.gz"
+          curl --proto '=https' --proto-redir '=https' --fail -sSL \
+            "https://github.com/spagu/ssg/releases/download/v${SSG_VERSION}/${archive}" -o "${RUNNER_TEMP}/${archive}"
+          echo "${SSG_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum --check --strict
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" ssg
+          mkdir -p "${RUNNER_TEMP}/bin"
+          install -m 0755 "${RUNNER_TEMP}/ssg" "${RUNNER_TEMP}/bin/ssg"
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Test site scripts
+        run: npm run test:site
+
+      - name: Build bundles and site content
+        run: |
+          npm run build
+          npm run site:content
+
+      - name: Build site
+        working-directory: site
+        run: ssg --config ssg.yaml
+
+      - name: Check site
+        run: node site/scripts/check-site.mjs site/public /XSLT-Processor
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site/public
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

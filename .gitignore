@@ -46,3 +46,10 @@ temp/
 # Playwright browser tests (results and reports)
 /test-results/
 /playwright-report/
+# Project website: generated content and ssg output (site/scripts/build-content.mjs, make site)
+/site/content/
+/site/data/
+/site/static/vendor/
+/site/public/
+/site/public-local/
+/site/.ssg-cache/

@@ -1,6 +1,6 @@
 # Complete Example
 
-Here's a full example transforming a list of products into an HTML table:
+Here's a full example transforming a list of products into an HTML table.
 
 **products.xml:**
 ```xml

@@ -1,0 +1,12 @@
+{{/* 404.html. Links are prefixed: the host serves it at any missing path. */}}
+{{define "notfound.html"}}{{template "head" .}}{{ $b := .Vars.base_path }}
+<main id="main" class="wrap prose narrow notfound">
+  <h1>{{ .Page.Title }}</h1>
+  {{ .Page.Content | safeHTML }}
+  <ul>
+    <li><a href="{{ $b }}/docs/">Documentation index</a></li>
+    <li><a href="{{ $b }}/playground/">Playground</a></li>
+    <li><a href="{{ $b }}/">Home page</a></li>
+  </ul>
+</main>
+{{template "footer" .}}{{end}}

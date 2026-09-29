@@ -1,0 +1,87 @@
+{{/*
+  Shared chrome of every page: <head> (meta tags, fonts, Google Tag Manager),
+  the site header and the footer. Role templates and layouts call these with
+  the page's root context.
+
+  Links are written as {{ $.Vars.base_path }}/path/ so the site works under a
+  path prefix (GitHub project pages) and at a domain root alike.
+*/}}
+
+{{define "head"}}{{ $b := .Vars.base_path }}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{/* Google Tag Manager (head half). Replace variables.gtm_id in site/ssg.yaml. */}}
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer',{{ .Vars.gtm_id }});</script>
+<title>{{ if eq .Page.Link "/" }}{{ .Site.Title }}: {{ .Page.Title }}{{ else }}{{ .Page.Title }} | {{ .Site.Title }}{{ end }}</title>
+<meta name="description" content="{{ .Page.Description }}">
+{{ with .Page.Robots }}<meta name="robots" content="{{ . }}">{{ end }}
+<link rel="canonical" href="{{ .CanonicalURL }}">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#202124" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="{{ if eq .Page.Link "/" }}website{{ else }}article{{ end }}">
+<meta property="og:site_name" content="{{ .Site.Title }}">
+<meta property="og:title" content="{{ .Page.Title }}">
+<meta property="og:description" content="{{ .Page.Description }}">
+<meta property="og:url" content="{{ .CanonicalURL }}">
+<meta property="og:image" content="https://{{ .Domain }}/images/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="An XML document and an XSLT stylesheet combined into an HTML page, with the package name @tradik/xslt-processor">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ .Page.Title }}">
+<meta name="twitter:description" content="{{ .Page.Description }}">
+<meta name="twitter:image" content="https://{{ .Domain }}/images/og-card.png">
+<link rel="icon" href="{{ $b }}/images/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="stylesheet" href="{{ $b }}/css/tokens.css">
+<link rel="stylesheet" href="{{ $b }}/css/site.css">
+{{ if eq .Page.Layout "landing" }}<link rel="stylesheet" href="{{ $b }}/css/landing.css">{{ end }}
+{{ if eq .Page.Layout "playground" }}<link rel="stylesheet" href="{{ $b }}/css/playground.css">{{ end }}
+</head>
+<body>
+{{/* Google Tag Manager (noscript half), immediately after <body>. */}}
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ .Vars.gtm_id }}" height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="{{ $b }}/">
+      <img src="{{ $b }}/images/logo.svg" alt="" width="32" height="32">
+      <span>xslt-processor</span>
+      <span class="brand__version">v{{ .Data.landing.version }}</span>
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <ul>
+        <li><a href="{{ $b }}/docs/"{{ if eq .Page.Link "/docs/" }} aria-current="page"{{ else if hasPrefix .Page.Link "/docs/" }} aria-current="true"{{ end }}>Docs</a></li>
+        <li><a href="{{ $b }}/playground/"{{ if eq .Page.Link "/playground/" }} aria-current="page"{{ end }}>Playground</a></li>
+        <li><a href="{{ $b }}/changelog/"{{ if eq .Page.Link "/changelog/" }} aria-current="page"{{ end }}>Changelog</a></li>
+        <li><a href="{{ .Vars.repo_url }}">GitHub</a></li>
+        <li><a href="{{ .Vars.npm_url }}">npm</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+{{end}}
+
+{{define "footer"}}{{ $b := .Vars.base_path }}<footer class="site-footer">
+  <div class="wrap site-footer__inner">
+    <p>@tradik/xslt-processor {{ .Data.landing.version }}, released under the <a href="{{ .Vars.repo_url }}/blob/main/LICENSE.md">BSD 3-Clause License</a>.</p>
+    <nav aria-label="Footer">
+      <ul>
+        <li><a href="{{ $b }}/docs/getting-started/">Getting started</a></li>
+        <li><a href="{{ $b }}/docs/api/">API reference</a></li>
+        <li><a href="{{ $b }}/docs/cli/">Command line</a></li>
+        <li><a href="{{ .Vars.repo_url }}/blob/main/SECURITY.md">Security policy</a></li>
+        <li><a href="{{ .Vars.repo_url }}/issues">Report an issue</a></li>
+      </ul>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>
+{{end}}

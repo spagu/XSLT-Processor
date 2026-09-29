@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="320" height="180"><style>
+.bg{fill:#e8f0fe}.paper{fill:#fff;stroke:#dadce0;stroke-width:2}.ink{fill:#9aa0a6}.line{stroke:#9aa0a6;stroke-width:4;stroke-linecap:round;fill:none}
+.b{fill:#4285f4}.r{fill:#ea4335}.y{fill:#fbbc04}.g{fill:#34a853}
+.bs{stroke:#4285f4}.rs{stroke:#ea4335}.ys{stroke:#fbbc04}.gs{stroke:#34a853}
+.st{stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.t{font:700 18px ui-monospace,Menlo,Consolas,monospace;fill:#202124}
+@media (prefers-color-scheme:dark){.bg{fill:#292a2d}.paper{fill:#35363a;stroke:#5f6368}.ink{fill:#80868b}.line{stroke:#80868b}
+.b{fill:#8ab4f8}.r{fill:#f28b82}.y{fill:#fdd663}.g{fill:#81c995}.bs{stroke:#8ab4f8}.rs{stroke:#f28b82}.ys{stroke:#fdd663}.gs{stroke:#81c995}.t{fill:#e8eaed}}
+</style><rect class="bg" width="320" height="180"/><path class="bs st" d="M110 40c-18 0-18 8-18 24v12c0 8-6 14-14 14 8 0 14 6 14 14v12c0 16 0 24 18 24M210 40c18 0 18 8 18 24v12c0 8 6 14 14 14-8 0-14 6-14 14v12c0 16 0 24-18 24"/><rect class="g" x="126" y="62" width="30" height="10" rx="5"/><rect class="ink" x="164" y="62" width="30" height="10" rx="5"/><rect class="y" x="126" y="86" width="44" height="10" rx="5"/><rect class="ink" x="178" y="86" width="16" height="10" rx="5"/><rect class="r" x="126" y="110" width="24" height="10" rx="5"/><rect class="ink" x="158" y="110" width="36" height="10" rx="5"/></svg>

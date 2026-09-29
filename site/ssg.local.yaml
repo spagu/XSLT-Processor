@@ -1,0 +1,11 @@
+# Local preview: the production config, served from the root of
+# http://localhost:8888 instead of /XSLT-Processor/. Used by `make site-serve`.
+include:
+  - ssg.yaml
+domain: localhost:8888
+output_dir: public-local
+check_links: strict
+minify_html: false
+minify_css: false
+variables:
+  base_path: ""

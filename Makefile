@@ -1,4 +1,4 @@
-.PHONY: install test test-watch test-browser conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help
+.PHONY: install test test-watch test-browser conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help site site-content site-serve site-test site-clean
 
 # Default target
 help:
@@ -20,6 +20,10 @@ help:
 	@echo "  docker-test  - Run tests in Docker"
 	@echo "  docker-dev   - Start development container"
 	@echo "  docker-build - Build using Docker"
+	@echo "  site         - Build the project website into site/public (needs ssg)"
+	@echo "  site-serve   - Preview the website on http://localhost:8888 with rebuilds"
+	@echo "  site-test    - Test the website's content scripts and playground"
+	@echo "  site-clean   - Remove the website's generated files"
 
 # Install dependencies
 install:
@@ -78,6 +82,31 @@ format:
 # Check formatting
 format-check:
 	npm run format:check
+
+# Project website (spagu/ssg, https://github.com/spagu/ssg). SSG may point
+# at a binary outside PATH: make site SSG=/path/to/ssg
+SSG ?= ssg
+
+# Generate site content from README.md, CHANGELOG.md and docs/*.md
+site-content: build
+	npm run site:content
+
+# Production build (served under /XSLT-Processor/), then the site checks
+site: site-content
+	cd site && $(SSG) --config ssg.yaml
+	node site/scripts/check-site.mjs site/public /XSLT-Processor
+
+# Local preview at the server root, rebuilt on change
+site-serve: site-content
+	cd site && $(SSG) --config ssg.local.yaml --http --watch
+
+# Unit tests of the content scripts and the playground core
+site-test:
+	npm run test:site
+
+# Remove generated site files
+site-clean:
+	rm -rf site/content site/data site/static/vendor site/public site/public-local site/.ssg-cache
 
 # Clean build artifacts
 clean:

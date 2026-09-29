@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Project website** (task 0015) with the documentation, the changelog and an XSLT playground, built with spagu/ssg and deployed to GitHub Pages (`make site`, `.github/workflows/site.yml`); it replaces the Jekyll workflow. Pull requests build and check the site without deploying it.
 - **Standalone `xslt` executables** (task 0008) for linux-x64/arm64, darwin-x64/arm64 and windows-x64, attached to each GitHub release with `checksums.sha256`. They are built as Node.js Single Executable Applications with jsdom bundled (`scripts/binaries/`) and smoke-tested on each operating system in CI; `scripts/install.sh` installs them with checksum verification.
 - **Browser tests** (task 0009): `npm run test:browser` runs the built bundles in Chromium, Firefox and WebKit with Playwright, in CI on pull requests; an informational differential test compares the output with the browser's native `XSLTProcessor`.
 - **`namespace::` axis** (task 0004): namespace nodes for every binding in scope (including `xml`), with `name()`, string value, parent, `generate-id()`, union deduplication, and `xsl:copy`/`xsl:copy-of` adding the declaration.

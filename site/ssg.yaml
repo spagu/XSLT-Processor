@@ -1,0 +1,58 @@
+# Project website, built with spagu/ssg (https://github.com/spagu/ssg).
+#
+# Not named .ssg.yaml on purpose: ssg auto-detects that name, and this config
+# must only apply when asked for. Build from the repository root with
+#
+#   make site          # production build into site/public/
+#   make site-serve    # local preview on http://localhost:8888
+#
+# Paths below are relative to site/, where the Makefile runs ssg. content/,
+# data/, static/vendor/ and public/ are generated (site/scripts/build-content.mjs
+# and ssg) and ignored by git.
+#
+# The site is served from https://spagu.github.io/XSLT-Processor/. A domain
+# with a path gives the right canonical URLs, sitemap and robots.txt; the theme
+# prefixes its own links with variables.base_path, and generated content uses
+# relative links, so both work under the /XSLT-Processor/ prefix. With a custom
+# domain, set domain to it and base_path to "".
+source: xslt
+template: xslt-site
+domain: spagu.github.io/XSLT-Processor
+title: "@tradik/xslt-processor"
+description: "XSLT 1.0 and XPath 1.0 in JavaScript: a drop-in XSLTProcessor for browsers without native XSLT, Node.js and the command line."
+content_dir: content
+templates_dir: templates
+data_dir: data
+static_dir: static
+output_dir: public
+clean: true
+
+# Every indexable page must have a title and a meta description, and every
+# image an alt attribute. ssg's check_links resolves links against the output
+# root and does not know the /XSLT-Processor/ prefix, so it is on in
+# ssg.local.yaml (served at the root) and the production output is checked by
+# site/scripts/check-site.mjs, which also verifies #anchors.
+check_meta: warn
+check_images: strict
+
+# JSON-LD structured data. The theme writes its own Open Graph and Twitter
+# tags, so ssg only adds what is missing (see its CONFIGURATION.md, "SEO").
+seo: true
+marketing:
+  og_site_name: "@tradik/xslt-processor"
+  og_image: "https://spagu.github.io/XSLT-Processor/images/og-card.png"
+
+# Minified HTML and CSS. JavaScript is left as written: the playground is an
+# ES module and its import paths must stay intact.
+minify_html: true
+minify_css: true
+
+variables:
+  # Path prefix of the site on its host, no trailing slash ("" at a root).
+  base_path: /XSLT-Processor
+  repo_url: https://github.com/spagu/XSLT-Processor
+  npm_url: https://www.npmjs.com/package/@tradik/xslt-processor
+  # Google Tag Manager container. GTM-XXXXXXX is a placeholder: replace it
+  # with the real container id. The theme renders both halves of the snippet
+  # (head script and body noscript) on every page.
+  gtm_id: GTM-XXXXXXX

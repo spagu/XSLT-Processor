@@ -1,0 +1,69 @@
+/*
+ * Design tokens of the project site: colours, fonts and spacing.
+ *
+ * Light roles reuse docs/STYLE-GUIDE.md (primary #2563eb, success #15803d,
+ * warning #b45309, error #dc2626, text #1f2937, background #ffffff), which
+ * already meet WCAG 2.2 AA on white. Roles the style guide does not define
+ * (surfaces, borders, muted text) and the whole dark scheme come from the
+ * Google Material palette (Grey 50-900, Blue 50/300, Green 300, Yellow 300,
+ * Red 300). Every text pair is at least 4.5:1 and every UI boundary at
+ * least 3:1; site/scripts/check-site.mjs recomputes the ratios from this
+ * file on every build.
+ *
+ * Fonts: Bricolage Grotesque for headings (a grotesque with some character,
+ * set large and sparingly), IBM Plex Sans for body text (designed for
+ * technical documentation, open apertures at small sizes) and IBM Plex Mono
+ * for code, which is most of what an XSLT reader looks at.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* contrast pairs checked by check-site.mjs: fg / bg */
+  --color-bg: #ffffff; /* style guide: Background */
+  --color-surface: #f8f9fa; /* Google Grey 50 */
+  --color-surface-strong: #f1f3f4; /* Google Grey 100 */
+  --color-hero: #e8f0fe; /* Google Blue 50 */
+  --color-text: #1f2937; /* style guide: Text */
+  --color-muted: #5f6368; /* Google Grey 700 */
+  --color-primary: #2563eb; /* style guide: Primary */
+  --color-on-primary: #ffffff;
+  --color-success: #15803d; /* style guide: Success */
+  --color-warning: #b45309; /* style guide: Warning */
+  --color-error: #dc2626; /* style guide: Error */
+  --color-border: #dadce0; /* Google Grey 300, decorative dividers only */
+  --color-control: #80868b; /* Google Grey 600, input and button outlines */
+  --color-focus: #2563eb;
+
+  --font-heading: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: 4rem;
+  --radius: 10px;
+  --wrap: 72rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #202124; /* Google Grey 900 */
+    --color-surface: #292a2d; /* Google dark surface */
+    --color-surface-strong: #35363a; /* Google dark surface, raised */
+    --color-hero: #292a2d;
+    --color-text: #e8eaed; /* Google Grey 200 */
+    --color-muted: #9aa0a6; /* Google Grey 500 */
+    --color-primary: #8ab4f8; /* Google Blue 300 */
+    --color-on-primary: #202124;
+    --color-success: #81c995; /* Google Green 300 */
+    --color-warning: #fdd663; /* Google Yellow 300 */
+    --color-error: #f28b82; /* Google Red 300 */
+    --color-border: #3c4043; /* Google Grey 800, decorative dividers only */
+    --color-control: #80868b; /* Google Grey 600 */
+    --color-focus: #8ab4f8;
+  }
+}

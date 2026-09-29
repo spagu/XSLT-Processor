@@ -1,0 +1,64 @@
+{{/*
+  The home page. Its text comes from README.md through data/landing.json
+  (site/scripts/build-content.mjs), so it says what the README says.
+*/}}
+{{define "landing.html"}}{{template "head" .}}{{ $b := .Vars.base_path }}{{ $l := .Data.landing }}
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap hero__inner">
+      <div class="hero__text">
+        <p class="eyebrow">XSLT 1.0 · XPath 1.0 · EXSLT</p>
+        <h1 id="hero-title">Keep your XSLT running when browsers drop it</h1>
+        <p class="lead">{{ $l.intro }}</p>
+        <div class="hero__actions">
+          <a class="button button--primary" href="{{ $b }}/docs/getting-started/">Get started</a>
+          <a class="button" href="{{ $b }}/playground/">Try it in the playground</a>
+        </div>
+        <p class="install-line"><code>npm install @tradik/xslt-processor</code></p>
+      </div>
+      <img class="hero__art" src="{{ $b }}/images/hero.svg" width="480" height="360" alt="An XML document and an XSLT stylesheet flow into the processor, which produces an HTML page">
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="why-title">
+    <div class="wrap prose narrow">
+      <h2 id="why-title">Why now</h2>
+      {{ $l.why | safeHTML }}
+    </div>
+  </section>
+
+  <section class="band band--alt" aria-labelledby="features-title">
+    <div class="wrap">
+      <h2 id="features-title">What you get</h2>
+      <ul class="cards">
+        {{ range $l.features }}<li class="card">
+          <img class="card__art" src="{{ $b }}/images/features/{{ .image }}" width="320" height="180" alt="">
+          <h3>{{ .title | raw }}</h3>
+          <p>{{ .html | raw }}</p>
+        </li>
+        {{ end }}
+      </ul>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="install-title">
+    <div class="wrap prose narrow">
+      <h2 id="install-title">Install</h2>
+      {{ $l.install | safeHTML }}
+      {{ if $l.quickstart }}<h3>Quick start: {{ $l.quickstartTitle }}</h3>
+      {{ $l.quickstart | safeHTML }}{{ end }}
+      <p>ES modules, CommonJS, Node.js and the <code>xslt</code> command line tool are covered in <a href="{{ $b }}/docs/getting-started/">Getting started</a>.</p>
+    </div>
+  </section>
+
+  <section class="band band--alt" aria-labelledby="guides-title">
+    <div class="wrap">
+      <h2 id="guides-title">Guides</h2>
+      <dl class="guide-list">
+        {{ range .Data.nav.docs }}<div><dt><a href="{{ $b }}{{ .url }}">{{ .label }}</a></dt><dd>{{ .summary }}</dd></div>
+        {{ end }}
+      </dl>
+    </div>
+  </section>
+</main>
+{{template "footer" .}}{{end}}

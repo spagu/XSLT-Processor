@@ -52,3 +52,5 @@ tests/conformance/corpus/
 # Playwright browser tests (results and reports)
 test-results/
 playwright-report/
+# Project website (not part of the package image)
+site/

@@ -1,6 +1,6 @@
 # Command Line Tool
 
-The package includes a command-line tool for transforming XML documents:
+The package includes a command-line tool for transforming XML documents.
 
 The command line tool needs a DOM implementation, so install `jsdom` next to
 the package. It is an optional peer dependency: library users do not need it.

@@ -43,13 +43,15 @@
     "test:conformance": "node scripts/conformance.mjs",
     "test:conformance:unit": "node --test \"scripts/conformance/*.test.mjs\"",
     "conformance:fetch": "node scripts/fetch-conformance.mjs",
-    "lint": "eslint src/ bin/ scripts/ tests/browser/",
-    "format": "prettier --write \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\"",
-    "format:check": "prettier --check \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\"",
+    "lint": "eslint src/ bin/ scripts/ tests/browser/ site/",
+    "format": "prettier --write \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\" \"site/scripts/*.mjs\" \"site/templates/**/js/*.js\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\" \"site/scripts/*.mjs\" \"site/templates/**/js/*.js\"",
     "prepublishOnly": "npm run build && npm run test",
     "docs:check": "node scripts/check-links.mjs",
     "test:browser": "playwright test -c tests/browser/playwright.config.mjs",
-    "test:binaries": "node --test \"scripts/binaries/*.test.mjs\""
+    "test:binaries": "node --test \"scripts/binaries/*.test.mjs\"",
+    "test:site": "node --test --experimental-test-coverage --test-coverage-include=\"site/**\" --test-coverage-lines=96 \"site/scripts/*.test.mjs\"",
+    "site:content": "node site/scripts/build-content.mjs"
   },
   "keywords": [
     "xslt",

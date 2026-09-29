@@ -1,0 +1,66 @@
+{{/*
+  The playground. Editors are plain textareas; the transformation runs with
+  the library's browser bundle (copied to /vendor/ at build time) and every
+  file it needs is on this site, so it keeps working offline after loading.
+  The preview frame is sandboxed without scripts: a stylesheet's output can
+  never run code on this page.
+*/}}
+{{define "playground.html"}}{{template "head" .}}{{ $b := .Vars.base_path }}
+<main id="main" class="wrap playground">
+  <h1>{{ .Page.Title }}</h1>
+  <div class="prose narrow">{{ .Page.Content | safeHTML }}</div>
+  <noscript><p class="notice">The playground runs the processor in your browser and needs JavaScript. The <a href="{{ $b }}/docs/examples/">complete example</a> shows the same kind of transformation as code.</p></noscript>
+
+  <div id="pg-app" hidden>
+    <form id="pg-form" class="pg" aria-label="Transformation input">
+      <div class="pg__toolbar">
+        <div class="field field--inline">
+          <label for="pg-preset">Example</label>
+          <select id="pg-preset"></select>
+        </div>
+        <button type="submit" class="button button--primary">Transform</button>
+        <div class="field field--check">
+          <input type="checkbox" id="pg-live" checked>
+          <label for="pg-live">Transform while typing</label>
+        </div>
+      </div>
+
+      <div class="pg__editors">
+        <div class="field">
+          <label for="pg-xml">XML source</label>
+          <textarea id="pg-xml" rows="20" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+        </div>
+        <div class="field">
+          <label for="pg-xsl">XSLT 1.0 stylesheet</label>
+          <textarea id="pg-xsl" rows="20" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+        </div>
+      </div>
+
+      <fieldset class="pg__params">
+        <legend>Parameters</legend>
+        <p class="hint">Each row calls <code>setParameter(null, name, value)</code> and overrides the top-level <code>xsl:param</code> of that name.</p>
+        <ul id="pg-params" class="pg-param-list"></ul>
+        <button type="button" id="pg-add-param" class="button button--small">Add parameter</button>
+      </fieldset>
+    </form>
+
+    <section class="pg__result" aria-labelledby="pg-result-title">
+      <h2 id="pg-result-title">Result</h2>
+      <p id="pg-status" class="pg-status" role="status" aria-live="polite"></p>
+      <ul id="pg-messages" class="pg-messages" aria-label="Messages"></ul>
+      <div class="pg__outputs">
+        <div class="pg__output">
+          <h3 id="pg-output-title">transformToString() output</h3>
+          <pre class="pg-code" tabindex="0" aria-labelledby="pg-output-title"><code id="pg-output"></code></pre>
+        </div>
+        <div class="pg__output">
+          <h3>Preview</h3>
+          <iframe id="pg-preview" class="pg-preview" title="Preview of the transformation result" sandbox=""></iframe>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+<script src="{{ $b }}/vendor/xslt-processor.browser.min.js"></script>
+<script type="module" src="{{ $b }}/js/playground.js"></script>
+{{template "footer" .}}{{end}}

@@ -37,6 +37,8 @@ This library ensures your XSLT-based applications continue to work regardless of
 
 ## Documentation
 
+The documentation is also published as a website with an interactive playground: <https://spagu.github.io/XSLT-Processor/> ([playground](https://spagu.github.io/XSLT-Processor/playground/)).
+
 | Guide | Contents |
 |-------|----------|
 | [API Reference](docs/API.md) | `XSLTProcessor` methods, parameters, `xsl:output` serialization, module exports, `XsltEngine` options, TypeScript |
