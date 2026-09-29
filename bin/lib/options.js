@@ -64,7 +64,9 @@ the directory named by the XSLT_BASE_DIR environment variable when it is set.
 xsl:include, xsl:import and document() resolve relative to the stylesheet and
 are confined to the same directory; only local files are loaded. Input files
 are decoded by their byte order mark or XML encoding declaration (UTF-8 by
-default), e.g. UTF-16, ISO-8859-1 or windows-1252.
+default), e.g. UTF-16, ISO-8859-1 or windows-1252. The result is written in
+the encoding named by xsl:output (UTF-8 by default); characters that encoding
+cannot represent are written as character references (&#8364;).
 
 EXAMPLES:
   # Basic transformation

@@ -75,9 +75,9 @@ function canonicalize(absolute, message) {
  * @throws {CliPathError} When the path escapes the base directory
  */
 function assertInsideBase(canonical, baseDir, label) {
-  const inside =
-    canonical === baseDir ||
-    (canonical.startsWith(baseDir) && canonical.startsWith(baseDir + sep));
+  // A file system root ("/", "C:\\") already ends with the separator
+  const prefix = baseDir.endsWith(sep) ? baseDir : baseDir + sep;
+  const inside = canonical === baseDir || canonical.startsWith(prefix);
 
   if (!inside) {
     throw new CliPathError(

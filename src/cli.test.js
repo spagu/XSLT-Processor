@@ -18,7 +18,7 @@ import {
   readFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
+import { join, dirname, parse } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   JSDOM_MISSING_MESSAGE,
@@ -593,7 +593,7 @@ describe("CLI transformation helpers", () => {
 
   it("runs a transformation with parameters and output overrides", async () => {
     const dom = await createDomEnvironment();
-    const output = runTransformation({
+    const { output, encoding } = runTransformation({
       dom,
       xmlContent: "<r/>",
       xsltContent: stylesheet,
@@ -601,11 +601,12 @@ describe("CLI transformation helpers", () => {
       values: { indent: true, "no-declaration": true },
     });
     assert.strictEqual(output, "<hi>\n  <b>you</b>\n</hi>");
+    assert.strictEqual(encoding, "UTF-8");
   });
 
   it("applies the method override", async () => {
     const dom = await createDomEnvironment();
-    const output = runTransformation({
+    const { output } = runTransformation({
       dom,
       xmlContent: "<r/>",
       xsltContent: stylesheet,
@@ -828,7 +829,7 @@ describe("CLI stylesheet and document loaders", () => {
       '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">' +
         '<xsl:template name="n">N</xsl:template></xsl:stylesheet>',
     );
-    const output = runTransformation({
+    const { output } = runTransformation({
       dom,
       xmlContent: "<r/>",
       xsltContent:
@@ -871,7 +872,7 @@ describe("CLI result output", () => {
     const stdout = fakeStream(true);
     const stderr = fakeStream();
     await writeResult("<a/>", undefined, { stdout, stderr });
-    assert.deepStrictEqual(stdout.chunks, ["<a/>\n"]);
+    assert.strictEqual(Buffer.concat(stdout.chunks).toString(), "<a/>\n");
 
     const dir = mkdtempSync(join(tmpdir(), "xslt-cli-out-"));
     try {
@@ -893,7 +894,10 @@ describe("CLI result output", () => {
     } finally {
       process.stdout.write = originalWrite;
     }
-    assert.strictEqual(chunks[0].startsWith("<a/>"), true);
+    assert.strictEqual(
+      Buffer.from(chunks[0]).toString().startsWith("<a/>"),
+      true,
+    );
   });
 });
 
@@ -967,5 +971,180 @@ describe("CLI path validation", () => {
       () => resolveOutputPath(join(tmpdir(), "o.xml"), baseDir),
       /outside the allowed/,
     );
+  });
+});
+
+describe("CLI output encoding", () => {
+  let dir;
+  const fakeStream = () => ({
+    isTTY: false,
+    chunks: [],
+    write(chunk) {
+      this.chunks.push(chunk);
+      return true;
+    },
+  });
+
+  before(() => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "xslt-cli-enc-")));
+  });
+
+  after(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("writes files and stdout in the declared encoding", async () => {
+    const stdout = fakeStream();
+    const stderr = fakeStream();
+    const target = join(dir, "latin1.xml");
+    await writeResult("<a>é</a>", target, {
+      encoding: "ISO-8859-1",
+      stdout,
+      stderr,
+    });
+    assert.strictEqual(
+      readFileSync(target).toString("hex"),
+      "3c613ee93c2f613e",
+    );
+
+    await writeResult("é", undefined, { encoding: "UTF-16", stdout, stderr });
+    assert.strictEqual(
+      Buffer.concat(stdout.chunks).toString("hex"),
+      "fffee900",
+    );
+    assert.deepStrictEqual(stderr.chunks, [`Output written to ${target}\n`]);
+  });
+
+  it("warns when the encoding cannot be written and uses UTF-8", async () => {
+    const stdout = fakeStream();
+    const stderr = fakeStream();
+    await writeResult("é", undefined, {
+      encoding: "Shift_JIS",
+      stdout,
+      stderr,
+    });
+    assert.strictEqual(Buffer.concat(stdout.chunks).toString("hex"), "c3a9");
+    assert.match(stderr.chunks[0], /Shift_JIS.*UTF-8/);
+  });
+
+  it("round trips an ISO-8859-1 result through the CLI", () => {
+    writeFileSync(join(dir, "in.xml"), "<r>é€😀</r>");
+    writeFileSync(
+      join(dir, "latin1.xsl"),
+      '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">' +
+        '<xsl:output encoding="ISO-8859-1"/>' +
+        '<xsl:template match="/"><o a="{r}"><xsl:value-of select="r"/></o></xsl:template>' +
+        "</xsl:stylesheet>",
+    );
+    writeFileSync(
+      join(dir, "copy.xsl"),
+      '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">' +
+        '<xsl:output omit-xml-declaration="yes"/>' +
+        '<xsl:template match="/"><xsl:copy-of select="."/></xsl:template>' +
+        "</xsl:stylesheet>",
+    );
+    const env = { ...process.env, NODE_V8_COVERAGE: join(dir, "coverage") };
+    execFileSync(
+      process.execPath,
+      [CLI, "in.xml", "latin1.xsl", "-o", "out.xml"],
+      { cwd: dir, env, stdio: "pipe" },
+    );
+    const bytes = readFileSync(join(dir, "out.xml"));
+    assert.strictEqual(
+      bytes.toString("latin1"),
+      '<?xml version="1.0" encoding="ISO-8859-1"?>\n' +
+        '<o a="é&#8364;&#128512;">é&#8364;&#128512;</o>',
+    );
+    const reread = execFileSync(
+      process.execPath,
+      [CLI, "out.xml", "copy.xsl"],
+      {
+        cwd: dir,
+        env,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    assert.strictEqual(reread, '<o a="é€😀">é€😀</o>');
+  });
+
+  it("reports the effective encoding of a transformation", async () => {
+    const dom = await createDomEnvironment();
+    const { encoding } = runTransformation({
+      dom,
+      xmlContent: "<r/>",
+      xsltContent:
+        '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">' +
+        '<xsl:output encoding="windows-1252"/><xsl:template match="/"><r/></xsl:template>' +
+        "</xsl:stylesheet>",
+      params: {},
+      values: {},
+    });
+    assert.strictEqual(encoding, "windows-1252");
+  });
+});
+
+describe("CLI --method validation", () => {
+  it("accepts the four output methods", () => {
+    for (const method of ["xml", "html", "xhtml", "text"]) {
+      const settings = applyOutputOverrides(
+        { engine: { outputSettings: {} } },
+        { method },
+      );
+      assert.strictEqual(settings.method, method);
+    }
+  });
+
+  it("rejects any other method", () => {
+    assert.throws(
+      () =>
+        applyOutputOverrides(
+          { engine: { outputSettings: {} } },
+          { method: "json" },
+        ),
+      /Invalid --method "json": expected xml, html, xhtml or text/,
+    );
+  });
+
+  it("exits with status 1 for an unknown method", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "xslt-cli-method-")));
+    try {
+      writeFileSync(join(dir, "a.xml"), "<a/>");
+      writeFileSync(
+        join(dir, "a.xsl"),
+        '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"/>',
+      );
+      const run = spawnSync(
+        process.execPath,
+        [CLI, "a.xml", "a.xsl", "--method", "bogus"],
+        {
+          cwd: dir,
+          env: { ...process.env, NODE_V8_COVERAGE: join(dir, "coverage") },
+          encoding: "utf-8",
+        },
+      );
+      assert.strictEqual(run.status, 1);
+      assert.match(run.stderr, /Invalid --method "bogus"/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("CLI root base directory", () => {
+  it("accepts paths below the file system root", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "xslt-cli-root-")));
+    try {
+      const file = join(dir, "a.xml");
+      writeFileSync(file, "<a/>");
+      const root = parse(dir).root;
+      assert.strictEqual(resolveInputPath(file, "XML", root), file);
+      assert.strictEqual(
+        resolveOutputPath(join(dir, "o.xml"), root),
+        join(dir, "o.xml"),
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

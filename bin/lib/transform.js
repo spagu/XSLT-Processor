@@ -9,6 +9,7 @@
 "use strict";
 
 import { XSLTProcessor } from "../../src/XSLTProcessor.js";
+import { findParseError } from "../../src/xslt/domParsing.js";
 import {
   createDocumentLoader,
   createStylesheetLoader,
@@ -78,7 +79,7 @@ export function parseDocument(dom, content, label) {
     "application/xml",
   );
 
-  const error = doc.querySelector("parsererror");
+  const error = findParseError(doc);
   if (error) {
     throw new Error(`Error parsing ${label}: ${error.textContent}`);
   }
@@ -86,12 +87,16 @@ export function parseDocument(dom, content, label) {
   return doc;
 }
 
+/** Output methods accepted by `--method`. */
+export const OUTPUT_METHODS = Object.freeze(["xml", "html", "xhtml", "text"]);
+
 /**
  * Override the stylesheet xsl:output settings from the command line flags.
  *
  * @param {XSLTProcessor} processor - Processor with an imported stylesheet
  * @param {object} values - Parsed command line option values
  * @returns {object} The effective output settings
+ * @throws {Error} When `--method` is not one of {@link OUTPUT_METHODS}
  */
 export function applyOutputOverrides(processor, values) {
   const settings = processor.engine.outputSettings;
@@ -100,6 +105,11 @@ export function applyOutputOverrides(processor, values) {
     settings.indent = "yes";
   }
   if (values.method) {
+    if (!OUTPUT_METHODS.includes(values.method)) {
+      throw new Error(
+        `Invalid --method "${values.method}": expected xml, html, xhtml or text`,
+      );
+    }
     settings.method = values.method;
   }
   if (values["no-declaration"]) {
@@ -108,6 +118,14 @@ export function applyOutputOverrides(processor, values) {
 
   return settings;
 }
+
+/**
+ * @typedef {Object} TransformationResult
+ * @property {string} output - The serialized result, with character
+ *   references for the characters the output encoding cannot represent
+ * @property {string} encoding - The effective `xsl:output` encoding, the
+ *   encoding the result has to be written in
+ */
 
 /**
  * Run a transformation and serialize its result.
@@ -123,7 +141,7 @@ export function applyOutputOverrides(processor, values) {
  * @param {string} [options.baseDir] - Canonical base directory every loaded
  *   file is confined to (required together with xsltFile)
  * @param {(message: string) => void} [options.warn] - Warning sink for document()
- * @returns {string} The serialized transformation result
+ * @returns {TransformationResult} The serialized result and its encoding
  */
 export function runTransformation({
   dom,
@@ -156,5 +174,5 @@ export function runTransformation({
     throw new Error("Transformation failed");
   }
 
-  return output;
+  return { output, encoding: processor.engine.outputSettings.encoding };
 }

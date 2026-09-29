@@ -81,7 +81,7 @@ async function main() {
       readFile(xsltFile),
     ]);
 
-    const output = runTransformation({
+    const { output, encoding } = runTransformation({
       dom,
       xmlContent: decodeXml(xmlBytes, xmlFile),
       xsltContent: decodeXml(xsltBytes, xsltFile),
@@ -91,7 +91,7 @@ async function main() {
       baseDir,
     });
 
-    await writeResult(output, outputFile);
+    await writeResult(output, outputFile, { encoding });
   } catch (err) {
     console.error(`Error: ${err.message}`);
     process.exit(1);
