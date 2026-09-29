@@ -1,6 +1,6 @@
 # Contributors
 
-Thank you to everyone who has contributed to SSG!
+Thank you to everyone who has contributed to `@tradik/xslt-processor`!
 
 ## Maintainers
 
@@ -8,67 +8,69 @@ Thank you to everyone who has contributed to SSG!
 
 ## How to Contribute
 
-We welcome contributions! Here's how you can help:
-
 ### Reporting Bugs
 
-1. Check existing issues first
-2. Use the bug report template
-3. Include reproduction steps
-4. Mention your OS and SSG version
+1. Check the [existing issues](https://github.com/spagu/XSLT-Processor/issues) first
+2. Include a minimal XML document and XSLT stylesheet that reproduce the problem
+3. Show the expected output (ideally from libxslt / Chrome or `xsltproc`) and the actual output
+4. Mention the package version and the environment (browser, or Node.js version and DOM such as `jsdom`)
+
+Security problems are reported privately, see [SECURITY.md](SECURITY.md).
 
 ### Feature Requests
 
-1. Open a discussion first
-2. Explain the use case
+1. Open an issue describing the use case
+2. Reference the relevant section of the XSLT 1.0 or XPath 1.0 specification when applicable
 3. Propose a solution if possible
 
 ### Pull Requests
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Write tests for new code
-4. Ensure all tests pass (`go test ./...`)
-5. Run linter (`golangci-lint run`)
-6. Commit with clear messages
-7. Open a Pull Request
+3. Write tests first; keep coverage at or above the current level
+4. Ensure all tests pass (`npm test`)
+5. Run the linter and the formatter check (`npm run lint`, `npm run format:check`)
+6. Build the bundles (`npm run build`) when the public API or the TypeScript declarations change
+7. Update `README.md` and `CHANGELOG.md`
+8. Commit with clear messages and open a Pull Request
 
 ### Development Setup
 
 ```bash
 # Clone the repo
-git clone https://github.com/spagu/ssg.git
-cd ssg
+git clone https://github.com/spagu/XSLT-Processor.git
+cd XSLT-Processor
 
-# Install dependencies
-go mod download
+# Install dependencies (Node.js 22+ recommended; the package supports >=20.19)
+npm install
 
-# Build
-make build
+# Run tests with coverage
+npm test
 
-# Run tests
-make test
+# Lint and check formatting
+npm run lint
+npm run format:check
 
-# Run linter
-make lint
+# Build dist/ bundles and TypeScript declarations
+npm run build
 ```
+
+The same tasks are available as `make test`, `make lint`, `make build` and,
+in Docker, `make docker-test`.
 
 ### Code Style
 
-- Follow Go conventions
-- Use `gofmt` for formatting
-- Document exported functions
-- Write meaningful commit messages
+- ES modules, formatted with Prettier and checked with ESLint
+- camelCase names; JSDoc on exported functions and classes
+- One responsibility per module (see `src/xpath/` and `src/xslt/`)
+- No runtime dependencies
 
 ### Areas for Contribution
 
-- 🐛 Bug fixes
-- 📝 Documentation improvements
-- 🧪 Test coverage
-- 🌍 Translations
-- 🎨 Template designs
-- 🔧 Template engine improvements
-- 📦 Package manager support
+- Bug fixes and XSLT/XPath conformance (see "Known Deviations" in the [README](README.md))
+- Test coverage
+- Documentation improvements
+- Performance of large transformations
 
 ## Recognition
 
