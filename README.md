@@ -5,6 +5,7 @@
 [![GitHub forks](https://img.shields.io/github/forks/spagu/XSLT-Processor?style=social)](https://github.com/spagu/XSLT-Processor/network/members)
 
 [![CI](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml)
+[![Browser tests](https://github.com/spagu/XSLT-Processor/actions/workflows/browser.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/browser.yml)
 [![Release](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml)
 [![npm version](https://img.shields.io/npm/v/@tradik/xslt-processor.svg)](https://www.npmjs.com/package/@tradik/xslt-processor)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)

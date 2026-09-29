@@ -97,3 +97,23 @@ git push origin v1.1.3
 3. `build`: checks that the tag matches the `package.json` version
 4. `build`: uploads the `dist/` build artifacts to GitHub
 5. `publish` (tags only): `npm publish --provenance --access public`
+
+## Browser tests
+
+The built bundles are tested in real browsers with Playwright (Chromium,
+Firefox, WebKit):
+
+```sh
+npx playwright install --with-deps chromium firefox webkit   # once
+npm run build && npm run test:browser                        # or: make test-browser
+npm run test:browser -- --project=chromium                   # one engine
+```
+
+The tests cover the ESM and IIFE/CDN bundles, `installGlobal()`,
+`transformToFragment` into the page document (real `HTMLElement`s),
+`transformToDocument`, `transformToString`, parameters and the stylesheet and
+document loaders. Where the browser still ships a native `XSLTProcessor`, a
+differential test compares its output with this library's and prints a summary
+table; it is informational and never fails the run. `BROWSER_DIFF_CORPUS=1`
+adds the libxslt conformance corpus (`npm run conformance:fetch`), and
+`BROWSER_DIFF_OUT=<dir>` writes the differences as JSON.

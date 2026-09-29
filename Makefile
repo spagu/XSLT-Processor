@@ -1,4 +1,4 @@
-.PHONY: install test test-watch conformance conformance-baseline build lint format format-check clean docker-test docker-dev docker-build docker-clean help
+.PHONY: install test test-watch test-browser conformance conformance-baseline build lint format format-check clean docker-test docker-dev docker-build docker-clean help
 
 # Default target
 help:
@@ -6,6 +6,7 @@ help:
 	@echo "  install      - Install dependencies"
 	@echo "  test         - Run tests"
 	@echo "  test-watch   - Run tests in watch mode"
+	@echo "  test-browser - Build, then run Playwright tests in Chromium, Firefox and WebKit"
 	@echo "  conformance  - Run the XSLT 1.0 conformance suite (libxslt corpus)"
 	@echo "  conformance-baseline - Rewrite the conformance baseline"
 	@echo "  build        - Build distribution bundles"
@@ -27,6 +28,11 @@ test:
 # Run tests in watch mode
 test-watch:
 	npm run test:watch
+
+# Browser tests (Playwright); install engines once with
+# `npx playwright install --with-deps chromium firefox webkit`
+test-browser: build
+	npm run test:browser
 
 # XSLT 1.0 conformance suite (downloads the corpus on first run)
 conformance:
@@ -58,6 +64,7 @@ clean:
 	rm -rf dist/
 	rm -rf node_modules/
 	rm -rf coverage/
+	rm -rf test-results/ playwright-report/
 
 # Docker: Run tests
 docker-test:

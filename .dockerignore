@@ -47,3 +47,7 @@ temp/
 
 # XSLT conformance corpus (downloaded on demand)
 tests/conformance/corpus/
+
+# Playwright browser tests (results and reports)
+test-results/
+playwright-report/

@@ -43,11 +43,12 @@
     "test:conformance": "node scripts/conformance.mjs",
     "test:conformance:unit": "node --test \"scripts/conformance/*.test.mjs\"",
     "conformance:fetch": "node scripts/fetch-conformance.mjs",
-    "lint": "eslint src/ bin/ scripts/",
-    "format": "prettier --write \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\"",
-    "format:check": "prettier --check \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\"",
+    "lint": "eslint src/ bin/ scripts/ tests/browser/",
+    "format": "prettier --write \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\"",
     "prepublishOnly": "npm run build && npm run test",
-    "docs:check": "node scripts/check-links.mjs"
+    "docs:check": "node scripts/check-links.mjs",
+    "test:browser": "playwright test -c tests/browser/playwright.config.mjs"
   },
   "keywords": [
     "xslt",
@@ -74,6 +75,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "esbuild": "^0.28.2",
     "eslint": "^10.11.0",
     "jsdom": "^30.1.1",

@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Browser tests** (task 0009): `npm run test:browser` runs the built bundles in Chromium, Firefox and WebKit with Playwright, in CI on pull requests; an informational differential test compares the output with the browser's native `XSLTProcessor`.
 - **`namespace::` axis** (task 0004): namespace nodes for every binding in scope (including `xml`), with `name()`, string value, parent, `generate-id()`, union deduplication, and `xsl:copy`/`xsl:copy-of` adding the declaration.
 - `XSLTProcessor`/`XsltEngine` options `enableDynamicEvaluate` and `clock` for EXSLT `dyn:evaluate()` and reproducible current-time functions.
 - **EXSLT** (task 0002): the common, math, sets, strings, dates-and-times and dynamic functions libexslt provides, with libexslt's behaviour (new `src/xslt/exslt/`). `dyn:evaluate` is opt-in through `engine.enableDynamicEvaluate` because it evaluates XPath built from data.

@@ -41,3 +41,7 @@ temp/
 /tests/conformance/corpus/
 /tests/conformance/report.json
 /tests/conformance/report.md
+
+# Playwright browser tests (results and reports)
+/test-results/
+/playwright-report/

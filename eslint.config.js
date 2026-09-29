@@ -41,6 +41,26 @@ export default [
     }
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**']
+    // Playwright specs run in Node; page.evaluate callbacks and the fixtures
+    // run in the browser page
+    files: ['tests/browser/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        window: 'readonly',
+        location: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        Node: 'readonly',
+        Document: 'readonly',
+        DocumentFragment: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLAnchorElement: 'readonly',
+        HTMLParagraphElement: 'readonly'
+      }
+    }
+  },
+  {
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'test-results/**']
   }
 ];
