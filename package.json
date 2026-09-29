@@ -1,6 +1,6 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "main": "dist/xslt-processor.cjs",
@@ -38,9 +38,8 @@
   },
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node --test --experimental-test-coverage src/*.test.js src/**/*.test.js",
+    "test": "node --test --experimental-test-coverage \"src/**/*.test.js\"",
     "test:watch": "node --test --watch src/**/*.test.js",
-    "test:browser": "node tests/browser-test-runner.js",
     "lint": "eslint src/",
     "format": "prettier --write \"src/**/*.js\" \"bin/**/*.js\"",
     "format:check": "prettier --check \"src/**/*.js\" \"bin/**/*.js\"",

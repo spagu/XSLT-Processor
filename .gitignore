@@ -33,3 +33,6 @@ temp/
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Planning notes (not versioned)
+/tasks/
