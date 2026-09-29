@@ -12,6 +12,7 @@ import assert from "node:assert";
 import { JSDOM } from "jsdom";
 import { XsltEngine } from "./engine.js";
 import { VENDOR, VENDOR_URL, createXsltFunctions } from "./functions.js";
+import { createExsltFunctions } from "./exslt/index.js";
 import { XSLT_NAMESPACE } from "./elements.js";
 import { XPathContext } from "../xpath/evaluator.js";
 import { parse as parseXPath } from "../xpath/parser.js";
@@ -590,19 +591,24 @@ describe("createXsltFunctions", () => {
   it("should expose the whole XSLT function library", () => {
     const engine = new XsltEngine();
 
-    assert.deepStrictEqual(Object.keys(createXsltFunctions(engine)).sort(), [
-      "current",
-      "document",
-      "element-available",
-      "format-number",
-      "function-available",
-      "generate-id",
-      "key",
-      "system-property",
-      "unparsed-entity-uri",
-      "{http://exslt.org/common}node-set",
-      "{urn:schemas-microsoft-com:xslt}node-set",
-    ]);
+    const exsltKeys = Object.keys(createExsltFunctions(engine));
+    assert.deepStrictEqual(
+      Object.keys(createXsltFunctions(engine)).sort(),
+      [
+        ...exsltKeys,
+        "current",
+        "document",
+        "element-available",
+        "format-number",
+        "function-available",
+        "generate-id",
+        "key",
+        "system-property",
+        "unparsed-entity-uri",
+        "{http://exslt.org/common}node-set",
+        "{urn:schemas-microsoft-com:xslt}node-set",
+      ].sort(),
+    );
   });
 });
 

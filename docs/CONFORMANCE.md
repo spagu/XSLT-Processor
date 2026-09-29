@@ -196,8 +196,33 @@ This implementation provides full compatibility with the [MDN XSLTProcessor API]
 - `system-property(name)` - `xsl:version`, `xsl:vendor`, `xsl:vendor-url`
 - `unparsed-entity-uri(name)` - always returns `''` (unparsed entities are not exposed by the DOM)
 
-### Extension Functions
-- `exsl:node-set(value)` (namespace `http://exslt.org/common`) and `msxsl:node-set(value)` (namespace `urn:schemas-microsoft-com:xslt`) - turn a result tree fragment into a node-set, so `exsl:node-set($rtf)/item` works; `function-available('exsl:node-set')` is true
+### Extension Functions (EXSLT)
+
+The EXSLT functions that libexslt (bundled with libxslt, used by Chrome's native
+`XSLTProcessor`) provides are implemented with libexslt's behaviour. Bind any
+prefix to the module namespace; `function-available()` reports each function.
+
+| Module | Namespace | Functions |
+|---|---|---|
+| Common | `http://exslt.org/common` | `node-set`, `object-type` (also `msxsl:node-set` in `urn:schemas-microsoft-com:xslt`) |
+| Math | `http://exslt.org/math` | `min`, `max`, `highest`, `lowest`, `abs`, `sqrt`, `power`, `constant`, `log`, `random`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `exp` |
+| Sets | `http://exslt.org/sets` | `difference`, `intersection`, `distinct`, `has-same-node`, `leading`, `trailing` |
+| Strings | `http://exslt.org/strings` | `tokenize`, `split`, `replace`, `padding`, `align`, `concat`, `encode-uri`, `decode-uri` |
+| Dates and times | `http://exslt.org/dates-and-times` | `date-time`, `date`, `time`, `year`, `leap-year`, `month-in-year`, `month-name`, `month-abbreviation`, `week-in-year`, `week-in-month`, `day-in-year`, `day-in-month`, `day-of-week-in-month`, `day-in-week`, `day-name`, `day-abbreviation`, `hour-in-day`, `minute-in-hour`, `second-in-minute`, `seconds`, `add`, `add-duration`, `difference`, `duration`, `sum` |
+| Dynamic | `http://exslt.org/dynamic` | `evaluate` (opt-in, see below) |
+
+Not supported, as in libexslt: `date:format-date`, `date:parse-date`,
+`dyn:map` and the `exsl:document` element; calling them throws
+`Unknown function`.
+
+- Current-time functions use the local time zone. For reproducible output set
+  `SOURCE_DATE_EPOCH` (seconds, UTC) or `processor.engine.clock = () => new Date(...)`.
+- `dyn:evaluate()` evaluates XPath built from strings, which often come from
+  the transformed data. It is disabled by default
+  (`function-available('dyn:evaluate')` is false); enable it only for trusted
+  input with `processor.engine.enableDynamicEvaluate = true` after
+  `importStylesheet()`.
+- Lengths and positions count Unicode characters, where libexslt counts bytes.
 
 ### Conformance Notes
 - CDATA sections count as text everywhere (string-value, `text()`, `xsl:value-of`, `xsl:copy-of`); a run of adjacent text and CDATA nodes is a single text node

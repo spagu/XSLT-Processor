@@ -3,7 +3,8 @@
  *
  * XSLT 1.0 section 12 adds functions to the XPath function library, and the
  * EXSLT `node-set()` extension (also under the msxsl namespace) is registered
- * by expanded name next to them. They live here rather than in `src/xpath` so
+ * by expanded name next to them, together with the other EXSLT functions of
+ * `./exslt/index.js`. They live here rather than in `src/xpath` so
  * that module stays a pure XPath 1.0 implementation; the engine registers this
  * map on its evaluator through
  * {@link XPathEvaluator#registerFunctions}.
@@ -15,10 +16,10 @@ import { formatNumber, DEFAULT_DECIMAL_FORMAT } from "./formatNumber.js";
 import { isXsltElementAvailable, XSLT_NAMESPACE } from "./elements.js";
 import { expandedFunctionName } from "../xpath/evaluator.js";
 import { rootNodeOf } from "../xpath/axes.js";
+import { EXSLT_COMMON, createExsltFunctions } from "./exslt/index.js";
 
 /** Namespace of the EXSLT common module (`exsl:node-set()`). */
-// A namespace name is an identifier, not a URL that is fetched; EXSLT defines it with http.
-export const EXSLT_COMMON_NAMESPACE = "http://exslt.org/common"; // NOSONAR
+export const EXSLT_COMMON_NAMESPACE = EXSLT_COMMON;
 
 /** Namespace of the MSXML extension functions (`msxsl:node-set()`). */
 export const MSXSL_NAMESPACE = "urn:schemas-microsoft-com:xslt";
@@ -127,6 +128,7 @@ export function createXsltFunctions(engine) {
   };
 
   return {
+    ...createExsltFunctions(engine),
     [expandedFunctionName(EXSLT_COMMON_NAMESPACE, "node-set")]: nodeSet,
     [expandedFunctionName(MSXSL_NAMESPACE, "node-set")]: nodeSet,
 
@@ -200,13 +202,14 @@ export function createXsltFunctions(engine) {
     /**
      * `function-available(name)` - reflects the evaluator function table. A
      * prefixed name is resolved through the stylesheet's namespace bindings,
-     * just as a call of that function would be.
+     * just as a call of that function would be. A function can report itself
+     * unavailable through an `isAvailable()` property (`dyn:evaluate()` does
+     * until the engine enables it).
      */
     "function-available": (args, ctx) => {
       const { prefix, localName } = splitQName(asString(args[0], ctx));
-      return (
-        evaluator.resolveFunction(localName, prefix, ctx.namespaces) !== null
-      );
+      const fn = evaluator.resolveFunction(localName, prefix, ctx.namespaces);
+      return fn !== null && fn.isAvailable?.() !== false;
     },
 
     /** `element-available(name)` - reflects the XSLT elements the engine runs. */
