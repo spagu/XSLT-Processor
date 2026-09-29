@@ -1441,8 +1441,8 @@ describe("XsltEngine", () => {
 
       assert.deepStrictEqual(engine.outputSettings.cdataSectionElements, [
         { namespaceUri: "urn:x", localName: "c" },
-        // Unprefixed names ignore the default namespace, as in libxslt
-        { namespaceUri: null, localName: "a" },
+        // Unprefixed names use the default namespace, as libxslt does (bug-140)
+        { namespaceUri: "urn:d", localName: "a" },
         {
           namespaceUri: "http://www.w3.org/XML/1998/namespace",
           localName: "e",
