@@ -251,3 +251,16 @@ function coverage, 97% branch coverage for 1.1.3):
 | `xsl:output` serializers | `src/xslt/serializer.test.js`, `src/xslt/outputRecovery.test.js` |
 | Command line tool | `src/cli.test.js` |
 | Reported issues | `src/regressions.test.js` |
+
+## Conformance test suite
+
+`npm run test:conformance` runs the test corpus of libxslt 1.1.45 (MIT), the
+XSLT engine behind Chrome's native `XSLTProcessor`, against this library. The
+corpus is downloaded and checksum-verified on first run; known failures are
+listed in [`tests/conformance/baseline.json`](../tests/conformance/baseline.json)
+and CI fails only on new failures. Details: [`tests/conformance/README.md`](../tests/conformance/README.md).
+
+| Result | Cases |
+|---|---|
+| Passing | 249 of 300 counted (83.0%) |
+| Skipped | 31 implementation-defined or extension-only cases |

@@ -1,4 +1,4 @@
-.PHONY: install test test-watch build lint format format-check clean docker-test docker-dev docker-build docker-clean help
+.PHONY: install test test-watch conformance conformance-baseline build lint format format-check clean docker-test docker-dev docker-build docker-clean help
 
 # Default target
 help:
@@ -6,6 +6,8 @@ help:
 	@echo "  install      - Install dependencies"
 	@echo "  test         - Run tests"
 	@echo "  test-watch   - Run tests in watch mode"
+	@echo "  conformance  - Run the XSLT 1.0 conformance suite (libxslt corpus)"
+	@echo "  conformance-baseline - Rewrite the conformance baseline"
 	@echo "  build        - Build distribution bundles"
 	@echo "  lint         - Run ESLint"
 	@echo "  format       - Format code with Prettier"
@@ -25,6 +27,15 @@ test:
 # Run tests in watch mode
 test-watch:
 	npm run test:watch
+
+# XSLT 1.0 conformance suite (downloads the corpus on first run)
+conformance:
+	npm run test:conformance:unit
+	npm run test:conformance
+
+# Rewrite tests/conformance/baseline.json from the current results
+conformance-baseline:
+	npm run test:conformance -- --update-baseline
 
 # Build distribution bundles
 build:

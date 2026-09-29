@@ -1,0 +1,66 @@
+name: Conformance
+
+# XSLT 1.0 conformance run against the libxslt regression test corpus.
+# Fails only on regressions: failing cases missing from
+# tests/conformance/baseline.json. See scripts/conformance.mjs.
+
+on:
+  push:
+    branches: [main, master, "release/**"]
+  pull_request:
+    branches: [main, master, "release/**"]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Cache conformance corpus
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tests/conformance/corpus
+          key: conformance-corpus-${{ hashFiles('scripts/fetch-conformance.mjs') }}
+
+      - name: Fetch corpus
+        run: npm run conformance:fetch
+
+      - name: Runner unit tests
+        run: npm run test:conformance:unit
+
+      - name: Run conformance suite
+        run: npm run test:conformance
+
+      - name: Write job summary
+        if: always()
+        run: |
+          if [ -f tests/conformance/report.md ]; then
+            cat tests/conformance/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: conformance-report
+          path: |
+            tests/conformance/report.md
+            tests/conformance/report.json
+          if-no-files-found: ignore

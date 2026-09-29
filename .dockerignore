@@ -44,3 +44,6 @@ tmp/
 temp/
 *.tmp
 .claude/
+
+# XSLT conformance corpus (downloaded on demand)
+tests/conformance/corpus/

@@ -58,10 +58,14 @@ export function headingAnchors(text) {
 export function brokenLinks(file) {
   const text = readFileSync(file, "utf8");
   const problems = [];
-  for (const [, target] of stripCode(text).matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
+  for (const [, target] of stripCode(text).matchAll(
+    /\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
+  )) {
     if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue; // http:, mailto:, ...
     const [path, anchor] = target.split("#");
-    const targetFile = path ? resolve(dirname(file), decodeURIComponent(path)) : resolve(file);
+    const targetFile = path
+      ? resolve(dirname(file), decodeURIComponent(path))
+      : resolve(file);
     if (!existsSync(targetFile)) {
       problems.push(`${file}: missing file ${target}`);
     } else if (anchor && targetFile.endsWith(".md")) {
@@ -75,7 +79,13 @@ export function brokenLinks(file) {
 
 const defaults = ["README.md", "SECURITY.md", "CONTRIBUTORS.md", "CHANGELOG.md"]
   .filter((f) => existsSync(f))
-  .concat(existsSync("docs") ? readdirSync("docs").filter((f) => f.endsWith(".md")).map((f) => join("docs", f)) : []);
+  .concat(
+    existsSync("docs")
+      ? readdirSync("docs")
+          .filter((f) => f.endsWith(".md"))
+          .map((f) => join("docs", f))
+      : [],
+  );
 const files = process.argv.slice(2).length ? process.argv.slice(2) : defaults;
 const problems = files.flatMap(brokenLinks);
 problems.forEach((p) => console.error(p));

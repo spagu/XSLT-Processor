@@ -36,3 +36,8 @@ temp/
 
 # Planning notes (not versioned)
 /tasks/
+
+# XSLT conformance corpus (downloaded) and generated reports
+/tests/conformance/corpus/
+/tests/conformance/report.json
+/tests/conformance/report.md

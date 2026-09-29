@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI, release and Docker builds install dependencies with `npm ci --ignore-scripts`, so lifecycle scripts of dependencies never run during builds (SonarCloud S6505).
 - The GitHub Pages workflow grants `pages: write` and `id-token: write` only to the deploy job instead of the whole workflow (SonarCloud S8233).
 
+### Added
+
+- **Conformance suite**: `npm run test:conformance` runs libxslt 1.1.45's test corpus (MIT, downloaded and checksum-verified) against the library, reports pass rates per spec section and fails CI only on regressions against `tests/conformance/baseline.json`. Initial result: 249 of 300 counted cases pass (83%).
+
 ### Documentation
 
 - README.md shortened from about 1,080 to 220 lines; the details moved to `docs/` (API, loaders, examples, CLI, conformance and known deviations, security limits, development, browser support, style guide) with an index in `docs/README.md`.
