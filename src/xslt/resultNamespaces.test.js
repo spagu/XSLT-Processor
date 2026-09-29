@@ -76,7 +76,7 @@ describe("xsl:element names", () => {
     );
     assert.strictEqual(
       run(xsl),
-      '<html xmlns="http://www.w3.org/1999/xhtml"><p/></html>',
+      '<html xmlns="http://www.w3.org/1999/xhtml"><p></p></html>',
     );
   });
 

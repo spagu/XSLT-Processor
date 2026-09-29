@@ -1,9 +1,15 @@
 /**
- * `xsl:number` counting and number-to-string conversion.
+ * `xsl:number` counting (XSLT 1.0 section 7.7).
  *
  * Counting is kept independent from the engine: callers pass a `matcher`
  * callback that answers "does this node match this XSLT pattern", which keeps
  * this module free of any XPath dependency and easy to test in isolation.
+ *
+ * Numbering every node of a long list would be quadratic if each call counted
+ * from scratch, so a call may be given a memo (one per instruction and
+ * transformation, see {@link isMemoizable}) remembering the numbers already
+ * computed: a later call stops at the nearest numbered node. The tree is
+ * walked with previousSibling/lastChild/parentNode only.
  */
 
 "use strict";
@@ -12,148 +18,189 @@
 const COUNTABLE_NODE_TYPES = new Set([1, 3, 4, 7, 8]);
 
 /**
- * Default `count` pattern behaviour: match nodes of the same type and name.
+ * The XPath node kind of a DOM node: CDATA sections are text nodes.
+ *
+ * @param {Node} node - Any node
+ * @returns {number} The DOM node type, 3 for CDATA sections
+ */
+function nodeKind(node) {
+  return node.nodeType === 4 ? 3 : node.nodeType;
+}
+
+/**
+ * Default `count` pattern: nodes of the same kind as the numbered node and,
+ * for elements and attributes, the same expanded name; for processing
+ * instructions, the same target.
  *
  * @param {Node} candidate - The node being considered
  * @param {Node} node - The node `xsl:number` is numbering
- * @returns {boolean} True when the candidate is of the same kind
+ * @returns {boolean} True when the candidate is counted
  */
 function matchesDefaultCount(candidate, node) {
-  if (candidate.nodeType !== node.nodeType) return false;
-  if (candidate.nodeType === 1) return candidate.nodeName === node.nodeName;
-  return true;
+  if (nodeKind(candidate) !== nodeKind(node)) return false;
+  switch (node.nodeType) {
+    case 1:
+    case 2:
+      return (
+        candidate.localName === node.localName &&
+        (candidate.namespaceURI ?? null) === (node.namespaceURI ?? null)
+      );
+    case 7:
+      return candidate.target === node.target;
+    default:
+      return true;
+  }
 }
 
 /**
- * Build the predicate used to decide whether a node is counted.
+ * Key telling apart the node kinds the default `count` pattern selects, so
+ * memoized numbers are only reused for the same kind.
  *
- * @param {Node} node - The node being numbered
- * @param {string|null} count - The `count` pattern, if any
- * @param {(node: Node, pattern: string) => boolean} matcher - Pattern matcher
- * @returns {(candidate: Node) => boolean} The predicate
+ * @param {Node} node - The numbered node
+ * @returns {string} e.g. `1|urn:x|item`
  */
-function createCountPredicate(node, count, matcher) {
-  if (count) return (candidate) => matcher(candidate, count);
-  return (candidate) => matchesDefaultCount(candidate, node);
+function defaultCountKey(node) {
+  if (node.nodeType === 7) return `7|${node.target}`;
+  if (node.nodeType === 1 || node.nodeType === 2) {
+    return `${node.nodeType}|${node.namespaceURI ?? ""}|${node.localName}`;
+  }
+  return String(nodeKind(node));
 }
 
 /**
- * Build the predicate marking `from` boundaries.
+ * Whether the numbers of an instruction may be memoized: its patterns must
+ * not depend on variables or on the current node, whose values may differ
+ * between invocations of the same instruction.
  *
- * @param {string|null} from - The `from` pattern, if any
- * @param {(node: Node, pattern: string) => boolean} matcher - Pattern matcher
- * @returns {(candidate: Node) => boolean} The predicate, always false without `from`
+ * @param {string|null} count - The `count` pattern
+ * @param {string|null} from - The `from` pattern
+ * @returns {boolean} True when counting only depends on the source tree
+ *
+ * @example
+ * isMemoizable("item", null);        // true
+ * isMemoizable("item[@k=$k]", null); // false
  */
-function createFromPredicate(from, matcher) {
-  if (!from) return () => false;
-  return (candidate) => matcher(candidate, from);
+export function isMemoizable(count, from) {
+  return !/\$|current\s*\(/.test(`${count ?? ""} ${from ?? ""}`);
 }
 
 /**
- * Count preceding siblings of a node that satisfy the predicate.
+ * Count a node's preceding siblings satisfying the predicate, stopping at the
+ * nearest one whose position is memoized.
  *
- * @param {Node} node - The node whose position is computed
+ * @param {Node} node - The (counted) node whose position is computed
  * @param {(candidate: Node) => boolean} isCounted - Counting predicate
+ * @param {WeakMap<Node, number>|null} positions - Memoized positions
  * @returns {number} The 1-based position
  */
-function siblingPosition(node, isCounted) {
+function siblingPosition(node, isCounted, positions) {
+  const own = positions?.get(node);
+  if (own !== undefined) return own;
+
   let position = 1;
-  let sibling = node.previousSibling;
-  while (sibling) {
+  for (let sibling = node.previousSibling; sibling;) {
+    const known = positions?.get(sibling);
+    if (known !== undefined) {
+      position += known;
+      break;
+    }
     if (COUNTABLE_NODE_TYPES.has(sibling.nodeType) && isCounted(sibling)) {
       position++;
     }
     sibling = sibling.previousSibling;
   }
+  positions?.set(node, position);
   return position;
 }
 
 /**
- * Collect nodes in document order up to and including a target node.
+ * The node before another one in document order (its preceding node or its
+ * parent).
  *
- * @param {Node} target - The node at which traversal stops
- * @returns {Node[]} Nodes in document order, ending with the target
+ * @param {Node} node - A child node
+ * @returns {Node|null} The previous node, null at the root
  */
-function nodesUpToTarget(target) {
-  const root = target.ownerDocument || target;
-  const result = [];
-  const stack = [root];
-
-  while (stack.length > 0) {
-    const current = stack.pop();
-    result.push(current);
-    if (current === target) break;
-    const children = current.childNodes;
-    if (children) {
-      for (let i = children.length - 1; i >= 0; i--) stack.push(children[i]);
-    }
-  }
-
-  return result;
+function previousInDocumentOrder(node) {
+  let previous = node.previousSibling;
+  if (!previous) return node.parentNode;
+  while (previous.lastChild) previous = previous.lastChild;
+  return previous;
 }
 
 /**
- * Count a node according to `level="single"`.
+ * Count the ancestors-or-self of a node according to `level="single"` or
+ * `level="multiple"`.
  *
  * @param {Node} node - The node being numbered
+ * @param {boolean} multiple - Whether every counted ancestor is numbered
  * @param {(candidate: Node) => boolean} isCounted - Counting predicate
  * @param {(candidate: Node) => boolean} isFrom - Boundary predicate
- * @returns {number[]} A single number, or an empty list when nothing matches
- */
-function countSingle(node, isCounted, isFrom) {
-  let current = node;
-  while (current && current.nodeType !== 9) {
-    if (isFrom(current)) return [];
-    if (isCounted(current)) return [siblingPosition(current, isCounted)];
-    current = current.parentNode;
-  }
-  return [];
-}
-
-/**
- * Count a node according to `level="multiple"`.
- *
- * @param {Node} node - The node being numbered
- * @param {(candidate: Node) => boolean} isCounted - Counting predicate
- * @param {(candidate: Node) => boolean} isFrom - Boundary predicate
+ * @param {WeakMap<Node, number>|null} positions - Memoized positions
  * @returns {number[]} Numbers from the outermost ancestor inwards
  */
-function countMultiple(node, isCounted, isFrom) {
+function countAncestors(node, multiple, isCounted, isFrom, positions) {
   const numbers = [];
   let current = node;
 
   while (current && current.nodeType !== 9) {
     if (isFrom(current)) break;
     if (isCounted(current)) {
-      numbers.unshift(siblingPosition(current, isCounted));
+      numbers.unshift(siblingPosition(current, isCounted, positions));
+      if (!multiple) break;
     }
-    current = current.parentNode;
+    current =
+      current.nodeType === 2 ? current.ownerElement : current.parentNode;
   }
 
   return numbers;
 }
 
 /**
- * Count a node according to `level="any"`.
+ * Count a node according to `level="any"`: walk backwards in document order
+ * until a `from` node, the root, or a node whose total is memoized.
  *
  * @param {Node} node - The node being numbered
  * @param {(candidate: Node) => boolean} isCounted - Counting predicate
  * @param {(candidate: Node) => boolean} isFrom - Boundary predicate
+ * @param {WeakMap<Node, number>|null} totals - Memoized totals
  * @returns {number[]} A single number, or an empty list when nothing matches
  */
-function countAny(node, isCounted, isFrom) {
+function countAny(node, isCounted, isFrom, totals) {
   let total = 0;
+  let current = node.nodeType === 2 ? node.ownerElement : node;
 
-  for (const candidate of nodesUpToTarget(node)) {
-    if (!COUNTABLE_NODE_TYPES.has(candidate.nodeType)) continue;
-    if (isFrom(candidate)) {
-      total = 0;
-      continue;
+  while (current && current.nodeType !== 9) {
+    const known = totals?.get(current);
+    if (known !== undefined) {
+      total += known;
+      break;
     }
-    if (isCounted(candidate)) total++;
+    if (COUNTABLE_NODE_TYPES.has(current.nodeType)) {
+      if (isFrom(current)) break;
+      if (isCounted(current)) total++;
+    }
+    current = previousInDocumentOrder(current);
   }
 
+  totals?.set(node, total);
   return total > 0 ? [total] : [];
+}
+
+/**
+ * The memo tables of one kind of counted node.
+ *
+ * @param {Map<string, {positions: WeakMap, totals: WeakMap}>|null} memo - The instruction's memo
+ * @param {string} key - The counted kind
+ * @returns {{positions: WeakMap, totals: WeakMap}|null} The tables, null without memo
+ */
+function memoTables(memo, key) {
+  if (!memo) return null;
+  let tables = memo.get(key);
+  if (!tables) {
+    tables = { positions: new WeakMap(), totals: new WeakMap() };
+    memo.set(key, tables);
+  }
+  return tables;
 }
 
 /**
@@ -162,17 +209,29 @@ function countAny(node, isCounted, isFrom) {
  * @param {Node} node - The current node
  * @param {{level?: string, count?: string|null, from?: string|null}} options - Instruction attributes
  * @param {(node: Node, pattern: string) => boolean} matcher - XSLT pattern matcher
+ * @param {Map|null} [memo] - Memo of the instruction for the current
+ *   transformation (a Map owned by the caller), or null to count from scratch
  * @returns {number[]} The computed numbers, outermost first
  *
  * @example
  * countXsltNumber(item, { level: 'any' }, matcher); // [2]
  */
-export function countXsltNumber(node, options, matcher) {
+export function countXsltNumber(node, options, matcher, memo = null) {
   const { level = "single", count = null, from = null } = options;
-  const isCounted = createCountPredicate(node, count, matcher);
-  const isFrom = createFromPredicate(from, matcher);
+  const isCounted = count
+    ? (candidate) => matcher(candidate, count)
+    : (candidate) => matchesDefaultCount(candidate, node);
+  const isFrom = from ? (candidate) => matcher(candidate, from) : () => false;
+  const tables = memoTables(memo, count ? "" : defaultCountKey(node));
 
-  if (level === "any") return countAny(node, isCounted, isFrom);
-  if (level === "multiple") return countMultiple(node, isCounted, isFrom);
-  return countSingle(node, isCounted, isFrom);
+  if (level === "any") {
+    return countAny(node, isCounted, isFrom, tables?.totals ?? null);
+  }
+  return countAncestors(
+    node,
+    level === "multiple",
+    isCounted,
+    isFrom,
+    tables?.positions ?? null,
+  );
 }

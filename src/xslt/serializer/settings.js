@@ -18,19 +18,63 @@ function isYes(value) {
 }
 
 /**
- * Convert a `cdata-section-elements` value into a lookup set.
+ * Lookup key of an expanded name, in Clark notation: `{uri}local`, or the
+ * bare local name for a name in no namespace.
  *
- * @param {string|string[]|undefined} value - Whitespace separated names or array
- * @returns {Set<string>} Element names requiring CDATA sections
+ * @param {string|null|undefined} namespaceUri - Namespace URI, empty for none
+ * @param {string} localName - Local name
+ * @returns {string} The key
+ *
+ * @example
+ * expandedNameKey("urn:p", "c"); // "{urn:p}c"
+ * expandedNameKey(null, "c");    // "c"
  */
-function toNameSet(value) {
-  if (Array.isArray(value)) {
-    return new Set(value);
+export function expandedNameKey(namespaceUri, localName) {
+  return namespaceUri ? `{${namespaceUri}}${localName}` : localName;
+}
+
+/**
+ * @typedef {Object} CdataNames
+ * @property {Set<string>} expanded - Expanded name keys ({@link expandedNameKey})
+ * @property {Array<{prefix: string, localName: string}>} qnames - Prefixed
+ *   names whose prefix is resolved against the result element
+ */
+
+/**
+ * Normalize a `cdata-section-elements` value.
+ *
+ * Entries resolved by the engine, `{namespaceUri, localName}`, are exact
+ * expanded names. A plain string QName carries no namespace bindings: an
+ * unprefixed name is taken to be in no namespace, and a prefixed one is kept
+ * aside to be resolved with the in-scope namespaces of each result element.
+ *
+ * @param {string|Array<string|{namespaceUri: ?string, localName: string}>|undefined} value -
+ *   Whitespace separated QNames, or an array of QNames and expanded names
+ * @returns {CdataNames} The names
+ */
+function toCdataNames(value) {
+  const entries =
+    typeof value === "string" ? value.split(/\s+/) : [value ?? []].flat();
+  const expanded = new Set();
+  const qnames = [];
+
+  for (const entry of entries) {
+    if (typeof entry !== "string") {
+      expanded.add(expandedNameKey(entry.namespaceUri, entry.localName));
+      continue;
+    }
+    const colon = entry.indexOf(":");
+    if (colon === -1) {
+      if (entry) expanded.add(entry);
+    } else {
+      qnames.push({
+        prefix: entry.slice(0, colon),
+        localName: entry.slice(colon + 1),
+      });
+    }
   }
-  if (typeof value === "string") {
-    return new Set(value.split(/\s+/).filter(Boolean));
-  }
-  return new Set();
+
+  return { expanded, qnames };
 }
 
 /**
@@ -114,6 +158,7 @@ export function resolveOutputSettings(outputSettings, node) {
     declared && declared !== "auto"
       ? declared.toLowerCase()
       : detectOutputMethod(node);
+  const cdata = toCdataNames(raw.cdataSectionElements);
 
   return {
     method,
@@ -125,6 +170,7 @@ export function resolveOutputSettings(outputSettings, node) {
     doctypePublic: raw.doctypePublic || null,
     doctypeSystem: raw.doctypeSystem || null,
     mediaType: raw.mediaType || null,
-    cdataSectionElements: toNameSet(raw.cdataSectionElements),
+    cdataSectionElements: cdata.expanded,
+    cdataSectionQNames: cdata.qnames,
   };
 }

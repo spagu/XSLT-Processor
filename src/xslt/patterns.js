@@ -22,107 +22,18 @@
  * @module xslt/patterns
  */
 
-import { XPathContext } from "../xpath/evaluator.js";
 import { childAxis } from "../xpath/axes.js";
 import { ROOT, compilePattern } from "./patternCompiler.js";
+import {
+  MatchScope,
+  isNamespaceDeclaration,
+  isRoot,
+  isStaticAnchor,
+  parentOf,
+  rootOf,
+} from "./matchScope.js";
 
 export { compilePattern };
-
-const XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/";
-const EMPTY_VARIABLES = Object.freeze({});
-
-/**
- * Parent of a node in the XPath data model.
- *
- * @param {Node} node - Any node
- * @returns {Node|null} The owner element of an attribute, else the parent
- */
-function parentOf(node) {
-  return node.nodeType === 2 ? node.ownerElement : node.parentNode;
-}
-
-/**
- * Whether a node is a root node (a document or a result tree fragment).
- *
- * @param {Node|null} node - Any node
- * @returns {boolean} True for document and document fragment nodes
- */
-function isRoot(node) {
-  return node !== null && (node.nodeType === 9 || node.nodeType === 11);
-}
-
-/**
- * Whether an attribute is a namespace declaration, which XPath does not
- * expose on the attribute axis.
- *
- * @param {Attr} attribute - An attribute node
- * @returns {boolean} True for `xmlns` and `xmlns:*` attributes
- */
-function isNamespaceDeclaration(attribute) {
-  return (
-    attribute.namespaceURI === XMLNS_NAMESPACE ||
-    attribute.name === "xmlns" ||
-    attribute.name.startsWith("xmlns:")
-  );
-}
-
-/**
- * State of a single match call: lazily merges the XSLT variables once.
- */
-class MatchScope {
-  /**
-   * @param {object|null} host - XSLT context (variables, parameters, namespaces)
-   * @param {Object<string, string>} [namespaces] - Prefix bindings, when they
-   *   differ from the host's (e.g. those in scope on an xsl:template)
-   */
-  constructor(host, namespaces) {
-    this.host = host;
-    this.namespaces = namespaces ?? host?.namespaces ?? {};
-    this.variables = null;
-  }
-
-  /**
-   * Build an XPath context for evaluating a predicate or anchor call.
-   *
-   * @param {Node} node - Context node
-   * @param {number} position - Context position
-   * @param {number} size - Context size
-   * @returns {XPathContext} The evaluation context
-   */
-  context(node, position, size) {
-    if (!this.variables) {
-      this.variables = this.host?.xpathVariables ?? {
-        ...this.host?.variables,
-        ...this.host?.parameters,
-      };
-    }
-    return new XPathContext(
-      node,
-      position,
-      size,
-      this.variables,
-      this.namespaces,
-      this.host,
-    );
-  }
-
-  /**
-   * Build a cheap XPath context for node tests (namespaces only).
-   *
-   * @param {Node} node - Context node
-   * @returns {XPathContext} The evaluation context
-   */
-  testContext(node) {
-    return new XPathContext(
-      node,
-      1,
-      1,
-      EMPTY_VARIABLES,
-      this.namespaces,
-      this.host,
-    );
-  }
-}
 
 /**
  * Matches nodes against XSLT patterns with an XPath evaluator.
@@ -135,32 +46,37 @@ export class PatternMatcher {
     this.evaluator = evaluator;
     this.compiled = new Map();
     this.positions = new WeakMap();
+    this.anchors = new WeakMap();
   }
 
   /**
-   * Forget cached sibling positions, e.g. before a new transformation (the
-   * source tree may have been modified in between).
+   * Forget cached sibling positions and anchor node-sets, e.g. before a new
+   * transformation (the source tree may have been modified in between).
    *
    * @returns {void}
    */
   reset() {
     this.positions = new WeakMap();
+    this.anchors = new WeakMap();
   }
 
   /**
-   * Compile a pattern, reusing the cached form. An invalid pattern compiles
-   * to no alternatives and so never matches.
+   * Compile a pattern, reusing the cached form.
    *
    * @param {string} pattern - The XSLT pattern
    * @returns {object[]} The compiled alternatives
+   * @throws {Error} When the string is not a valid pattern (XSLT 1.0
+   *   section 5.2); the message names the pattern
    */
   compile(pattern) {
     let compiled = this.compiled.get(pattern);
     if (!compiled) {
       try {
         compiled = compilePattern(pattern);
-      } catch {
-        compiled = [];
+      } catch (error) {
+        throw new Error(`Invalid pattern "${pattern}": ${error.message}`, {
+          cause: error,
+        });
       }
       this.compiled.set(pattern, compiled);
     }
@@ -361,7 +277,10 @@ export class PatternMatcher {
   }
 
   /**
-   * Evaluate the `id()`/`key()` anchor of a pattern relative to a node.
+   * The nodes selected by the `id()`/`key()` anchor of a pattern relative to
+   * a node. With literal arguments the set only depends on the node's tree
+   * and the prefixes in scope, so it is computed once per root until
+   * {@link PatternMatcher#reset}, instead of once per candidate node.
    *
    * @param {object} anchor - Function call AST
    * @param {Node} node - Node providing the document
@@ -369,6 +288,38 @@ export class PatternMatcher {
    * @returns {Set<Node>} The anchor nodes
    */
   anchorNodes(anchor, node, scope) {
+    if (!isStaticAnchor(anchor)) {
+      return this.evaluateAnchor(anchor, node, scope);
+    }
+
+    const root = rootOf(node);
+    let byAnchor = this.anchors.get(root);
+    if (!byAnchor) {
+      byAnchor = new Map();
+      this.anchors.set(root, byAnchor);
+    }
+    let byScope = byAnchor.get(anchor);
+    if (!byScope) {
+      byScope = new Map();
+      byAnchor.set(anchor, byScope);
+    }
+    let nodes = byScope.get(scope.namespaces);
+    if (!nodes) {
+      nodes = this.evaluateAnchor(anchor, node, scope);
+      byScope.set(scope.namespaces, nodes);
+    }
+    return nodes;
+  }
+
+  /**
+   * Evaluate the `id()`/`key()` anchor of a pattern relative to a node.
+   *
+   * @param {object} anchor - Function call AST
+   * @param {Node} node - Node providing the document
+   * @param {MatchScope} scope - Match state
+   * @returns {Set<Node>} The anchor nodes
+   */
+  evaluateAnchor(anchor, node, scope) {
     const result = this.evaluator.evaluate(anchor, scope.context(node, 1, 1));
     return new Set(Array.isArray(result) ? result : []);
   }

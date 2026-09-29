@@ -5,7 +5,7 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
 import { JSDOM } from "jsdom";
-import { countXsltNumber } from "./number.js";
+import { countXsltNumber, isMemoizable } from "./number.js";
 
 let dom;
 
@@ -157,6 +157,107 @@ describe("countXsltNumber", () => {
     const text = doc.documentElement.lastChild;
 
     assert.deepStrictEqual(countXsltNumber(text, {}, matcher), [2]);
+  });
+
+  it("compares elements by expanded name by default", () => {
+    const doc = parseXML(
+      "<root xmlns:p='urn:p' xmlns:q='urn:p'><p:a/><a/><q:a/></root>",
+    );
+    const [first, plain, second] = doc.documentElement.childNodes;
+
+    assert.deepStrictEqual(countXsltNumber(second, {}, matcher), [2]);
+    assert.deepStrictEqual(countXsltNumber(first, {}, matcher), [1]);
+    assert.deepStrictEqual(countXsltNumber(plain, {}, matcher), [1]);
+  });
+
+  it("counts processing instructions with the same target by default", () => {
+    const doc = parseXML("<root><?x 1?><?y 2?><?x 3?></root>");
+    const [, y, x] = doc.documentElement.childNodes;
+
+    assert.deepStrictEqual(countXsltNumber(x, {}, matcher), [2]);
+    assert.deepStrictEqual(countXsltNumber(y, {}, matcher), [1]);
+    assert.deepStrictEqual(
+      countXsltNumber(x, { level: "any" }, matcher, new Map()),
+      [2],
+    );
+  });
+
+  it("counts CDATA sections and text nodes as the same kind", () => {
+    const doc = parseXML("<root><![CDATA[a]]><e/>b</root>");
+    const text = doc.documentElement.lastChild;
+
+    assert.deepStrictEqual(countXsltNumber(text, {}, matcher), [2]);
+  });
+
+  it("numbers an attribute's owner element when it is counted", () => {
+    const doc = parseXML("<root><i/><i a='1'/></root>");
+    const attribute = doc.getElementsByTagName("i")[1].getAttributeNode("a");
+
+    assert.deepStrictEqual(countXsltNumber(attribute, {}, matcher), [1]);
+    assert.deepStrictEqual(
+      countXsltNumber(attribute, { count: "i" }, matcher),
+      [2],
+    );
+    assert.deepStrictEqual(
+      countXsltNumber(attribute, { level: "any", count: "i" }, matcher),
+      [2],
+    );
+  });
+
+  it("counts within a detached fragment only", () => {
+    const doc = parseXML("<root><i/><i/></root>");
+    const fragment = doc.createDocumentFragment();
+    fragment.appendChild(doc.createElement("i"));
+
+    assert.deepStrictEqual(
+      countXsltNumber(fragment.firstChild, { level: "any" }, matcher),
+      [1],
+    );
+  });
+
+  it("reuses memoized numbers and matches the unmemoized results", () => {
+    const doc = parseXML(
+      "<r><s><i/><x/><i/></s><f/><s><i/><i/><x/><i/></s></r>",
+    );
+    const items = Array.from(doc.getElementsByTagName("i"));
+    const calls = { count: 0 };
+    const counting = (node, pattern) => {
+      calls.count++;
+      return matcher(node, pattern);
+    };
+    for (const options of [
+      { level: "any", count: "i" },
+      { level: "any", count: "i", from: "f" },
+      { level: "single", count: "i" },
+      { level: "multiple", count: "s|i" },
+      { level: "any" },
+    ]) {
+      const memo = new Map();
+      const multi = (node, pattern) =>
+        pattern.split("|").some((p) => counting(node, p));
+      const expected = items.map((item) =>
+        countXsltNumber(item, options, multi),
+      );
+      calls.count = 0;
+      const memoized = items.map((item) =>
+        countXsltNumber(item, options, multi, memo),
+      );
+      assert.deepStrictEqual(memoized, expected, JSON.stringify(options));
+      // Numbering again only hits the memo
+      const before = calls.count;
+      const again = items.map((item) =>
+        countXsltNumber(item, options, multi, memo),
+      );
+      assert.deepStrictEqual(again, expected);
+      assert.ok(calls.count - before <= items.length * 6);
+    }
+  });
+
+  it("memoizes only patterns without variables or current()", () => {
+    assert.strictEqual(isMemoizable(null, null), true);
+    assert.strictEqual(isMemoizable("i[@k='1']", "s"), true);
+    assert.strictEqual(isMemoizable("i[@k=$k]", null), false);
+    assert.strictEqual(isMemoizable(null, "s[@k=current()/@k]"), false);
   });
 
   it("should ignore nodes that cannot be counted", () => {

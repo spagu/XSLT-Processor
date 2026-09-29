@@ -599,7 +599,7 @@ describe("serializeResult", () => {
         omitXmlDeclaration: "yes",
       });
 
-      assert.strictEqual(output, "<html><body><br /><p/></body></html>");
+      assert.strictEqual(output, "<html><body><br /><p></p></body></html>");
     });
   });
 

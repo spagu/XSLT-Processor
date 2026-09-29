@@ -1,8 +1,10 @@
 /**
  * `xsl:key` indexing for the XSLT `key()` function.
  *
- * Indexes are built lazily, once per (document, key name) pair, and cached in a
- * `WeakMap` so source documents stay garbage collectable. The registry is
+ * Indexes are built lazily, once per (root node, key name) pair, and cached in
+ * a `WeakMap` so source documents stay garbage collectable. The root node is
+ * the document of the context node, or the DocumentFragment of a result tree
+ * fragment converted with `exsl:node-set()` (see `rootNodeOf` in xpath/axes). The registry is
  * deliberately decoupled from the engine: pattern matching and `use` evaluation
  * are injected as callbacks.
  */
@@ -23,7 +25,7 @@
  */
 
 /**
- * Lazily built, per-document indexes for all declared keys.
+ * Lazily built, per-tree indexes for all declared keys.
  */
 export class KeyIndexRegistry {
   /**
@@ -56,7 +58,7 @@ export class KeyIndexRegistry {
    *
    * @param {string} name - The key name
    * @param {string|string[]} values - One key value, or several to union
-   * @param {Document} doc - The document to search
+   * @param {Node} doc - Root of the tree to search (Document or DocumentFragment)
    * @returns {Node[]} Matching nodes in document order, without duplicates
    * @throws {Error} When the key name was never declared
    *
@@ -83,7 +85,7 @@ export class KeyIndexRegistry {
    * Get (building if needed) the index of one key for one document.
    *
    * @param {string} name - The key name
-   * @param {Document} doc - The document being indexed
+   * @param {Node} doc - Root of the tree being indexed
    * @returns {KeyIndex} The index
    */
   getIndex(name, doc) {
@@ -107,7 +109,7 @@ export class KeyIndexRegistry {
    * of that key name.
    *
    * @param {string} name - The key name
-   * @param {Document} doc - The document being indexed
+   * @param {Node} doc - Root of the tree being indexed
    * @returns {KeyIndex} The index
    */
   buildIndex(name, doc) {

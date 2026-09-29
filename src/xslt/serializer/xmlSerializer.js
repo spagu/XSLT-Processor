@@ -6,9 +6,11 @@
  * the html serializer, which overrides the dialect hooks defined here.
  */
 
-import { TEXT_MODE, VOID_ELEMENTS } from "./constants.js";
+import { TEXT_MODE, VOID_ELEMENTS, XHTML_NAMESPACE } from "./constants.js";
 import { escapeXmlAttribute, escapeXmlText } from "./escape.js";
+import { characterReference } from "./encoding.js";
 import { BaseWriter } from "./baseWriter.js";
+import { expandedNameKey } from "./settings.js";
 
 export class XmlWriter extends BaseWriter {
   /**
@@ -62,16 +64,50 @@ export class XmlWriter extends BaseWriter {
   }
 
   /**
-   * Determine how the character data children of an element are written.
+   * Determine how the character data children of an element are written:
+   * as CDATA sections when the expanded name of the element is listed in
+   * `cdata-section-elements` (XSLT 1.0 section 16.1).
    *
    * @param {Element} element - Parent element
    * @returns {string} A {@link TEXT_MODE} value
    */
   childTextMode(element) {
-    const names = this.settings.cdataSectionElements;
-    return names.has(element.nodeName) || names.has(element.localName)
+    return this.isCdataSectionElement(element)
       ? TEXT_MODE.CDATA
       : TEXT_MODE.ESCAPE;
+  }
+
+  /**
+   * Whether an element is listed in `cdata-section-elements`. Prefixed names
+   * the engine passed unresolved are resolved with the element's in-scope
+   * namespaces.
+   *
+   * @param {Element} element - Element to test
+   * @returns {boolean} True when its text is written as CDATA sections
+   */
+  isCdataSectionElement(element) {
+    const { cdataSectionElements, cdataSectionQNames = [] } = this.settings;
+    const namespaceUri = element.namespaceURI || null;
+    const { localName } = element;
+    if (cdataSectionElements.has(expandedNameKey(namespaceUri, localName))) {
+      return true;
+    }
+    return cdataSectionQNames.some(
+      (qname) =>
+        qname.localName === localName &&
+        namespaceUri !== null &&
+        element.lookupNamespaceURI(qname.prefix) === namespaceUri,
+    );
+  }
+
+  /**
+   * Markup the serializer itself adds as the first child of an element.
+   *
+   * @param {Element} _element - Element being written
+   * @returns {string} Always empty for XML output
+   */
+  leadingChildMarkup(_element) {
+    return "";
   }
 
   /**
@@ -87,12 +123,32 @@ export class XmlWriter extends BaseWriter {
   /**
    * Build the markup closing an element that has no children.
    *
+   * XHTML elements follow the XHTML compatibility guidelines, as libxml2
+   * (Chrome) and the DOM serializer (Firefox) do: void elements become
+   * `<br />` and every other empty element gets an explicit end tag, because
+   * `<script/>` or `<div/>` break when XHTML reaches an HTML parser. Other
+   * elements use the XML empty-element tag.
+   *
    * @param {Element} element - Empty element
-   * @param {string} _name - Element name as written
+   * @param {string} name - Element name as written
    * @returns {string} Markup terminating the start tag
    */
-  emptyElementMarkup(element, _name) {
-    return this.xhtml && this.isVoidElement(element) ? " />" : "/>";
+  emptyElementMarkup(element, name) {
+    if (!this.followsXhtmlConventions(element)) return "/>";
+    return this.isVoidElement(element) ? " />" : `></${name}>`;
+  }
+
+  /**
+   * Whether an element is written with the XHTML empty-element conventions:
+   * elements in the XHTML namespace, and namespace-less elements when the
+   * output method is `xhtml`.
+   *
+   * @param {Element} element - Element to test
+   * @returns {boolean} True for XHTML elements
+   */
+  followsXhtmlConventions(element) {
+    const namespace = element.namespaceURI || null;
+    return namespace === XHTML_NAMESPACE || (this.xhtml && namespace === null);
   }
 
   /**
@@ -112,7 +168,7 @@ export class XmlWriter extends BaseWriter {
    * @returns {string} Escaped text
    */
   escapeText(value) {
-    return escapeXmlText(value);
+    return this.encodeReferences(escapeXmlText(value));
   }
 
   /**
@@ -122,6 +178,16 @@ export class XmlWriter extends BaseWriter {
    * @returns {string} Escaped value
    */
   escapeAttribute(value) {
-    return escapeXmlAttribute(value);
+    return this.encodeReferences(escapeXmlAttribute(value));
+  }
+
+  /**
+   * Reference to a character the output encoding cannot represent.
+   *
+   * @param {number} codePoint - The code point
+   * @returns {string} A numeric character reference
+   */
+  characterReference(codePoint) {
+    return characterReference(codePoint);
   }
 }

@@ -95,12 +95,19 @@ function prefixList(value) {
     .map((prefix) => (prefix === "#default" ? "" : prefix));
 }
 
+/** Attributes whose prefixes are excluded from the result tree. */
+const EXCLUSION_ATTRIBUTES = [
+  "exclude-result-prefixes",
+  "extension-element-prefixes",
+];
+
 /**
  * Read the exclusion attributes of one stylesheet element: unqualified on
  * `xsl:stylesheet`, `xsl:`-qualified on literal result elements.
  *
  * @param {Element} element - A stylesheet element
- * @returns {string[]} Excluded prefixes declared on this element
+ * @returns {Array<{prefix: string, attribute: string}>} Excluded prefixes
+ *   declared on this element, with the attribute declaring each
  */
 function ownExclusions(element) {
   const isXslt = element.namespaceURI === XSLT_NAMESPACE;
@@ -108,16 +115,17 @@ function ownExclusions(element) {
     isXslt
       ? element.getAttribute(localName)
       : element.getAttributeNS(XSLT_NAMESPACE, localName);
-  return [
-    ...prefixList(read("exclude-result-prefixes")),
-    ...prefixList(read("extension-element-prefixes")),
-  ];
+  return EXCLUSION_ATTRIBUTES.flatMap((attribute) =>
+    prefixList(read(attribute)).map((prefix) => ({ prefix, attribute })),
+  );
 }
 
 /**
  * Namespace URIs excluded from the result tree around a stylesheet element:
  * the XSLT namespace, plus the namespaces of every excluded or extension
- * prefix declared on the element or its ancestors.
+ * prefix declared on the element or its ancestors. A prefix that is not
+ * declared (including `#all`, which XSLT 1.0 does not know) is reported with
+ * console.warn and ignored.
  *
  * @param {Node|null} node - A stylesheet element
  * @returns {Set<string>} Excluded namespace URIs
@@ -133,8 +141,17 @@ function excludedNamespaces(node) {
   if (prefixes.length > 0) {
     const scope = inScopeNamespaces(node);
     excluded = new Set(excluded);
-    for (const prefix of prefixes) {
-      if (scope[prefix]) excluded.add(scope[prefix]);
+    for (const { prefix, attribute } of prefixes) {
+      const uri = resolvePrefix(scope, prefix);
+      if (uri) {
+        excluded.add(uri);
+      } else {
+        // An error in XSLT 1.0 (section 7.1.1) that libxslt reports and
+        // recovers from; reported once, as the result is cached per element
+        console.warn(
+          `XSLT: ${attribute}: undefined namespace prefix "${prefix || "#default"}" is ignored`,
+        );
+      }
     }
   }
   exclusions.set(node, excluded);

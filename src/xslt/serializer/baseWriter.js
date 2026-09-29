@@ -14,6 +14,11 @@ import {
 } from "./constants.js";
 import { wrapCdata } from "./escape.js";
 import {
+  getOutputEncoding,
+  replaceUnencodable,
+  splitUnencodable,
+} from "./encoding.js";
+import {
   collectNamespaceDeclarations,
   createNamespaceScope,
 } from "./namespaces.js";
@@ -44,6 +49,37 @@ export class BaseWriter {
     this.settings = settings;
     this.xhtml = options.xhtml === true;
     this.parts = [];
+    this.encoding = getOutputEncoding(settings.encoding);
+    this.reference = (codePoint) => this.characterReference(codePoint);
+  }
+
+  /**
+   * Replace the characters the output encoding cannot represent with
+   * references (XSLT 1.0 section 16.1). Only escaped character data and
+   * attribute values go through here: comments, processing instructions and
+   * unescaped text cannot hold references and are written unchanged.
+   *
+   * @param {string} text - Escaped text or attribute value
+   * @returns {string} Text holding only representable characters
+   */
+  encodeReferences(text) {
+    return replaceUnencodable(text, this.encoding, this.reference);
+  }
+
+  /**
+   * Write text as CDATA sections. A character the output encoding cannot
+   * represent ends the section and is written as a reference between two
+   * sections, since a CDATA section cannot hold references.
+   *
+   * @param {string} value - Text content
+   * @returns {string} CDATA sections and references
+   */
+  cdataMarkup(value) {
+    return splitUnencodable(value, this.encoding)
+      .map(({ text, representable }) =>
+        representable ? wrapCdata(text) : this.reference(text.codePointAt(0)),
+      )
+      .join("");
   }
 
   /**
@@ -147,13 +183,14 @@ export class BaseWriter {
         this.attributesMarkup(element),
     );
 
-    if (!element.firstChild) {
+    const leading = this.leadingChildMarkup(element);
+    if (!element.firstChild && !leading) {
       this.parts.push(this.emptyElementMarkup(element, name));
       return;
     }
 
     this.parts.push(">");
-    this.writeElementChildren(element, namespaces.scope, depth);
+    this.writeElementChildren(element, namespaces.scope, depth, leading);
     this.parts.push(`</${name}>`);
   }
 
@@ -163,18 +200,22 @@ export class BaseWriter {
    * @param {Element} element - Parent element
    * @param {Map<string, string>} scope - Namespace scope in effect
    * @param {number} depth - Depth of the parent element
+   * @param {string} [leading] - Markup the serializer adds before the
+   *   children, indented like a child (see leadingChildMarkup)
    * @returns {void}
    */
-  writeElementChildren(element, scope, depth) {
+  writeElementChildren(element, scope, depth, leading = "") {
     const textMode = this.childTextMode(element);
     const indentable = this.indentableChildren(element, textMode);
 
     if (!indentable) {
+      this.parts.push(leading);
       this.writeChildNodes(element, scope, depth, textMode);
       return;
     }
 
     const childIndent = `\n${INDENT_UNIT.repeat(depth + 1)}`;
+    if (leading) this.parts.push(childIndent, leading);
     for (const child of indentable) {
       this.parts.push(childIndent);
       this.writeNode(child, scope, depth + 1, textMode);
@@ -259,7 +300,7 @@ export class BaseWriter {
 
     const mode = this.resolveTextMode(node, textMode);
     if (mode === TEXT_MODE.CDATA) {
-      this.parts.push(wrapCdata(value));
+      this.parts.push(this.cdataMarkup(value));
     } else if (mode === TEXT_MODE.RAW) {
       this.parts.push(value);
     } else {
