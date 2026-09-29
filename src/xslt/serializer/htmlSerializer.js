@@ -8,12 +8,46 @@
  */
 
 import {
+  NODE_TYPE,
   PRESERVE_SPACE_ELEMENTS,
   RAW_TEXT_ELEMENTS,
   TEXT_MODE,
+  URI_ATTRIBUTES,
 } from "./constants.js";
-import { escapeHtmlAttribute, escapeHtmlText } from "./escape.js";
+import {
+  escapeHtmlAttribute,
+  escapeHtmlText,
+  escapeUriNonAscii,
+} from "./escape.js";
+import { htmlCharacterReference } from "./htmlEntities.js";
 import { XmlWriter } from "./xmlSerializer.js";
+
+/**
+ * Whether a `head` element already declares the content type or character
+ * set: a `meta` child with `http-equiv="Content-Type"` or a `charset`
+ * attribute (names and the http-equiv value compared case-insensitively).
+ *
+ * @param {Element} head - The head element
+ * @returns {boolean} True when no meta element has to be added
+ */
+function hasContentTypeMeta(head) {
+  for (const child of head.childNodes) {
+    if (
+      child.nodeType !== NODE_TYPE.ELEMENT ||
+      child.localName.toLowerCase() !== "meta"
+    ) {
+      continue;
+    }
+    for (const { name, value } of child.attributes) {
+      const lower = name.toLowerCase();
+      if (lower === "charset") return true;
+      if (lower === "http-equiv" && value.toLowerCase() === "content-type") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 export class HtmlWriter extends XmlWriter {
   /**
@@ -106,7 +140,8 @@ export class HtmlWriter extends XmlWriter {
   }
 
   /**
-   * Boolean attributes are minimized to their name alone.
+   * Boolean attributes are minimized to their name alone; the non-ASCII
+   * characters of URI attributes are %-escaped.
    *
    * @param {Attr} attribute - Attribute to write
    * @returns {string} Attribute markup, starting with a space
@@ -116,7 +151,32 @@ export class HtmlWriter extends XmlWriter {
     if (String(value).toLowerCase() === name.toLowerCase()) {
       return ` ${name}`;
     }
-    return ` ${name}="${this.escapeAttribute(value)}"`;
+    const isUri =
+      !attribute.namespaceURI &&
+      URI_ATTRIBUTES.has(attribute.localName.toLowerCase());
+    const written = isUri ? escapeUriNonAscii(value) : value;
+    return ` ${name}="${this.escapeAttribute(written)}"`;
+  }
+
+  /**
+   * The content type `meta` element libxslt (and so Chrome) writes as the
+   * first child of an HTML `head` element that does not already have one
+   * (XSLT 1.0 section 16.2 recommends it). Firefox does not add it.
+   *
+   * @param {Element} element - Element being written
+   * @returns {string} The meta element markup, or an empty string
+   */
+  leadingChildMarkup(element) {
+    if (
+      element.namespaceURI ||
+      element.localName.toLowerCase() !== "head" ||
+      hasContentTypeMeta(element)
+    ) {
+      return "";
+    }
+    const { mediaType, encoding } = this.settings;
+    const content = `${mediaType || "text/html"}; charset=${encoding}`;
+    return `<meta http-equiv="Content-Type" content="${this.escapeAttribute(content)}">`;
   }
 
   /**
@@ -126,7 +186,7 @@ export class HtmlWriter extends XmlWriter {
    * @returns {string} Escaped text
    */
   escapeText(value) {
-    return escapeHtmlText(value);
+    return this.encodeReferences(escapeHtmlText(value));
   }
 
   /**
@@ -136,6 +196,17 @@ export class HtmlWriter extends XmlWriter {
    * @returns {string} Escaped value
    */
   escapeAttribute(value) {
-    return escapeHtmlAttribute(value);
+    return this.encodeReferences(escapeHtmlAttribute(value));
+  }
+
+  /**
+   * Reference to a character the output encoding cannot represent: an HTML
+   * entity reference where HTML 4.01 has one, as libxslt writes.
+   *
+   * @param {number} codePoint - The code point
+   * @returns {string} An entity or numeric character reference
+   */
+  characterReference(codePoint) {
+    return htmlCharacterReference(codePoint);
   }
 }

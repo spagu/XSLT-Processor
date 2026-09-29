@@ -19,12 +19,7 @@ const XML_ATTRIBUTE_ESCAPES = {
   "\r": "&#13;",
 };
 
-const HTML_ATTRIBUTE_ESCAPES = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-};
+const HTML_ATTRIBUTE_ESCAPES = { "&": "&amp;", '"': "&quot;" };
 
 /**
  * Replace every character matched by a pattern using a lookup table.
@@ -77,14 +72,41 @@ export function escapeHtmlText(value) {
 /**
  * Escape an attribute value for the html output method.
  *
- * URI attributes keep their reserved characters; only markup significant
- * characters are escaped (XSLT 1.0 section 16.2).
+ * Only `&` and `"` are escaped: XSLT 1.0 section 16.2 keeps `<` unescaped
+ * and `&` unescaped before `{` (HTML 4.0 script macros), as libxslt does.
  *
  * @param {string} value - Attribute value
  * @returns {string} Escaped value
+ *
+ * @example
+ * escapeHtmlAttribute('&{x} & <b> "'); // '&{x} &amp; <b> &quot;'
  */
 export function escapeHtmlAttribute(value) {
-  return escapeWith(value, /[&<>"]/g, HTML_ATTRIBUTE_ESCAPES);
+  return escapeWith(value, /&(?!\{)|"/g, HTML_ATTRIBUTE_ESCAPES);
+}
+
+/** Runs of characters outside ASCII. */
+const NON_ASCII_RUN = /[\u{80}-\u{10FFFF}]+/gu;
+
+/**
+ * %-escape the non-ASCII characters of a URI attribute value as their UTF-8
+ * bytes (XSLT 1.0 section 16.2, HTML 4.0 appendix B.2.1). ASCII characters,
+ * `%` included, are kept as they are.
+ *
+ * @param {string} value - Attribute value
+ * @returns {string} The value with only ASCII characters
+ *
+ * @example
+ * escapeUriNonAscii("/café?q=1"); // "/caf%C3%A9?q=1"
+ */
+export function escapeUriNonAscii(value) {
+  const encoder = new globalThis.TextEncoder();
+  return String(value).replaceAll(NON_ASCII_RUN, (run) =>
+    Array.from(
+      encoder.encode(run),
+      (byte) => `%${byte.toString(16).toUpperCase().padStart(2, "0")}`,
+    ).join(""),
+  );
 }
 
 /**

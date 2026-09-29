@@ -52,8 +52,13 @@ export function splitQName(qname) {
  * // { namespaceUri: "http://www.w3.org/1999/xhtml", qname: "p" }
  */
 export function elementName(qname, namespace, scope) {
-  if (namespace !== null) return { namespaceUri: namespace || null, qname };
-  const { prefix } = splitQName(qname);
+  const { prefix, localName } = splitQName(qname);
+  if (namespace !== null) {
+    // An element in no namespace cannot keep a prefix, as for attributes
+    return namespace
+      ? { namespaceUri: namespace, qname }
+      : { namespaceUri: null, qname: localName };
+  }
   return { namespaceUri: resolvePrefix(scope, prefix), qname };
 }
 

@@ -488,7 +488,7 @@ describe("XPath Evaluator", () => {
 
     it("should evaluate lang() function", () => {
       const docWithLang = createDOM(`<?xml version="1.0"?>
-        <root lang="en">
+        <root xml:lang="en">
           <item>Test</item>
         </root>
       `);
@@ -499,7 +499,7 @@ describe("XPath Evaluator", () => {
 
     it("should evaluate lang() with sublanguage", () => {
       const docWithLang = createDOM(`<?xml version="1.0"?>
-        <root lang="en-US">
+        <root xml:lang="en-US">
           <item>Test</item>
         </root>
       `);
@@ -657,9 +657,11 @@ describe("XPath Evaluator", () => {
       }, /Unknown function/);
     });
 
-    it("should handle sum of non-array", () => {
-      const result = evaluate('sum("not-a-nodeset")', doc);
-      assert.ok(isNaN(result));
+    it("should reject sum of a non-node-set", () => {
+      assert.throws(
+        () => evaluate('sum("not-a-nodeset")', doc),
+        /sum\(\) expects a node-set/,
+      );
     });
   });
 

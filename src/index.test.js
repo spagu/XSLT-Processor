@@ -8,14 +8,16 @@
 import { describe, it, before } from "node:test";
 import assert from "node:assert";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import * as entryPoint from "./index.js";
 import {
   VERSION,
   XPathContext,
   XPathEvaluator,
+  XPathLimits,
   XPathResultType,
   XSLTProcessor,
   XsltContext,
@@ -67,6 +69,7 @@ describe("package entry point", () => {
     }
 
     assert.strictEqual(XPathResultType.STRING_TYPE, 2);
+    assert.strictEqual(XPathLimits.MAX_RESULT_SIZE, 10000);
   });
 
   it("should report the version and the runtime", () => {
@@ -83,6 +86,19 @@ describe("CommonJS consumer flow", () => {
       stdio: "ignore",
       env: childEnv(),
     });
+  });
+
+  it("should declare every export in the TypeScript declarations", () => {
+    for (const file of ["xslt-processor.d.ts", "xslt-processor.d.cts"]) {
+      const declarations = readFileSync(join(rootDir, "dist", file), "utf8");
+      for (const name of Object.keys(entryPoint)) {
+        const declared =
+          name === "default"
+            ? /^export default /m
+            : new RegExp(`^export (?:class|function|const) ${name}\\b`, "m");
+        assert.match(declarations, declared, `${file}: ${name}`);
+      }
+    }
   });
 
   it("should transform through the CommonJS bundle", () => {

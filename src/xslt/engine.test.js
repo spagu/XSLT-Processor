@@ -1416,9 +1416,69 @@ describe("XsltEngine", () => {
       engine.importStylesheet(xslt);
 
       assert.deepStrictEqual(engine.outputSettings.cdataSectionElements, [
-        "script",
-        "style",
+        { namespaceUri: null, localName: "script" },
+        { namespaceUri: null, localName: "style" },
       ]);
+    });
+
+    it("should expand the names and unite several xsl:output lists", () => {
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+            xmlns="urn:d" xmlns:p="urn:x">
+          <xsl:output cdata-section-elements="p:c a"/>
+          <xsl:output cdata-section-elements="a zz:b 1x&#10;xml:e"/>
+          <xsl:template match="/"><out/></xsl:template>
+        </xsl:stylesheet>
+      `);
+      const warnings = [];
+      const warn = console.warn;
+      console.warn = (message) => warnings.push(message);
+      try {
+        engine.importStylesheet(xslt);
+      } finally {
+        console.warn = warn;
+      }
+
+      assert.deepStrictEqual(engine.outputSettings.cdataSectionElements, [
+        { namespaceUri: "urn:x", localName: "c" },
+        { namespaceUri: "urn:d", localName: "a" },
+        {
+          namespaceUri: "http://www.w3.org/XML/1998/namespace",
+          localName: "e",
+        },
+      ]);
+      assert.strictEqual(warnings.length, 2);
+      assert.match(warnings[0], /"zz:b" is not a QName with a declared prefix/);
+      assert.match(warnings[1], /"1x"/);
+    });
+
+    it("should compare expanded names, not prefixes", () => {
+      const xslt = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+            xmlns:p="urn:x">
+          <xsl:output omit-xml-declaration="yes" cdata-section-elements="p:c"/>
+          <xsl:template match="/">
+            <o><q:c xmlns:q="urn:x">1</q:c><c>2</c></o>
+          </xsl:template>
+        </xsl:stylesheet>
+      `);
+      engine.importStylesheet(xslt);
+      assert.strictEqual(
+        engine.transformToString(parseXML("<d/>")),
+        '<o xmlns:p="urn:x"><q:c xmlns:q="urn:x"><![CDATA[1]]></q:c><c>2</c></o>',
+      );
+
+      const bare = new XsltEngine();
+      bare.importStylesheet(
+        parseXML(`<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:output omit-xml-declaration="yes" cdata-section-elements="c"/>
+          <xsl:template match="/"><o><c xmlns="urn:x">1</c><c>2</c></o></xsl:template>
+        </xsl:stylesheet>`),
+      );
+      assert.strictEqual(
+        bare.transformToString(parseXML("<d/>")),
+        '<o><c xmlns="urn:x">1</c><c><![CDATA[2]]></c></o>',
+      );
     });
   });
 

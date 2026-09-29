@@ -1,5 +1,5 @@
 /**
- * xslt-processor
+ * @tradik/xslt-processor
  *
  * JavaScript implementation of XSLTProcessor for browser environments.
  *
@@ -13,7 +13,7 @@
  *
  * @example
  * // ESM import
- * import { XSLTProcessor, installGlobal } from 'xslt-processor';
+ * import { XSLTProcessor, installGlobal } from '@tradik/xslt-processor';
  *
  * // Install as global replacement
  * installGlobal();
@@ -40,6 +40,7 @@ export {
   XPathEvaluator,
   XPathContext,
   XPathResultType,
+  XPathLimits,
   parse as parseXPath,
 } from "./xpath/index.js";
 
@@ -62,7 +63,7 @@ export {
 /**
  * Version information
  */
-export const VERSION = "1.1.2";
+export const VERSION = "1.1.3";
 
 /**
  * Check if we're running in a browser environment

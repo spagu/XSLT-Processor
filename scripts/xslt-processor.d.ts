@@ -1,0 +1,406 @@
+/**
+ * @tradik/xslt-processor - TypeScript Declarations
+ *
+ * Source of dist/xslt-processor.d.ts and dist/xslt-processor.d.cts, copied
+ * by scripts/build.js. Keep it in step with the exports of src/index.js.
+ */
+
+/**
+ * Loader used to resolve xsl:import and xsl:include references.
+ *
+ * The loader is synchronous: it must return the external stylesheet as a
+ * Document or as an XML string (which is parsed automatically).
+ *
+ * @param href - The resolved URI of the referenced stylesheet
+ * @param baseUri - The URI of the importing/including stylesheet, if known
+ */
+export type StylesheetLoader = (href: string, baseUri?: string) => Document | string;
+
+/**
+ * Loader used by the XSLT document() function.
+ *
+ * The loader is synchronous: it must return the document as a Document, as an
+ * XML string (which is parsed automatically) or null when it is unavailable
+ * (document() then evaluates to an empty node-set).
+ *
+ * @param uri - The resolved URI of the requested document
+ * @param baseUri - The base URI the reference was resolved against, if known
+ */
+export type DocumentLoader = (uri: string, baseUri?: string) => Document | string | null;
+
+/**
+ * Anything with a DOMParser-like parseFromString method (a browser, jsdom or
+ * xmldom DOMParser instance).
+ */
+export interface DomParserLike {
+  parseFromString(text: string, type: string): Document;
+}
+
+/**
+ * XSLTProcessor - Applies XSLT stylesheet transformations to XML documents.
+ */
+export class XSLTProcessor {
+  constructor();
+
+  /**
+   * The underlying XSLT engine (advanced usage).
+   * Null until a stylesheet has been imported.
+   */
+  readonly engine: XsltEngine | null;
+
+  /**
+   * Sets the loader used to resolve xsl:import and xsl:include references.
+   * Call it before importStylesheet() so the loader is available while the
+   * stylesheet is compiled; calling it afterwards updates the live engine.
+   * @param loader - The loader function, or null to remove it
+   * @returns This processor, to allow chaining
+   */
+  setStylesheetLoader(loader: StylesheetLoader | null): this;
+
+  /**
+   * Sets the loader used by the XSLT document() function. It may be set
+   * before or after importStylesheet(); a live engine is kept in sync.
+   * @param loader - The loader function, or null to remove it
+   * @returns This processor, to allow chaining
+   */
+  setDocumentLoader(loader: DocumentLoader | null): this;
+
+  /**
+   * Imports the XSLT stylesheet.
+   * Throws when the stylesheet is malformed or invalid (for example when a
+   * pattern is invalid); the processor then keeps its previous stylesheet.
+   * @param style - The XSLT stylesheet to import (Document or Element)
+   * @param stylesheetUri - Optional base URI used to resolve relative
+   *   xsl:import/xsl:include hrefs
+   */
+  importStylesheet(style: Node, stylesheetUri?: string): void;
+
+  /**
+   * Transforms the node source and returns a document fragment.
+   * @param source - The XML document to transform
+   * @param output - The document that will own the generated fragment
+   * @returns The transformed result as a DocumentFragment
+   */
+  transformToFragment(source: Node, output: Document): DocumentFragment | null;
+
+  /**
+   * Transforms the node source and returns a full XML document.
+   * @param source - The XML document to transform
+   * @returns The transformed result as an XMLDocument
+   */
+  transformToDocument(source: Node): XMLDocument | null;
+
+  /**
+   * Transforms the node source and serializes the result to a string,
+   * honoring the stylesheet xsl:output settings (non-W3C convenience method).
+   * @param source - The XML document to transform
+   * @returns The serialized result, or null on a transformation error
+   */
+  transformToString(source: Node): string | null;
+
+  /**
+   * Sets a parameter in the XSLT stylesheet.
+   * @param namespaceURI - The namespace URI (use null for no namespace)
+   * @param localName - The local name of the parameter
+   * @param value - The value to set
+   */
+  setParameter(namespaceURI: string | null, localName: string, value: unknown): void;
+
+  /**
+   * Gets the value of a parameter from the XSLT stylesheet.
+   * @param namespaceURI - The namespace URI
+   * @param localName - The local name of the parameter
+   * @returns The parameter value, or empty string if not set
+   */
+  getParameter(namespaceURI: string | null, localName: string): unknown;
+
+  /**
+   * Removes a parameter from the XSLT processor.
+   * @param namespaceURI - The namespace URI
+   * @param localName - The local name of the parameter
+   */
+  removeParameter(namespaceURI: string | null, localName: string): void;
+
+  /**
+   * Removes all set parameters from the XSLTProcessor.
+   */
+  clearParameters(): void;
+
+  /**
+   * Removes all parameters and stylesheets from the XSLTProcessor.
+   * The loaders are configuration, not stylesheet state, and are preserved.
+   */
+  reset(): void;
+}
+
+/**
+ * Check if native XSLTProcessor is available and functional. After
+ * installGlobal() replaced it, the original native implementation is probed.
+ */
+export function isNativeXSLTSupported(): boolean;
+
+/**
+ * Install as global XSLTProcessor replacement if native is not functional.
+ * @param force - Force installation even if native is available
+ * @returns True if installed as global
+ */
+export function installGlobal(force?: boolean): boolean;
+
+/**
+ * XPath evaluation result types.
+ */
+export const XPathResultType: {
+  ANY_TYPE: 0;
+  NUMBER_TYPE: 1;
+  STRING_TYPE: 2;
+  BOOLEAN_TYPE: 3;
+  UNORDERED_NODE_ITERATOR_TYPE: 4;
+  ORDERED_NODE_ITERATOR_TYPE: 5;
+  UNORDERED_NODE_SNAPSHOT_TYPE: 6;
+  ORDERED_NODE_SNAPSHOT_TYPE: 7;
+  ANY_UNORDERED_NODE_TYPE: 8;
+  FIRST_ORDERED_NODE_TYPE: 9;
+};
+
+/**
+ * Default limits of the standalone XPath evaluator, guarding against
+ * untrusted expressions.
+ */
+export const XPathLimits: {
+  MAX_RECURSION_DEPTH: number;
+  MAX_RESULT_SIZE: number;
+  MAX_STRING_LENGTH: number;
+};
+
+/**
+ * XPath evaluation context.
+ */
+export class XPathContext {
+  constructor(
+    node: Node,
+    position?: number,
+    size?: number,
+    variables?: Record<string, unknown>,
+    namespaces?: Record<string, string>,
+    hostContext?: unknown
+  );
+
+  node: Node;
+  position: number;
+  size: number;
+  variables: Record<string, unknown>;
+  namespaces: Record<string, string>;
+  /** Opaque context of the host language (XSLT), for host defined functions. */
+  hostContext: unknown;
+
+  clone(overrides?: Partial<XPathContext>): XPathContext;
+}
+
+/**
+ * An extension function: called with the argument expressions (unevaluated
+ * ASTs) and the evaluation context, with the evaluator as `this`.
+ */
+export type XPathFunction = (
+  this: XPathEvaluator,
+  args: unknown[],
+  context: XPathContext
+) => unknown;
+
+/**
+ * XPath evaluator.
+ */
+export class XPathEvaluator {
+  constructor(options?: {
+    /** Deepest expression nesting (default XPathLimits.MAX_RECURSION_DEPTH). */
+    maxRecursionDepth?: number;
+    /** Largest node-set one step may produce (default XPathLimits.MAX_RESULT_SIZE). */
+    maxResultSize?: number;
+    /** Longest string a function may produce (default XPathLimits.MAX_STRING_LENGTH). */
+    maxStringLength?: number;
+  });
+
+  evaluate(ast: unknown, context: XPathContext): unknown;
+  /**
+   * Register extension functions by name, `{namespace-uri}local-name` for
+   * namespaced ones.
+   * @returns This evaluator, to allow chaining
+   */
+  registerFunctions(functions: Record<string, XPathFunction>): this;
+  toBoolean(value: unknown): boolean;
+  toNumber(value: unknown): number;
+  toString(value: unknown): string;
+  getStringValue(node: Node): string;
+}
+
+/**
+ * Evaluate an XPath expression against a node.
+ */
+export function evaluateXPath(
+  expression: string,
+  contextNode: Node,
+  options?: { variables?: Record<string, unknown>; namespaces?: Record<string, string> }
+): unknown;
+
+/**
+ * Select nodes matching an XPath expression.
+ */
+export function selectXPath(
+  expression: string,
+  contextNode: Node,
+  options?: { variables?: Record<string, unknown>; namespaces?: Record<string, string> }
+): Node[];
+
+/**
+ * Select first node matching an XPath expression.
+ */
+export function selectFirstXPath(
+  expression: string,
+  contextNode: Node,
+  options?: { variables?: Record<string, unknown>; namespaces?: Record<string, string> }
+): Node | null;
+
+/**
+ * Parse an XPath expression into an AST.
+ */
+export function parseXPath(expression: string): unknown;
+
+/**
+ * XSLT processing context.
+ */
+export class XsltContext {
+  constructor(options?: {
+    currentNode?: Node;
+    currentNodeList?: Node[];
+    position?: number;
+    variables?: Record<string, unknown>;
+    parameters?: Record<string, unknown>;
+    /** Global variables and parameters of the transformation. */
+    globals?: unknown;
+    outputDocument?: Document;
+    stylesheet?: Document;
+    namespaces?: Record<string, string>;
+    templates?: unknown[];
+    keys?: Record<string, unknown>;
+    decimalFormats?: Record<string, unknown>;
+    outputMethod?: string;
+    xpathEvaluator?: XPathEvaluator;
+    /** The template rule being instantiated (for xsl:apply-imports). */
+    currentTemplate?: unknown;
+    /** The current mode, null for the default mode. */
+    currentMode?: string | null;
+  });
+
+  clone(overrides?: Partial<XsltContext>): XsltContext;
+  getVariable(name: string): unknown;
+  setVariable(name: string, value: unknown): void;
+}
+
+/**
+ * Default node-set limit of an XSLT transformation (5,000,000).
+ */
+export const XSLT_MAX_RESULT_SIZE: number;
+
+/**
+ * Default XPath expression depth limit of an XSLT transformation (1000).
+ */
+export const XSLT_MAX_EXPRESSION_DEPTH: number;
+
+/**
+ * XSLT processing engine.
+ */
+export class XsltEngine {
+  constructor(options?: {
+    stylesheetLoader?: StylesheetLoader | null;
+    documentLoader?: DocumentLoader | null;
+    baseUri?: string;
+    /**
+     * Parser for the XML strings returned by the loaders; defaults to the
+     * global DOMParser, then to the DOMParser of the stylesheet's window.
+     */
+    domParser?: DomParserLike | null;
+    /** Largest node-set one XPath step may produce (default XSLT_MAX_RESULT_SIZE). */
+    maxResultSize?: number;
+    /** Deepest XPath expression nesting (default XSLT_MAX_EXPRESSION_DEPTH). */
+    maxRecursionDepth?: number;
+  });
+
+  setStylesheetLoader(loader: StylesheetLoader | null): this;
+  setDocumentLoader(loader: DocumentLoader | null): this;
+  importStylesheet(stylesheetNode: Node, stylesheetUri?: string): void;
+  transform(sourceNode: Node, ownerDocument: Document): DocumentFragment;
+  transformToDocument(sourceNode: Node): Document;
+  transformToString(sourceNode: Node): string;
+
+  outputSettings: OutputSettings;
+}
+
+/**
+ * xsl:output settings driving the result serialization
+ * (XSLT 1.0 section 16). Accepts the raw stylesheet values, so the yes/no
+ * attributes are strings and cdata-section-elements may be a name list.
+ * A null method means "not declared": html or xml is picked from the result.
+ */
+export interface OutputSettings {
+  method?: 'xml' | 'html' | 'xhtml' | 'text' | 'auto' | (string & {}) | null;
+  version?: string;
+  encoding?: string;
+  standalone?: 'yes' | 'no' | string | null;
+  indent?: 'yes' | 'no' | boolean;
+  omitXmlDeclaration?: 'yes' | 'no' | boolean;
+  doctypePublic?: string | null;
+  doctypeSystem?: string | null;
+  mediaType?: string | null;
+  /**
+   * QNames (whitespace separated or as an array), or expanded names as the
+   * engine resolves them from xsl:output.
+   */
+  cdataSectionElements?:
+    | string
+    | Array<string | { namespaceUri: string | null; localName: string }>;
+}
+
+/**
+ * Serialize a transformation result honoring the xsl:output settings.
+ * @param node - Result document, fragment or element
+ * @param outputSettings - xsl:output settings
+ * @returns The serialized result, or an empty string for a null node
+ */
+export function serializeResult(
+  node: Node | null,
+  outputSettings?: OutputSettings
+): string;
+
+/**
+ * Mark a text node as produced with disable-output-escaping="yes".
+ */
+export function markRawText<T extends Node | null>(node: T): T;
+
+/**
+ * Check whether a node must be serialized without output escaping.
+ */
+export function isRawText(node: Node | null): boolean;
+
+/**
+ * Normalize raw xsl:output settings for the serializers.
+ */
+export function resolveOutputSettings(
+  outputSettings: OutputSettings | null,
+  node: Node | null
+): Required<OutputSettings> & { indent: boolean; omitXmlDeclaration: boolean; cdataSectionElements: Set<string> };
+
+/**
+ * Version information.
+ */
+export const VERSION: string;
+
+/**
+ * Check if running in a browser environment.
+ */
+export const isBrowser: boolean;
+
+/**
+ * Check if running in Node.js.
+ */
+export const isNode: boolean;
+
+export default XSLTProcessor;

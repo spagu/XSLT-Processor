@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-09-29
+
+### Fixed
+
+- **Empty `xsl:param` / `xsl:variable` was true in boolean tests** ([#11](https://github.com/spagu/XSLT-Processor/issues/11)) - a variable-binding element with neither `select` nor content became an empty result tree fragment, which converts to `true`. XSLT 1.0 section 11.2 gives it the empty string, so `<xsl:param name="p"/>` followed by `<xsl:if test="$p">` is now false. This applies to global and template params, variables and `xsl:with-param`; a variable whose content produces no nodes is still a (true) result tree fragment, and `setParameter()` still overrides the default.
+- **Empty XHTML elements were written as `<script/>` or `<div/>`**, which breaks when XHTML is parsed as HTML. Empty elements in the XHTML namespace now follow the XHTML compatibility guidelines like libxml2 (Chrome) and Firefox: void elements as `<br />`, all others with an explicit end tag (`<script src="a.js"></script>`). Elements in other namespaces keep `<x/>`.
+
+- **Output `encoding` was ignored**: characters the declared encoding cannot represent are now written as character references (`&#8364;`, or HTML entity names such as `&euro;` with `method="html"`; CDATA sections are split around them). The CLI writes the file and stdout as bytes in the declared encoding (UTF-16 with a BOM; unknown multi-byte encodings fall back to UTF-8 with a warning). Previously an `ISO-8859-1` declaration was followed by UTF-8 bytes.
+- **`name()`, `local-name()`, `namespace-uri()`** returned `#document`, `#text` and `#comment` for unnamed nodes; they return `""` (XPath 4.1), and a processing instruction's name is its target.
+- **`id()` with a node-set argument** used only the first node and could return duplicates; every node's value is split and the result is a set in document order.
+- **`/` and `key()` inside `exsl:node-set()` trees** resolved against the source document instead of the fragment containing the context node.
+- **`lang()`** now works from text and attribute nodes and honours only `xml:lang`, not a plain `lang` attribute.
+- **`cdata-section-elements`** compares expanded names (a prefix bound to the same namespace matches; a bare name no longer matches the same local name in any namespace).
+- **HTML output method** now follows libxslt/Chrome: a `Content-Type` meta is added to `head`, `&{` and `<` stay unescaped in attribute values, and non-ASCII characters in URI attributes (`href`, `src`, ...) are %-escaped as UTF-8.
+- **Node-set functions** (`count()`, `sum()`, `name()`, `local-name()`, `namespace-uri()`) given a number, string or boolean now raise a type error instead of returning a made-up value.
+- **CLI**: `--method` accepts only `xml`, `html`, `xhtml` or `text`; the root directory `/` (or a drive root) works as base directory.
+
+- **Computed names are validated** (XML 1.0 5th ed. QNames): `xsl:element`/`xsl:attribute` names such as `1a`, `x{` or `a:b:c`, undeclared prefixes and `xmlns` attribute names are reported with `console.warn` and skipped, as libxslt does, instead of producing malformed output. `xsl:element name="p:e" namespace=""` creates `<e/>` in no namespace.
+- **`xsl:fallback`** is instantiated for unknown XSLT instructions (XSLT 15), and forwards-compatible mode (`version` other than 1.0) ignores unknown top-level elements.
+- **`xsl:number` default count** compares expanded names and processing-instruction targets.
+- **`xsl:output cdata-section-elements`** names are expanded with the namespaces in scope on `xsl:output`, including the default namespace for unprefixed names (XSLT 16.1); several `xsl:output` lists are united and undeclared prefixes are reported.
+- **`isNativeXSLTSupported()`** no longer reports this polyfill as native after `installGlobal()`.
+- **Loaders with non-jsdom DOMs** (e.g. xmldom): XML strings returned by loaders are parsed with the new `domParser` engine option, the global `DOMParser` or the stylesheet's window, and parse errors are detected without `querySelector`.
+- **Warnings** for duplicate variable bindings (XSLT 11.4/11.5) and undeclared `exclude-result-prefixes` / `extension-element-prefixes`; behaviour is unchanged (the later binding wins).
+- The broken `npm run test:browser` script (it pointed to a file that does not exist) was removed; `npm test` now expands `src/**/*.test.js` itself, so test files in nested directories are no longer skipped.
+
+### Performance
+
+- `axis::x[n]` steps (the common `following-sibling::x[1]` / `preceding-sibling::x[1]` idiom) stop walking the axis after the n-th match: 8,000 siblings in a loop dropped from 4.7 s to 0.09 s.
+
+- `xsl:number` is linear per transformation: 8,000 nodes with `level="any" count="i[@k='1']"` dropped from 105 s to 0.09 s, `level="single"` from 5.5 s to 0.1 s.
+- `key()`/`id()` patterns cache their anchor nodes per document.
+
+### Changed
+
+- `count(5)`, `sum('x')` and similar calls now throw a type error; `name(/)` returns `""`; `lang()` ignores a plain `lang` attribute; HTML output gains a `Content-Type` meta; the CLI's `runTransformation()` helper returns `{ output, encoding }`.
+
+- **Invalid patterns** in `xsl:template match`, `xsl:key match` and `xsl:number count`/`from` now make `importStylesheet()` throw an error naming the pattern (XSLT 5.2), as Chrome's native processor rejects such stylesheets; previously the template silently never matched. A failed import leaves the processor's previous stylesheet in place.
+- `engine.outputSettings.cdataSectionElements` holds `{ namespaceUri, localName }` objects instead of strings.
+
+### Added
+
+- `XsltEngine` option `domParser`; `XsltEngine.setStylesheetLoader()`/`setDocumentLoader()` return the engine for chaining; `XPathLimits` export.
+- Complete TypeScript declarations in `scripts/xslt-processor.d.ts` (`DocumentLoader`, `XSLTProcessor.setDocumentLoader`, `XPathEvaluator` options, `XPathContext` `hostContext`, ...); a test fails when a runtime export is missing from the declarations.
+
+### Documentation
+
+- README: corrected the Custom Security Limits example (`parseXPath` instead of the non-exported `parse`) and the Node.js loader example (jsdom with a global `DOMParser`; the xmldom version failed).
+- README: new table of contents and "Module exports", "TypeScript" and "Known Deviations" sections.
+- README: conformance tables corrected (`namespace::` axis not supported, `xsl:fallback` and extensions partial, `xsl:number` ignores `lang`/`letter-value`, the DOM is consumed rather than implemented); invented per-spec test counts replaced by real figures.
+- README: browser minimums corrected for the ES2022 bundle (Chrome/Edge 93, Opera 79, Samsung Internet 17); the `XsltProcessorLib` CDN global and auto-install behaviour documented; development setup, Docker commands and publishing notes fixed; style-guide success and warning colours now meet WCAG 2.2 AA contrast.
+- SECURITY.md and CONTRIBUTORS.md rewritten for this project (they described a different project); security reports go through GitHub private vulnerability reporting.
+
 ## [1.1.2] - 2026-09-24
 
 ### Fixed

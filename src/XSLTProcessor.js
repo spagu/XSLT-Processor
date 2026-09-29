@@ -14,6 +14,14 @@
  */
 
 import { XsltEngine } from "./xslt/engine.js";
+import { findParseError } from "./xslt/domParsing.js";
+
+/**
+ * The native XSLTProcessor constructor that installGlobal() replaced, kept so
+ * that isNativeXSLTSupported() keeps probing the browser's implementation
+ * rather than this one.
+ */
+let nativeProcessor = null;
 
 /**
  * XSLTProcessor
@@ -151,6 +159,8 @@ export class XSLTProcessor {
    *   base URI when resolving relative `xsl:import`/`xsl:include` hrefs. When
    *   omitted, hrefs are passed to the loader unresolved.
    * @returns {void}
+   * @throws {Error} When the stylesheet is malformed or invalid, e.g. has an
+   *   invalid pattern (XSLT 1.0 section 5.2)
    *
    * @example
    * const parser = new DOMParser();
@@ -172,25 +182,25 @@ export class XSLTProcessor {
     }
 
     // Check for parser errors
-    const errorNode = style.querySelector
-      ? style.querySelector("parsererror")
-      : null;
-    if (errorNode) {
+    if (findParseError(style)) {
       throw new Error("XSLT stylesheet contains parse errors");
     }
 
-    this._stylesheet = style;
-    this._engine = new XsltEngine({
+    const engine = new XsltEngine({
       stylesheetLoader: this._stylesheetLoader,
       documentLoader: this._documentLoader,
     });
 
     // Apply any previously set parameters
     for (const [key, value] of this._parameters) {
-      this._engine.setParameterValue(key, value);
+      engine.setParameterValue(key, value);
     }
 
-    this._engine.importStylesheet(style, stylesheetUri);
+    // An invalid stylesheet (e.g. an invalid pattern) throws here and leaves
+    // the processor as it was
+    engine.importStylesheet(style, stylesheetUri);
+    this._engine = engine;
+    this._stylesheet = style;
   }
 
   /**
@@ -487,17 +497,20 @@ export class XSLTProcessor {
 }
 
 /**
- * Check if native XSLTProcessor is available and functional
+ * Check if native XSLTProcessor is available and functional.
+ *
+ * After installGlobal() replaced the global, the original native constructor
+ * is probed; this implementation never counts as native.
  *
  * @returns {boolean} True if native XSLTProcessor works correctly
  */
 export function isNativeXSLTSupported() {
-  if (typeof globalThis.XSLTProcessor === "undefined") {
-    return false;
-  }
+  const current = globalThis.XSLTProcessor;
+  const Native = current === XSLTProcessor ? nativeProcessor : current;
+  if (typeof Native !== "function") return false;
 
   try {
-    const processor = new globalThis.XSLTProcessor();
+    const processor = new Native();
     const parser = new DOMParser();
 
     const xslt = parser.parseFromString(
@@ -530,6 +543,10 @@ export function installGlobal(force = false) {
     return false;
   }
 
+  const current = globalThis.XSLTProcessor;
+  if (typeof current === "function" && current !== XSLTProcessor) {
+    nativeProcessor = current;
+  }
   globalThis.XSLTProcessor = XSLTProcessor;
   return true;
 }

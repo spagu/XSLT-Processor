@@ -83,11 +83,47 @@ describe("compilePattern", () => {
 });
 
 describe("PatternMatcher", () => {
-  it("never matches an invalid pattern and caches the compilation", () => {
+  it("rejects an invalid pattern and caches the compilation", () => {
     const doc = parseXML("<r/>");
-    assert.strictEqual(matcher.matches(doc.documentElement, "[[["), false);
-    assert.deepStrictEqual(matcher.compile("[[["), []);
+    assert.throws(
+      () => matcher.matches(doc.documentElement, "[[["),
+      /Invalid pattern "\[\[\[": Unexpected token/,
+    );
+    assert.throws(() => matcher.compile("a/.."), /Invalid pattern "a\/\.\."/);
     assert.strictEqual(matcher.compile("r"), matcher.compile("r"));
+  });
+
+  it("caches key() anchors with literal arguments per root", () => {
+    const doc = parseXML("<r><e k='1'/><e k='2'/></r>");
+    const counting = new PatternMatcher(new XPathEvaluator());
+    let calls = 0;
+    counting.evaluator.registerFunctions({
+      key(args, ctx) {
+        calls++;
+        const [name, value] = args.map((arg) =>
+          this.toString(this.evaluate(arg, ctx)),
+        );
+        return name === "k"
+          ? Array.from(ctx.node.ownerDocument.getElementsByTagName("e")).filter(
+              (e) => e.getAttribute("k") === value,
+            )
+          : [];
+      },
+    });
+    const [first, second] = doc.getElementsByTagName("e");
+    assert.strictEqual(counting.matches(first, "key('k','1')"), true);
+    assert.strictEqual(counting.matches(second, "key('k','1')"), false);
+    assert.strictEqual(calls, 1);
+
+    // A variable argument is evaluated for every candidate
+    const host = { xpathVariables: { v: "2" }, namespaces: {} };
+    assert.strictEqual(counting.matches(second, "key('k',$v)", host), true);
+    assert.strictEqual(counting.matches(first, "key('k',$v)", host), false);
+    assert.strictEqual(calls, 3);
+
+    counting.reset();
+    assert.strictEqual(counting.matches(first, "key('k','1')"), true);
+    assert.strictEqual(calls, 4);
   });
 
   it("matches '/' against root nodes only", () => {

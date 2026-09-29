@@ -14,6 +14,7 @@
 import { formatNumber, DEFAULT_DECIMAL_FORMAT } from "./formatNumber.js";
 import { isXsltElementAvailable, XSLT_NAMESPACE } from "./elements.js";
 import { expandedFunctionName } from "../xpath/evaluator.js";
+import { rootNodeOf } from "../xpath/axes.js";
 
 /** Namespace of the EXSLT common module (`exsl:node-set()`). */
 // A namespace name is an identifier, not a URL that is fetched; EXSLT defines it with http.
@@ -149,11 +150,15 @@ export function createXsltFunctions(engine) {
       return result;
     },
 
-    /** `key(name, value)` - look up nodes through an `xsl:key` index. */
+    /**
+     * `key(name, value)` - look up nodes through an `xsl:key` index of the
+     * tree containing the context node: its document, or the fragment of a
+     * result tree fragment converted with `exsl:node-set()`.
+     */
     key: (args, ctx) => {
       const name = asString(args[0], ctx);
       const values = toStringList(evaluator, stringify, evaluate(args[1], ctx));
-      return engine.keyRegistry.lookup(name, values, ownerDocumentOf(ctx.node));
+      return engine.keyRegistry.lookup(name, values, rootNodeOf(ctx.node));
     },
 
     /** `format-number(number, pattern, decimalFormat?)`. */

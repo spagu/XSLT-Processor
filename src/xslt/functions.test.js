@@ -306,6 +306,30 @@ describe("key()", () => {
 
     assert.throws(() => transform(xslDoc, parseXML(xml)), /Undefined key/);
   });
+
+  it("should search the tree of a node-set() result tree fragment", () => {
+    const xslDoc = stylesheet(
+      `<xsl:key name="k" match="a" use="@n"/>
+       <xsl:variable name="v"><a n="1"/><b><a n="1"/></b></xsl:variable>
+       <xsl:template match="/"><out><xsl:for-each select="e:node-set($v)"><xsl:value-of select="count(key('k','1'))"/></xsl:for-each>|<xsl:for-each select="e:node-set($v)/b/a"><xsl:value-of select="count(key('k','1'))"/></xsl:for-each>|<xsl:value-of select="count(key('k','1'))"/></out></xsl:template>`,
+      `xmlns:e="http://exslt.org/common" exclude-result-prefixes="e"`,
+    );
+
+    assert.strictEqual(
+      transform(xslDoc, parseXML("<x><a n='1'/><a n='1'/><a n='1'/></x>")),
+      "<out>2|2|3</out>",
+    );
+  });
+
+  it("should resolve / to the root of a node-set() fragment", () => {
+    const xslDoc = stylesheet(
+      `<xsl:variable name="v"><a/></xsl:variable>
+       <xsl:template match="/"><out><xsl:for-each select="e:node-set($v)/a"><xsl:value-of select="count(/x)"/>,<xsl:value-of select="count(/a)"/></xsl:for-each></out></xsl:template>`,
+      `xmlns:e="http://exslt.org/common" exclude-result-prefixes="e"`,
+    );
+
+    assert.strictEqual(transform(xslDoc, parseXML("<x/>")), "<out>0,1</out>");
+  });
 });
 
 describe("format-number()", () => {

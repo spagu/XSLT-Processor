@@ -37,6 +37,9 @@ export const TEXT_MODE = {
   RAW: "raw",
 };
 
+/** Namespace of XHTML elements. */
+export const XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
+
 /**
  * HTML elements that never have an end tag.
  */
@@ -55,6 +58,25 @@ export const VOID_ELEMENTS = new Set([
   "source",
   "track",
   "wbr",
+]);
+
+/**
+ * HTML attributes holding URIs, whose non-ASCII characters the html output
+ * method %-escapes (XSLT 1.0 section 16.2).
+ */
+export const URI_ATTRIBUTES = new Set([
+  "action",
+  "background",
+  "cite",
+  "classid",
+  "codebase",
+  "data",
+  "formaction",
+  "href",
+  "longdesc",
+  "profile",
+  "src",
+  "usemap",
 ]);
 
 /**

@@ -6,11 +6,12 @@
  */
 
 import { parse as parseXPath } from "../xpath/parser.js";
+import { trimXmlSpace } from "../xpath/strings.js";
 import { XPathEvaluator, XPathContext } from "../xpath/evaluator.js";
 import { XSLT_NAMESPACE } from "./elements.js";
 import { createXsltFunctions } from "./functions.js";
 import { KeyIndexRegistry } from "./keys.js";
-import { countXsltNumber } from "./number.js";
+import { countXsltNumber, isMemoizable } from "./number.js";
 import { formatXsltNumber, toRoman } from "./numberFormat.js";
 import { resolveUri, stripFragment } from "./uri.js";
 import {
@@ -37,11 +38,10 @@ import {
   shallowCopyElement,
 } from "./copying.js";
 import {
-  attributeName,
   copyLiteralNamespaces,
-  elementName,
   setResultAttribute,
 } from "./resultNamespaces.js";
+import { computedAttributeName, computedElementName } from "./computedNames.js";
 import { inScopeNamespaces } from "./stylesheetNamespaces.js";
 import {
   GlobalBindings,
@@ -51,6 +51,19 @@ import {
 import { calculatePriority } from "./templatePriority.js";
 import { PatternMatcher } from "./patterns.js";
 import { sortNodes } from "./sort.js";
+import {
+  checkGlobalDuplicate,
+  checkLocalBindings,
+  checkNumberPatterns,
+  checkPattern,
+  xsltLocalName,
+} from "./stylesheetChecks.js";
+import {
+  fallbackChildren,
+  isForwardsCompatible,
+} from "./forwardsCompatible.js";
+import { parseXml, resolveDomParser } from "./domParsing.js";
+import { cdataSectionNames } from "./outputNames.js";
 import { serializeResult } from "./serializer.js";
 
 const XSLT_NS = XSLT_NAMESPACE;
@@ -75,6 +88,24 @@ export const XSLT_MAX_RESULT_SIZE = 5000000;
  * Override it with the `maxRecursionDepth` engine option.
  */
 export const XSLT_MAX_EXPRESSION_DEPTH = 1000;
+
+/**
+ * Whether a variable-binding element has content (XSLT 1.0 section 11.2).
+ *
+ * Whitespace-only text is stripped from stylesheets, and comments and
+ * processing instructions are not part of a template, so they do not count.
+ *
+ * @param {Element|undefined} node - xsl:variable, xsl:param or xsl:with-param
+ * @returns {boolean} True when instantiating the element produces a fragment
+ */
+function hasTemplateContent(node) {
+  for (let child = node?.firstChild; child; child = child.nextSibling) {
+    if (child.nodeType === 1) return true;
+    const isText = child.nodeType === 3 || child.nodeType === 4;
+    if (isText && trimXmlSpace(child.nodeValue) !== "") return true;
+  }
+  return false;
+}
 
 /**
  * Engine method handling each top-level XSLT element (xsl:import is handled
@@ -283,6 +314,9 @@ export class XsltEngine {
     this.documentLoader = options.documentLoader || null;
     this.loadedDocuments = new Map();
 
+    // Parser for XML strings returned by the loaders (see domParsing.js)
+    this.domParser = options.domParser ?? null;
+
     // generate-id() support
     this.generatedIds = new WeakMap();
     this.generatedIdCount = 0;
@@ -305,8 +339,8 @@ export class XsltEngine {
         this.evaluateKeyValues(node, expression, definition?.namespaces),
     });
 
-    // Whether the "attribute after children" warning was already given
-    this.warnedLateAttribute = false;
+    // Recoverable errors already reported, so each is reported once
+    this.reportedWarnings = new Set();
 
     this.xpathEvaluator.registerFunctions(createXsltFunctions(this));
   }
@@ -405,11 +439,17 @@ export class XsltEngine {
   }
 
   /**
-   * Set the stylesheet loader function for xsl:import and xsl:include
-   * @param {Function} loader - Function(href, baseUri) => Document or string (XML)
+   * Set the loader used by xsl:import and xsl:include.
+   *
+   * @param {((href: string, baseUri?: string) => (Document|string))|null} loader - The loader, or null to remove it
+   * @returns {XsltEngine} This engine, to allow chaining
+   *
+   * @example
+   * engine.setStylesheetLoader((href) => readFileSync(href, 'utf8'));
    */
   setStylesheetLoader(loader) {
-    this.stylesheetLoader = loader;
+    this.stylesheetLoader = loader ?? null;
+    return this;
   }
 
   /**
@@ -442,19 +482,19 @@ export class XsltEngine {
   }
 
   /**
-   * Parse XML string to document (helper for stylesheet loading)
+   * Parse an XML string returned by a stylesheet or document loader, with
+   * the `domParser` option, else the global DOMParser, else the DOMParser of
+   * the stylesheet's window (see domParsing.js).
+   *
+   * @param {string} xmlString - The markup
+   * @returns {Document} The parsed document
+   * @throws {Error} When no parser is available or the markup is malformed
    */
   parseXmlString(xmlString) {
-    if (typeof DOMParser !== "undefined") {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlString, "application/xml");
-      const parseError = doc.querySelector("parsererror");
-      if (parseError) {
-        throw new Error(`XML parse error: ${parseError.textContent}`);
-      }
-      return doc;
-    }
-    throw new Error("XML parsing not available in this environment");
+    return parseXml(
+      xmlString,
+      resolveDomParser(this.domParser, this.stylesheetDoc),
+    );
   }
 
   /**
@@ -613,11 +653,24 @@ export class XsltEngine {
     }
 
     for (const child of otherElements) {
-      const method = this.isXsltNamespace(child)
-        ? TOP_LEVEL_HANDLERS[child.localName]
-        : undefined;
+      if (!this.isXsltNamespace(child)) continue;
+      const method = TOP_LEVEL_HANDLERS[child.localName];
       if (method) this[method](child, stylesheetUri);
+      else this.unknownTopLevelElement(child);
     }
+    checkNumberPatterns(this.patternMatcher, root);
+  }
+
+  /**
+   * Ignore an unknown top-level XSLT element: silently in forwards-compatible
+   * mode (XSLT 1.0 section 2.5), with a warning otherwise.
+   *
+   * @param {Element} node - The unknown element
+   * @returns {void}
+   */
+  unknownTopLevelElement(node) {
+    if (isForwardsCompatible(node)) return;
+    this.warnOnce(`unknown top-level element xsl:${node.localName} is ignored`);
   }
 
   /**
@@ -630,6 +683,8 @@ export class XsltEngine {
    */
   processLiteralResultStylesheet(root) {
     this.collectNamespaces(root);
+    checkNumberPatterns(this.patternMatcher, root);
+    checkLocalBindings(root, (message) => this.warnOnce(message));
     this.templates.push({
       match: "/",
       name: null,
@@ -676,6 +731,10 @@ export class XsltEngine {
    */
   registerTemplate(node) {
     const match = node.getAttribute("match");
+    if (match !== null) {
+      checkPattern(this.patternMatcher, match, "xsl:template match");
+    }
+    checkLocalBindings(node, (message) => this.warnOnce(message));
     const name = node.getAttribute("name");
     const mode = node.getAttribute("mode") || null;
     const priorityAttr = node.getAttribute("priority");
@@ -709,6 +768,14 @@ export class XsltEngine {
     return calculatePriority(matchPattern ? matchPattern.trim() : matchPattern);
   }
 
+  /**
+   * Merge an xsl:output element into the output settings (XSLT 1.0
+   * section 16): a later attribute wins, except cdata-section-elements whose
+   * expanded names are united.
+   *
+   * @param {Element} node - The xsl:output element
+   * @returns {void}
+   */
   processOutput(node) {
     const method = node.getAttribute("method");
     if (method) this.outputSettings.method = method;
@@ -739,17 +806,57 @@ export class XsltEngine {
 
     const cdataElements = node.getAttribute("cdata-section-elements");
     if (cdataElements) {
-      this.outputSettings.cdataSectionElements = cdataElements
-        .split(/\s+/)
-        .filter(Boolean);
+      this.outputSettings.cdataSectionElements = cdataSectionNames(
+        cdataElements,
+        inScopeNamespaces(node),
+        this.outputSettings.cdataSectionElements,
+        (message) => this.warnOnce(message),
+      );
     }
   }
 
+  /**
+   * Register an `xsl:variable` top level declaration.
+   *
+   * @param {Element} node - The `xsl:variable` element
+   * @returns {void}
+   */
   processGlobalVariable(node) {
     const name = node.getAttribute("name");
-    const select = node.getAttribute("select");
+    this.checkGlobalBinding(name, node);
+    this.globalVariables[name] = {
+      node,
+      select: node.getAttribute("select"),
+      importPrecedence: this.currentImportPrecedence,
+    };
+  }
 
-    this.globalVariables[name] = { node, select };
+  /**
+   * Warn about a global variable or parameter declared twice at the same
+   * import precedence (an error in XSLT 1.0 section 11.4 that libxslt
+   * reports) and about duplicate local bindings in its content. The current
+   * resolution is kept: the later declaration, or the xsl:variable when a
+   * parameter has the same name.
+   *
+   * @param {string} name - The declared name
+   * @param {Element} node - The xsl:variable or xsl:param element
+   * @returns {void}
+   */
+  checkGlobalBinding(name, node) {
+    const warn = (message) => this.warnOnce(message);
+    checkLocalBindings(node, warn);
+    checkGlobalDuplicate(
+      {
+        name,
+        kind: xsltLocalName(node),
+        precedence: this.currentImportPrecedence,
+      },
+      {
+        variable: this.globalVariables[name],
+        param: this.globalParameters[name],
+      },
+      warn,
+    );
   }
 
   /**
@@ -763,9 +870,13 @@ export class XsltEngine {
    */
   processGlobalParam(node) {
     const name = node.getAttribute("name");
-    const select = node.getAttribute("select");
+    this.checkGlobalBinding(name, node);
     const existing = this.globalParameters[name];
-    const definition = { node, select };
+    const definition = {
+      node,
+      select: node.getAttribute("select"),
+      importPrecedence: this.currentImportPrecedence,
+    };
 
     if (existing && "value" in existing) {
       definition.value = existing.value;
@@ -840,6 +951,9 @@ export class XsltEngine {
     const name = node.getAttribute("name");
     const match = node.getAttribute("match");
     const use = node.getAttribute("use");
+    if (match !== null) {
+      checkPattern(this.patternMatcher, match, "xsl:key match");
+    }
     const definitions = (this.keys[name] ??= []);
 
     if (!definitions.some((d) => d.match === match && d.use === use)) {
@@ -870,6 +984,7 @@ export class XsltEngine {
   }
 
   processAttributeSet(node) {
+    checkLocalBindings(node, (message) => this.warnOnce(message));
     const name = node.getAttribute("name");
     const useAttributeSets = node.getAttribute("use-attribute-sets");
 
@@ -932,6 +1047,7 @@ export class XsltEngine {
     // The source tree may have changed since the previous transformation
     this.keyRegistry.clear();
     this.patternMatcher.reset();
+    this.numberMemos = new WeakMap();
 
     // Create result document fragment
     const fragment = resultDocument.createDocumentFragment();
@@ -1108,7 +1224,13 @@ export class XsltEngine {
       return this.evaluateXPath(def.select, context);
     }
 
-    // If no select, evaluate content as result tree fragment
+    // Empty content and no select: the value is an empty string (XSLT 11.2),
+    // which is false in a boolean test, unlike an (always true) fragment.
+    if (!hasTemplateContent(def.node)) {
+      return "";
+    }
+
+    // Otherwise the content is instantiated as a result tree fragment
     const fragment = context.outputDocument.createDocumentFragment();
     this.processChildren(def.node, context, fragment);
     return fragment;
@@ -1412,9 +1534,10 @@ export class XsltEngine {
 
   /**
    * Name of the engine method instantiating a stylesheet element: the
-   * handler of an XSLT instruction, or processLiteralResultElement. Returns
-   * null for elements that are not instructions (xsl:param, xsl:sort,
-   * xsl:with-param, xsl:fallback) and, with a warning, for unknown ones.
+   * handler of an XSLT instruction, processLiteralResultElement, or
+   * instantiateUnknown for an XSLT element the engine does not implement.
+   * Returns null for elements that are not instructions (xsl:param,
+   * xsl:sort, xsl:with-param, xsl:fallback).
    *
    * @param {Element} node - A stylesheet element in a sequence constructor
    * @returns {string|null} The method name
@@ -1426,8 +1549,28 @@ export class XsltEngine {
     if (Object.hasOwn(INSTRUCTION_METHODS, localName)) {
       return INSTRUCTION_METHODS[localName];
     }
-    console.warn(`Unknown XSLT element: ${localName}`);
-    return null;
+    return "instantiateUnknown";
+  }
+
+  /**
+   * Instantiate an XSLT element the engine does not implement (XSLT 1.0
+   * section 15): its xsl:fallback children are instantiated in order; without
+   * any, the error is reported and nothing is produced.
+   *
+   * @param {Element} node - The unknown XSLT element
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result node receiving the output
+   * @returns {void}
+   */
+  instantiateUnknown(node, context, output) {
+    const fallbacks = fallbackChildren(node);
+    if (fallbacks.length === 0) {
+      console.warn(`Unknown XSLT element: ${xsltLocalName(node)}`);
+      return;
+    }
+    for (const fallback of fallbacks) {
+      this.processChildren(fallback, context, output);
+    }
   }
 
   /**
@@ -1563,13 +1706,23 @@ export class XsltEngine {
   canAddAttribute(target) {
     if (target.nodeType !== 1) return false;
     if (!target.firstChild) return true;
-    if (!this.warnedLateAttribute) {
-      this.warnedLateAttribute = true;
-      console.warn(
-        "XSLT: an attribute created after the children of an element is ignored (XSLT 1.0 section 7.1.3)",
-      );
-    }
+    this.warnOnce(
+      "an attribute created after the children of an element is ignored (XSLT 1.0 section 7.1.3)",
+    );
     return false;
+  }
+
+  /**
+   * Report a recoverable stylesheet error with console.warn, once per engine
+   * and message (libxslt reports these errors and goes on).
+   *
+   * @param {string} message - The error description
+   * @returns {void}
+   */
+  warnOnce(message) {
+    if (this.reportedWarnings.has(message)) return;
+    this.reportedWarnings.add(message);
+    console.warn(`XSLT: ${message}`);
   }
 
   // XSLT Instructions
@@ -1709,6 +1862,8 @@ export class XsltEngine {
    * Instantiate `xsl:element`. The name's prefix, or the default namespace
    * for an unprefixed name, resolves against the namespaces in scope on the
    * instruction; a `namespace` attribute wins (XSLT 1.0 section 7.1.2).
+   * An invalid name or an undeclared prefix is reported and, as in libxslt,
+   * neither the element nor its content is created.
    *
    * @param {Element} node - The xsl:element instruction
    * @param {XsltContext} context - The current context
@@ -1716,11 +1871,16 @@ export class XsltEngine {
    * @returns {void}
    */
   xslElement(node, context, output) {
-    const { namespaceUri, qname } = elementName(
+    const { name, error } = computedElementName(
       this.processAttributeValueTemplate(node.getAttribute("name"), context),
       this.optionalAvt(node, "namespace", context),
       context.namespaces,
     );
+    if (error) {
+      this.warnOnce(error);
+      return;
+    }
+    const { namespaceUri, qname } = name;
     const element = namespaceUri
       ? context.outputDocument.createElementNS(namespaceUri, qname)
       : context.outputDocument.createElement(qname);
@@ -1737,7 +1897,8 @@ export class XsltEngine {
   /**
    * Instantiate `xsl:attribute` (XSLT 1.0 section 7.1.3): a prefixed name
    * uses the namespace bound in scope, `namespace` wins, and a namespaced
-   * attribute without a usable prefix gets a generated one.
+   * attribute without a usable prefix gets a generated one. An invalid name,
+   * an undeclared prefix or `xmlns` is reported and the attribute skipped.
    *
    * @param {Element} node - The xsl:attribute instruction
    * @param {XsltContext} context - The current context
@@ -1747,11 +1908,15 @@ export class XsltEngine {
   xslAttribute(node, context, output) {
     if (!this.canAddAttribute(output)) return;
 
-    const name = attributeName(
+    const { name, error } = computedAttributeName(
       this.processAttributeValueTemplate(node.getAttribute("name"), context),
       this.optionalAvt(node, "namespace", context),
       context.namespaces,
     );
+    if (error) {
+      this.warnOnce(error);
+      return;
+    }
     setResultAttribute(output, name, this.instantiateText(node, context));
   }
 
@@ -1973,15 +2138,14 @@ export class XsltEngine {
         ),
       ];
     } else {
+      const count = node.getAttribute("count");
+      const from = node.getAttribute("from");
       numbers = countXsltNumber(
         context.currentNode,
-        {
-          level: node.getAttribute("level") || "single",
-          count: node.getAttribute("count"),
-          from: node.getAttribute("from"),
-        },
+        { level: node.getAttribute("level") || "single", count, from },
         (candidate, pattern) =>
           this.matchesPattern(candidate, pattern, context),
+        isMemoizable(count, from) ? this.numberMemo(node) : null,
       );
     }
 
@@ -1989,6 +2153,23 @@ export class XsltEngine {
       formatXsltNumber(numbers, format, grouping),
     );
     output.appendChild(text);
+  }
+
+  /**
+   * The memo of an xsl:number instruction for the current transformation
+   * (see number.js), so numbering a long list stays linear.
+   *
+   * @param {Element} node - The xsl:number instruction
+   * @returns {Map} The instruction's memo
+   */
+  numberMemo(node) {
+    this.numberMemos ??= new WeakMap();
+    let memo = this.numberMemos.get(node);
+    if (!memo) {
+      memo = new Map();
+      this.numberMemos.set(node, memo);
+    }
+    return memo;
   }
 
   /**
