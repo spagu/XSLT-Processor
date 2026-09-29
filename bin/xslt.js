@@ -98,4 +98,8 @@ async function main() {
   }
 }
 
-main();
+main().catch((err) => {
+  // main() reports expected failures itself; this catches anything unexpected.
+  console.error(`Error: ${err?.message ?? err}`);
+  process.exit(1);
+});

@@ -14,9 +14,12 @@
 
 "use strict";
 
-/** Namespace Gecko puts its `parsererror` element in. */
+/**
+ * Namespace Gecko puts its `parsererror` element in. A namespace name is an
+ * identifier compared as a string, never fetched, so http is correct here.
+ */
 const GECKO_PARSER_ERROR_NS =
-  "http://www.mozilla.org/newlayout/xml/parsererror.xml";
+  "http://www.mozilla.org/newlayout/xml/parsererror.xml"; // NOSONAR
 
 /**
  * @typedef {{parseFromString: (text: string, type: string) => Document}} DomParserLike
