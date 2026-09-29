@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A global `xsl:param` with higher import precedence wins over an imported `xsl:variable` of the same name (XSLT 1.0 section 11.4).
 - `self::*` and other non-attribute axes no longer match attribute or namespace nodes.
 - Node-sets holding an element and its own attributes are sorted in document order under jsdom.
+- The release workflow ran twice per release (on the tag push and on the published release), including `npm publish`; it now runs once, on the published release.
 - The CLI entry point handles an unexpected rejection from `main()` instead of leaving the promise unhandled (SonarCloud S9383).
 
 ### Security
@@ -32,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Standalone `xslt` executables** (task 0008) for linux-x64/arm64, darwin-x64/arm64 and windows-x64, attached to each GitHub release with `checksums.sha256`. They are built as Node.js Single Executable Applications with jsdom bundled (`scripts/binaries/`) and smoke-tested on each operating system in CI; `scripts/install.sh` installs them with checksum verification.
 - **Browser tests** (task 0009): `npm run test:browser` runs the built bundles in Chromium, Firefox and WebKit with Playwright, in CI on pull requests; an informational differential test compares the output with the browser's native `XSLTProcessor`.
 - **`namespace::` axis** (task 0004): namespace nodes for every binding in scope (including `xml`), with `name()`, string value, parent, `generate-id()`, union deduplication, and `xsl:copy`/`xsl:copy-of` adding the declaration.
 - `XSLTProcessor`/`XsltEngine` options `enableDynamicEvaluate` and `clock` for EXSLT `dyn:evaluate()` and reproducible current-time functions.

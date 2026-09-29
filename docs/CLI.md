@@ -6,6 +6,44 @@ The command line tool needs a DOM implementation, so install `jsdom` next to
 the package. It is an optional peer dependency: library users do not need it.
 Without it, `xslt` exits with an explanation instead of a stack trace.
 
+## Standalone executables
+
+Every GitHub release ships self-contained `xslt` executables that need no
+Node.js, npm or jsdom: `xslt-linux-x64`, `xslt-linux-arm64`,
+`xslt-darwin-x64`, `xslt-darwin-arm64` and `xslt-windows-x64.exe`, plus
+`checksums.sha256`. They embed Node.js as a Single Executable Application
+together with jsdom, so they behave exactly like `npx xslt`.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/spagu/XSLT-Processor/main/scripts/install.sh | bash
+# pin a version or location:
+XSLT_VERSION=1.2.0 XSLT_INSTALL_DIR=$HOME/.local/bin bash install.sh
+```
+
+The installer detects the operating system and CPU, downloads over HTTPS and
+refuses to install when the SHA-256 checksum does not match. Manual install on
+Linux (on macOS use `shasum -a 256 --check --ignore-missing`):
+
+```sh
+curl -fsSLO https://github.com/spagu/XSLT-Processor/releases/latest/download/xslt-linux-x64
+curl -fsSLO https://github.com/spagu/XSLT-Processor/releases/latest/download/checksums.sha256
+sha256sum --check --ignore-missing checksums.sha256
+install -m 0755 xslt-linux-x64 /usr/local/bin/xslt
+xslt --version
+```
+
+On Windows, download `xslt-windows-x64.exe`, compare
+`(Get-FileHash xslt-windows-x64.exe).Hash` with its line in
+`checksums.sha256`, rename it to `xslt.exe` and put it on your `PATH`.
+
+- Linux builds need glibc 2.28 or newer; on Alpine (musl) use npm instead.
+- The executables are about 100 to 150 MB. Start-up takes about 25 ms and a
+  small transformation about 250 ms, most of it jsdom initialisation.
+- macOS executables are ad-hoc signed and the Windows one is unsigned, so
+  Gatekeeper or SmartScreen may ask for confirmation.
+- Build them locally with `make binaries` (host platform, Node.js 25.5 or
+  newer) or `node scripts/binaries/build.mjs --target all`.
+
 ## Examples
 
 ```bash

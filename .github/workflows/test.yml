@@ -39,6 +39,10 @@ jobs:
       - name: Check documentation links
         run: npm run docs:check
 
+      - name: Test binary build scripts
+        if: matrix.node-version == '26.x'
+        run: npm run test:binaries
+
       - name: Run tests with coverage
         run: npm test
 

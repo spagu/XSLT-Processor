@@ -1,4 +1,4 @@
-.PHONY: install test test-watch test-browser conformance conformance-baseline build lint format format-check clean docker-test docker-dev docker-build docker-clean help
+.PHONY: install test test-watch test-browser conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help
 
 # Default target
 help:
@@ -10,6 +10,10 @@ help:
 	@echo "  conformance  - Run the XSLT 1.0 conformance suite (libxslt corpus)"
 	@echo "  conformance-baseline - Rewrite the conformance baseline"
 	@echo "  build        - Build distribution bundles"
+	@echo "  binaries     - Build the standalone xslt executable for this machine (dist-bin/)"
+	@echo "  binaries-all - Cross-build all standalone executables (darwin ones unsigned)"
+	@echo "  binaries-test  - Test the standalone binary scripts and install.sh"
+	@echo "  binaries-smoke - Smoke test the executables in dist-bin/"
 	@echo "  lint         - Run ESLint"
 	@echo "  format       - Format code with Prettier"
 	@echo "  clean        - Remove build artifacts"
@@ -47,6 +51,22 @@ conformance-baseline:
 build:
 	npm run build
 
+# Standalone xslt executable for this machine (Node.js SEA, needs Node.js 25.5+)
+binaries:
+	node scripts/binaries/build.mjs --target host
+
+# Cross-build every target; darwin binaries need `codesign --sign -` on a Mac
+binaries-all:
+	node scripts/binaries/build.mjs --target all
+
+# Tests of scripts/binaries and scripts/install.sh
+binaries-test:
+	node --test "scripts/binaries/*.test.mjs"
+
+# Smoke test dist-bin/xslt-<os>-<arch> of this machine
+binaries-smoke:
+	node scripts/binaries/smoke.mjs
+
 # Run ESLint
 lint:
 	npm run lint
@@ -62,6 +82,7 @@ format-check:
 # Clean build artifacts
 clean:
 	rm -rf dist/
+	rm -rf dist-bin/
 	rm -rf node_modules/
 	rm -rf coverage/
 	rm -rf test-results/ playwright-report/

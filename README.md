@@ -160,9 +160,18 @@ method.
 
 ## CLI Usage
 
-The package includes a command-line tool for transforming XML documents:
+The package includes a command-line tool for transforming XML documents.
 
-The command line tool needs a DOM implementation, so install `jsdom` next to
+Without Node.js, use the standalone executable attached to every GitHub
+release (Linux x64/arm64, macOS x64/arm64, Windows x64), installed with a
+checksum check:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spagu/XSLT-Processor/main/scripts/install.sh | bash
+```
+
+See [Standalone executables](docs/CLI.md#standalone-executables) for manual
+installation. With Node.js, the command line tool needs a DOM implementation, so install `jsdom` next to
 the package. It is an optional peer dependency: library users do not need it.
 Without it, `xslt` exits with an explanation instead of a stack trace.
 

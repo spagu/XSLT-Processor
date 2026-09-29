@@ -48,7 +48,8 @@
     "format:check": "prettier --check \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\"",
     "prepublishOnly": "npm run build && npm run test",
     "docs:check": "node scripts/check-links.mjs",
-    "test:browser": "playwright test -c tests/browser/playwright.config.mjs"
+    "test:browser": "playwright test -c tests/browser/playwright.config.mjs",
+    "test:binaries": "node --test \"scripts/binaries/*.test.mjs\""
   },
   "keywords": [
     "xslt",

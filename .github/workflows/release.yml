@@ -1,11 +1,10 @@
 name: Release
 
+# Runs once per GitHub release (creating a release also pushes its tag, so
+# triggering on both events ran every job twice, including npm publish).
 on:
   release:
     types: [published]
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: read
@@ -125,3 +124,117 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
+
+  # Standalone `xslt` executables (Node.js Single Executable Applications,
+  # see scripts/binaries/build.mjs). Each target is built on its own OS and
+  # CPU: the V8 code cache is platform specific and macOS binaries must be
+  # signed (ad hoc) on a Mac. Every binary is smoke-tested natively with an
+  # empty PATH: --version, an xsl:include transform of an ISO-8859-1 input
+  # and an ISO-8859-1 result file.
+  binaries:
+    name: Binary (${{ matrix.target }})
+    needs: [test]
+    runs-on: ${{ matrix.runner }}
+
+    permissions:
+      contents: read
+
+    # bash on every runner, Windows included (Git Bash), so "$VAR" works.
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+            binary: xslt-linux-x64
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+            binary: xslt-linux-arm64
+          - target: darwin-x64
+            runner: macos-15-intel
+            binary: xslt-darwin-x64
+          - target: darwin-arm64
+            runner: macos-latest
+            binary: xslt-darwin-arm64
+          - target: windows-x64
+            runner: windows-latest
+            binary: xslt-windows-x64.exe
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "26.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Test the binary build scripts
+        run: node --test "scripts/binaries/*.test.mjs"
+
+      - name: Build the ${{ matrix.target }} binary
+        env:
+          TARGET: ${{ matrix.target }}
+        run: node scripts/binaries/build.mjs --target "$TARGET"
+
+      - name: Smoke test the binary
+        env:
+          BINARY: dist-bin/${{ matrix.binary }}
+        run: node scripts/binaries/smoke.mjs "$BINARY"
+
+      - name: Upload the binary
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: binary-${{ matrix.target }}
+          path: dist-bin/${{ matrix.binary }}
+          if-no-files-found: error
+          retention-days: 30
+
+  # Attaches the binaries and checksums.sha256 to the published GitHub
+  # release. Only this job may write to the repository contents.
+  release-binaries:
+    needs: [build, binaries]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "26.x"
+
+      - name: Download the binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: binary-*
+          path: dist-bin
+          merge-multiple: true
+
+      - name: Write and verify checksums.sha256
+        run: |
+          node scripts/binaries/build.mjs checksums --out dist-bin
+          cd dist-bin
+          sha256sum --check checksums.sha256
+          test "$(wc -l < checksums.sha256)" -eq 5
+
+      - name: Upload to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "$TAG" dist-bin/xslt-* dist-bin/checksums.sha256 \
+            --repo "$GITHUB_REPOSITORY" --clobber
