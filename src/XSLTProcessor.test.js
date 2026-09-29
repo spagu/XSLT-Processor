@@ -1314,4 +1314,86 @@ describe("XSLTProcessor", () => {
       assert.strictEqual(fragment.firstChild.firstChild.nodeName, "qux");
     });
   });
+
+  describe("invalid stylesheets", () => {
+    it("throws on an invalid pattern and keeps the previous stylesheet", () => {
+      const processor = new XSLTProcessor();
+      processor.importStylesheet(IDENTITY_STYLESHEET());
+      const engine = processor.engine;
+
+      const invalid = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:template match="a/..">x</xsl:template>
+        </xsl:stylesheet>`);
+      assert.throws(
+        () => processor.importStylesheet(invalid),
+        /xsl:template match: Invalid pattern "a\/\.\."/,
+      );
+
+      assert.strictEqual(processor.engine, engine);
+      assert.strictEqual(
+        processor.transformToString(parseXML("<d/>")),
+        '<?xml version="1.0" encoding="UTF-8"?>\n<out/>',
+      );
+    });
+
+    it("detects parse errors without querySelector", () => {
+      const processor = new XSLTProcessor();
+      const doc = parseXML("<xsl:stylesheet");
+      const minimal = new Proxy(doc, {
+        get(target, property) {
+          if (property === "querySelector") return undefined;
+          const value = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+      assert.throws(
+        () => processor.importStylesheet(minimal),
+        /contains parse errors/,
+      );
+      assert.strictEqual(processor.engine, null);
+    });
+  });
+
+  describe("native detection after installGlobal", () => {
+    it("does not report this implementation as native", () => {
+      const original = globalThis.XSLTProcessor;
+      try {
+        delete globalThis.XSLTProcessor;
+        assert.strictEqual(installGlobal(false), true);
+        assert.strictEqual(globalThis.XSLTProcessor, XSLTProcessor);
+        assert.strictEqual(isNativeXSLTSupported(), false);
+      } finally {
+        globalThis.XSLTProcessor = original;
+      }
+    });
+
+    it("keeps probing the native implementation it replaced", () => {
+      const original = globalThis.XSLTProcessor;
+      let probes = 0;
+      class NativeXSLTProcessor {
+        importStylesheet() {
+          probes++;
+        }
+        transformToFragment() {
+          const fragment = document.createDocumentFragment();
+          fragment.appendChild(document.createElement("test"));
+          return fragment;
+        }
+      }
+      try {
+        globalThis.XSLTProcessor = NativeXSLTProcessor;
+        assert.strictEqual(installGlobal(true), true);
+        assert.strictEqual(globalThis.XSLTProcessor, XSLTProcessor);
+        assert.strictEqual(isNativeXSLTSupported(), true);
+        assert.strictEqual(probes, 1);
+        // Installing again keeps the native reference
+        assert.strictEqual(installGlobal(true), true);
+        assert.strictEqual(isNativeXSLTSupported(), true);
+        assert.strictEqual(probes, 2);
+      } finally {
+        globalThis.XSLTProcessor = original;
+      }
+    });
+  });
 });
