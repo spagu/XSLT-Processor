@@ -101,3 +101,26 @@ describe("dyn:evaluate() through XSLTProcessor", () => {
     assert.strictEqual(processor.transformToString(source), "2");
   });
 });
+
+describe("engine and processor options", () => {
+  it("enables dyn:evaluate and a fixed clock through constructor options", async () => {
+    const { XSLTProcessor } = await import("../../XSLTProcessor.js");
+    const { JSDOM } = await import("jsdom");
+    const { window } = new JSDOM("");
+    const parse = (s) =>
+      new window.DOMParser().parseFromString(s, "application/xml");
+    const processor = new XSLTProcessor({
+      enableDynamicEvaluate: true,
+      clock: () => new Date(Date.UTC(2026, 8, 29, 12, 0, 0)),
+    });
+    processor.importStylesheet(
+      parse(`<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+          xmlns:dyn="http://exslt.org/dynamic" xmlns:date="http://exslt.org/dates-and-times">
+        <xsl:output method="text"/>
+        <xsl:template match="/"><xsl:value-of select="dyn:evaluate('1 + 2')"/>|<xsl:value-of select="date:year()"/></xsl:template>
+      </xsl:stylesheet>`),
+    );
+    assert.strictEqual(processor.transformToString(parse("<r/>")), "3|2026");
+    assert.strictEqual(processor.engine.enableDynamicEvaluate, true);
+  });
+});

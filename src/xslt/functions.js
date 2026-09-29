@@ -220,8 +220,12 @@ export function createXsltFunctions(engine) {
       const namespaceUri =
         ctx.namespaces[prefix] ?? (prefix === "xsl" ? XSLT_NAMESPACE : null);
 
-      return (
-        namespaceUri === XSLT_NAMESPACE && isXsltElementAvailable(localName)
+      if (namespaceUri === XSLT_NAMESPACE) {
+        return isXsltElementAvailable(localName);
+      }
+      // Extension elements with an implementation (registerExtensionElement)
+      return Boolean(
+        engine.extensionElements?.has(`{${namespaceUri}}${localName}`),
       );
     },
 

@@ -34,7 +34,8 @@ describe("formatXsltNumber", () => {
 
   it("should fall back to decimals for non positive numbers", () => {
     assert.strictEqual(formatXsltNumber([0], "a"), "0");
-    assert.strictEqual(formatXsltNumber([-3], "I"), "-3");
+    // Negative numbers are formatted as 0, as in libxslt
+    assert.strictEqual(formatXsltNumber([-3], "I"), "0");
   });
 
   it("should join multi level numbers with the format separator", () => {

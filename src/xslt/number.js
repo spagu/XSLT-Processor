@@ -157,7 +157,9 @@ function countAncestors(node, multiple, isCounted, isFrom, positions) {
 
 /**
  * Count a node according to `level="any"`: walk backwards in document order
- * until a `from` node, the root, or a node whose total is memoized.
+ * until a `from` node, the root, or a node whose total is memoized. An
+ * attribute counts itself, then its element and the nodes before it: other
+ * attributes are neither preceding nor ancestor nodes (as in libxslt).
  *
  * @param {Node} node - The node being numbered
  * @param {(candidate: Node) => boolean} isCounted - Counting predicate
@@ -167,7 +169,12 @@ function countAncestors(node, multiple, isCounted, isFrom, positions) {
  */
 function countAny(node, isCounted, isFrom, totals) {
   let total = 0;
-  let current = node.nodeType === 2 ? node.ownerElement : node;
+  let current = node;
+  if (node.nodeType === 2) {
+    if (isFrom(node)) return [];
+    if (isCounted(node)) total++;
+    current = node.ownerElement;
+  }
 
   while (current && current.nodeType !== 9) {
     const known = totals?.get(current);

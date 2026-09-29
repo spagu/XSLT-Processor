@@ -12,7 +12,8 @@
 
 import { NodeType, parse } from "../xpath/parser.js";
 
-const ANCHOR_FUNCTIONS = new Set(["id", "key"]);
+/** Number of (literal) arguments of the anchor functions of patterns. */
+const ANCHOR_ARITY = Object.freeze({ id: 1, key: 2 });
 const POSITIONAL_FUNCTIONS = new Set(["position", "last"]);
 
 /** Marker anchor of absolute location path patterns. */
@@ -79,8 +80,29 @@ function isAnchorCall(ast) {
   return (
     ast?.type === NodeType.FUNCTION_CALL &&
     !ast.prefix &&
-    ANCHOR_FUNCTIONS.has(ast.name)
+    Object.hasOwn(ANCHOR_ARITY, ast.name)
   );
+}
+
+/**
+ * Check the arguments of an `id()`/`key()` pattern anchor: XSLT 1.0
+ * (section 5.2, production IdKeyPattern) only allows string literals, as
+ * libxslt enforces.
+ *
+ * @param {object} call - Function call AST of the anchor
+ * @returns {object} The call
+ * @throws {Error} When the arguments are not the right number of literals
+ */
+function checkAnchorArguments(call) {
+  const arity = ANCHOR_ARITY[call.name];
+  const literals = call.args.every((arg) => arg.type === NodeType.LITERAL);
+  if (call.args.length !== arity || !literals) {
+    const noun = arity === 1 ? "literal" : "literals";
+    throw new Error(
+      `${call.name}() expects ${arity} ${noun} in a pattern (XSLT 1.0 section 5.2)`,
+    );
+  }
+  return call;
 }
 
 /**
@@ -98,14 +120,14 @@ function compileAlternative(ast) {
     anchor = ast.absolute ? ROOT : null;
     steps = ast.steps;
   } else if (isAnchorCall(ast)) {
-    anchor = ast;
+    anchor = checkAnchorArguments(ast);
     steps = [];
   } else if (
     ast.type === NodeType.PATH_EXPR &&
     isAnchorCall(ast.filter) &&
     !ast.predicates
   ) {
-    anchor = ast.filter;
+    anchor = checkAnchorArguments(ast.filter);
     steps = ast.steps;
   } else {
     throw new Error(`Unsupported pattern expression: ${ast.type}`);

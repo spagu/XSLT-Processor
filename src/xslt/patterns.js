@@ -28,7 +28,6 @@ import {
   MatchScope,
   isNamespaceDeclaration,
   isRoot,
-  isStaticAnchor,
   parentOf,
   rootOf,
 } from "./matchScope.js";
@@ -164,7 +163,9 @@ export class PatternMatcher {
     const type = node.nodeType;
     if (step.axis === "attribute") {
       if (type !== 2 || isNamespaceDeclaration(node)) return false;
-    } else if (type === 2 || type === 9 || type === 11) {
+    } else if (type === 2 || type === 9 || type === 11 || type === 13) {
+      // Patterns only use the child and attribute axes: roots, attributes
+      // and namespace nodes are never children
       return false;
     }
     if (
@@ -278,9 +279,10 @@ export class PatternMatcher {
 
   /**
    * The nodes selected by the `id()`/`key()` anchor of a pattern relative to
-   * a node. With literal arguments the set only depends on the node's tree
-   * and the prefixes in scope, so it is computed once per root until
-   * {@link PatternMatcher#reset}, instead of once per candidate node.
+   * a node. Anchors only have literal arguments (see patternCompiler.js), so
+   * the set only depends on the node's tree and the prefixes in scope: it is
+   * computed once per root until {@link PatternMatcher#reset}, instead of
+   * once per candidate node.
    *
    * @param {object} anchor - Function call AST
    * @param {Node} node - Node providing the document
@@ -288,10 +290,6 @@ export class PatternMatcher {
    * @returns {Set<Node>} The anchor nodes
    */
   anchorNodes(anchor, node, scope) {
-    if (!isStaticAnchor(anchor)) {
-      return this.evaluateAnchor(anchor, node, scope);
-    }
-
     const root = rootOf(node);
     let byAnchor = this.anchors.get(root);
     if (!byAnchor) {

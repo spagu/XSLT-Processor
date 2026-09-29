@@ -5,7 +5,7 @@
  * Copies follow the XPath data model rather than the raw DOM: a run of
  * adjacent Text/CDATA nodes is one text node (its first DOM node stands for
  * the run), copying a root node copies its children, and copying an attribute
- * adds it to the result element being built. Names keep their namespace and
+ * or a namespace node adds it to the result element being built. Names keep their namespace and
  * elements keep their namespace declarations.
  *
  * @module xslt/copying
@@ -14,6 +14,7 @@
 "use strict";
 
 import { childAxis } from "../xpath/axes.js";
+import { NAMESPACE_NODE } from "../xpath/namespaceNodes.js";
 import { copyNamespaceDeclarations } from "./resultNamespaces.js";
 import { XMLNS_NAMESPACE } from "./stylesheetNamespaces.js";
 
@@ -39,6 +40,37 @@ export function copyAttribute(attribute, target, canAddAttribute) {
   } else {
     target.setAttribute(attribute.name, attribute.value);
   }
+}
+
+/**
+ * Copy a namespace node onto a result element as a namespace declaration
+ * (XSLT 1.0 sections 7.5 and 11.3). As in libxslt, nothing is declared for
+ * the implicit `xml` binding, for a prefix the element's own name binds to
+ * another namespace, for a prefix the element already declares differently,
+ * or when the element already has children (see `canAddAttribute`).
+ *
+ * @param {import('../xpath/namespaceNodes.js').NamespaceNode} namespace - The namespace node
+ * @param {Node} target - The result node receiving it
+ * @param {(element: Node) => boolean} canAddNamespace - Guard for late nodes
+ * @returns {void}
+ *
+ * @example
+ * copyNamespaceNode(nsNode, resultElement, () => true); // xmlns:a="urn:a"
+ */
+export function copyNamespaceNode(namespace, target, canAddNamespace) {
+  const prefix = namespace.localName;
+  if (prefix === "xml" || !canAddNamespace(target)) return;
+  const uri = namespace.nodeValue;
+  if ((target.prefix ?? "") === prefix && (target.namespaceURI ?? "") !== uri) {
+    return;
+  }
+  const declared = target.getAttributeNS(XMLNS_NAMESPACE, prefix || "xmlns");
+  if (declared !== null && declared !== uri) return;
+  target.setAttributeNS(
+    XMLNS_NAMESPACE,
+    prefix ? `xmlns:${prefix}` : "xmlns",
+    uri,
+  );
 }
 
 /**
@@ -141,6 +173,8 @@ export function copyOf(value, output, host) {
 
   if (value.nodeType === 2) {
     copyAttribute(value, output, host.canAddAttribute);
+  } else if (value.nodeType === NAMESPACE_NODE) {
+    copyNamespaceNode(value, output, host.canAddAttribute);
   } else if (value.nodeType === 9) {
     appendChildCopies(value, output, host.doc, host.stringValue);
   } else {

@@ -27,6 +27,8 @@ import {
 import {
   createResultDocument,
   importResultFragment,
+  isHtmlDocument,
+  parseHtmlFragment,
   wrapTextResult,
 } from "./resultTree.js";
 import { childAxis, isTextContinuation } from "../xpath/axes.js";
@@ -34,6 +36,7 @@ import { evaluateAvt } from "./avt.js";
 import {
   cloneNode,
   copyAttribute,
+  copyNamespaceNode,
   copyOf,
   shallowCopyElement,
 } from "./copying.js";
@@ -42,7 +45,10 @@ import {
   setResultAttribute,
 } from "./resultNamespaces.js";
 import { computedAttributeName, computedElementName } from "./computedNames.js";
-import { inScopeNamespaces } from "./stylesheetNamespaces.js";
+import {
+  inScopeNamespaces,
+  isExtensionElement,
+} from "./stylesheetNamespaces.js";
 import {
   GlobalBindings,
   createVariableView,
@@ -64,7 +70,7 @@ import {
 } from "./forwardsCompatible.js";
 import { parseXml, resolveDomParser } from "./domParsing.js";
 import { cdataSectionNames } from "./outputNames.js";
-import { serializeResult } from "./serializer.js";
+import { resolveOutputSettings, serializeResult } from "./serializer.js";
 
 const XSLT_NS = XSLT_NAMESPACE;
 
@@ -272,10 +278,27 @@ const INSTRUCTION_METHODS = Object.freeze({
  * XSLT Engine
  */
 export class XsltEngine {
+  /**
+   * @param {object} [options] - Engine options
+   * @param {number} [options.maxResultSize] - Largest node-set of one XPath step
+   * @param {number} [options.maxRecursionDepth] - Deepest XPath expression nesting
+   * @param {boolean} [options.legacyNameTests] - Deprecated: unprefixed name
+   *   tests also match nodes in a namespace, as before 1.2.0
+   * @param {Function} [options.stylesheetLoader] - Loader for xsl:import/include
+   * @param {Function} [options.documentLoader] - Loader for document()
+   * @param {string} [options.baseUri] - Base URI of the stylesheet
+   * @param {object} [options.domParser] - Parser for loaded XML strings
+   * @param {boolean} [options.enableDynamicEvaluate] - Allow EXSLT
+   *   `dyn:evaluate()` (off by default: it evaluates XPath built from data)
+   * @param {() => Date} [options.clock] - Clock for EXSLT current-time functions
+   */
   constructor(options = {}) {
+    this.enableDynamicEvaluate = options.enableDynamicEvaluate === true;
+    this.clock = options.clock ?? null;
     this.xpathEvaluator = new XPathEvaluator({
       maxResultSize: options.maxResultSize ?? XSLT_MAX_RESULT_SIZE,
       maxRecursionDepth: options.maxRecursionDepth ?? XSLT_MAX_EXPRESSION_DEPTH,
+      legacyNameTests: options.legacyNameTests,
     });
     this.templates = [];
     this.keys = {};
@@ -341,6 +364,9 @@ export class XsltEngine {
 
     // Recoverable errors already reported, so each is reported once
     this.reportedWarnings = new Set();
+
+    // Extension element implementations by expanded name `{uri}local`
+    this.extensionElements = new Map();
 
     this.xpathEvaluator.registerFunctions(createXsltFunctions(this));
   }
@@ -834,9 +860,9 @@ export class XsltEngine {
   /**
    * Warn about a global variable or parameter declared twice at the same
    * import precedence (an error in XSLT 1.0 section 11.4 that libxslt
-   * reports) and about duplicate local bindings in its content. The current
-   * resolution is kept: the later declaration, or the xsl:variable when a
-   * parameter has the same name.
+   * reports) and about duplicate local bindings in its content. The later
+   * declaration is used, or the xsl:variable when a parameter has the same
+   * name and import precedence.
    *
    * @param {string} name - The declared name
    * @param {Element} node - The xsl:variable or xsl:param element
@@ -1011,16 +1037,67 @@ export class XsltEngine {
   }
 
   /**
-   * Transform a source document
+   * Transform a source node into a fragment owned by `ownerDocument`, built
+   * with the XML DOM (names and namespaces as in the result tree).
+   *
+   * @param {Node} sourceNode - Source document or element
+   * @param {Document} [ownerDocument] - Output document, default the global one
+   * @returns {DocumentFragment} The result
    */
   transform(sourceNode, ownerDocument) {
+    const doc = this.outputDocumentOf(ownerDocument);
+    return importResultFragment(this.buildResultTree(sourceNode, doc), doc);
+  }
+
+  /**
+   * Transform a source node into a fragment of `ownerDocument` as Chrome's
+   * `transformToFragment` does: into an HTML document, the output of the
+   * html method (declared or detected) is serialized and parsed as HTML, so
+   * it holds HTMLElements; any other output keeps the XML DOM nodes.
+   *
+   * @param {Node} sourceNode - Source document or element
+   * @param {Document} ownerDocument - Output document
+   * @returns {DocumentFragment} The result
+   */
+  transformToFragment(sourceNode, ownerDocument) {
+    const doc = this.outputDocumentOf(ownerDocument);
+    const fragment = this.buildResultTree(sourceNode, doc);
+    const settings = resolveOutputSettings(this.outputSettings, fragment);
+    if (isHtmlDocument(doc) && settings.method === "html") {
+      return parseHtmlFragment(
+        serializeResult(fragment, this.outputSettings),
+        doc,
+      );
+    }
+    return importResultFragment(fragment, doc);
+  }
+
+  /**
+   * The document that owns a transformation result.
+   *
+   * @param {Document} [ownerDocument] - Requested owner
+   * @returns {Document} The owner, else the global document
+   * @throws {Error} When there is no document at all
+   */
+  outputDocumentOf(ownerDocument) {
     const doc =
       ownerDocument || (typeof document !== "undefined" ? document : null);
 
     if (!doc) {
       throw new Error("No output document available");
     }
+    return doc;
+  }
 
+  /**
+   * Run the transformation and return the result tree, built in a neutral
+   * XML document.
+   *
+   * @param {Node} sourceNode - Source document or element
+   * @param {Document} doc - Document providing the DOM implementation
+   * @returns {DocumentFragment} The result tree
+   */
+  buildResultTree(sourceNode, doc) {
     // Build the result tree in a neutral XML document: creating nodes directly
     // in an HTML owner document would lower case names and force the XHTML
     // namespace on every element.
@@ -1047,6 +1124,7 @@ export class XsltEngine {
     // The source tree may have changed since the previous transformation
     this.keyRegistry.clear();
     this.patternMatcher.reset();
+    this.xpathEvaluator.resetNamespaceNodes();
     this.numberMemos = new WeakMap();
 
     // Create result document fragment
@@ -1064,14 +1142,16 @@ export class XsltEngine {
       throw recursionError(error);
     }
 
-    return importResultFragment(fragment, doc);
+    return fragment;
   }
 
   /**
    * Declare the global variables and parameters of the stylesheet for one
    * transformation. They are evaluated lazily with the root node as context
    * node (XSLT 1.0 section 11.4), so they may refer to each other in any
-   * order; a variable wins over a parameter of the same name.
+   * order. Of a variable and a parameter of the same name, the one with the
+   * higher import precedence wins (section 11.4), the variable when the
+   * precedences are equal.
    *
    * @param {XsltContext} rootContext - The initial context
    * @returns {GlobalBindings} The global bindings
@@ -1087,6 +1167,10 @@ export class XsltEngine {
       globals.define(name, def);
     }
     for (const [name, def] of Object.entries(this.globalVariables)) {
+      const param = this.globalParameters[name];
+      if (param?.node && param.importPrecedence > def.importPrecedence) {
+        continue;
+      }
       globals.define(name, def);
     }
     return globals;
@@ -1170,7 +1254,7 @@ export class XsltEngine {
    * @returns {string} The serialized transformation result
    */
   transformToString(sourceNode) {
-    const fragment = this.transform(
+    const fragment = this.buildResultTree(
       sourceNode,
       this.createDocument(sourceNode),
     );
@@ -1543,7 +1627,11 @@ export class XsltEngine {
    * @returns {string|null} The method name
    */
   instructionMethod(node) {
-    if (!this.isXsltNamespace(node)) return "processLiteralResultElement";
+    if (!this.isXsltNamespace(node)) {
+      return isExtensionElement(node)
+        ? "instantiateExtension"
+        : "processLiteralResultElement";
+    }
 
     const localName = node.localName || node.nodeName.replace(/^xsl:/, "");
     if (Object.hasOwn(INSTRUCTION_METHODS, localName)) {
@@ -1563,13 +1651,68 @@ export class XsltEngine {
    * @returns {void}
    */
   instantiateUnknown(node, context, output) {
-    const fallbacks = fallbackChildren(node);
-    if (fallbacks.length === 0) {
+    if (!this.instantiateFallbacks(node, context, output)) {
       console.warn(`Unknown XSLT element: ${xsltLocalName(node)}`);
-      return;
     }
+  }
+
+  /**
+   * Instantiate the xsl:fallback children of an element in order.
+   *
+   * @param {Element} node - An unknown XSLT element or extension element
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result node receiving the output
+   * @returns {boolean} Whether the element had any xsl:fallback child
+   */
+  instantiateFallbacks(node, context, output) {
+    const fallbacks = fallbackChildren(node);
     for (const fallback of fallbacks) {
       this.processChildren(fallback, context, output);
+    }
+    return fallbacks.length > 0;
+  }
+
+  /**
+   * Register the implementation of an extension element (XSLT 1.0 section
+   * 14.1). It is called as `handler(node, context, output, engine)` where
+   * an element of that name is instantiated in a namespace declared with
+   * `extension-element-prefixes`.
+   *
+   * @param {string} namespaceUri - The extension namespace
+   * @param {string} localName - The element's local name
+   * @param {(node: Element, context: XsltContext, output: Node, engine: XsltEngine) => void} handler - The implementation
+   * @returns {XsltEngine} This engine, to allow chaining
+   *
+   * @example
+   * engine.registerExtensionElement("urn:my", "log", (node) => console.log(node.textContent));
+   */
+  registerExtensionElement(namespaceUri, localName, handler) {
+    this.extensionElements.set(`{${namespaceUri}}${localName}`, handler);
+    return this;
+  }
+
+  /**
+   * Instantiate an extension element: its registered implementation, else
+   * its xsl:fallback children (XSLT 1.0 sections 14.1 and 15); without
+   * either, the error is reported once and nothing is produced, as libxslt
+   * does. An extension element is never copied to the result.
+   *
+   * @param {Element} node - The extension element
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result node receiving the output
+   * @returns {void}
+   */
+  instantiateExtension(node, context, output) {
+    const name = `{${node.namespaceURI}}${node.localName}`;
+    const handler = this.extensionElements.get(name);
+    if (handler) {
+      handler(node, context, output, this);
+      return;
+    }
+    if (!this.instantiateFallbacks(node, context, output)) {
+      this.warnOnce(
+        `extension element ${node.nodeName} (${name}) is not supported and has no xsl:fallback`,
+      );
     }
   }
 
@@ -2008,6 +2151,12 @@ export class XsltEngine {
         );
         break;
 
+      case 13: // Namespace node: a namespace declaration
+        copyNamespaceNode(currentNode, output, (target) =>
+          this.canAddAttribute(target),
+        );
+        break;
+
       case 3: // Text
       case 4: {
         // CDATA; a text node stands for its whole text run
@@ -2137,6 +2286,10 @@ export class XsltEngine {
           this.xpathEvaluator.toNumber(this.evaluateXPath(value, context)),
         ),
       ];
+      // An error that libxslt reports and recovers from by numbering 0
+      if (numbers[0] < 0) {
+        this.warnOnce("xsl:number: negative value, 0 is used");
+      }
     } else {
       const count = node.getAttribute("count");
       const from = node.getAttribute("from");

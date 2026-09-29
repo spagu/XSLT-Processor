@@ -2,9 +2,15 @@
  * `xsl:number` number-to-string conversion.
  *
  * Renders the number sequence produced by {@link countXsltNumber} using the
- * `format` attribute of `xsl:number`: numeric tokens (`1`, `01`), alphabetic
- * tokens (`a`, `A`) and Roman numerals (`i`, `I`), together with the prefix,
- * separators and suffix taken from the format string itself.
+ * `format` attribute of `xsl:number`: numeric tokens (`1`, `01`, and the
+ * same in any Unicode digit family, e.g. `٠١`), alphabetic tokens (`a`, `A`)
+ * and Roman numerals (`i`, `I`), together with the prefix, separators and
+ * suffix taken from the format string itself.
+ *
+ * Extreme values follow libxslt: a negative number is formatted as 0, NaN
+ * and Infinity as by `string()`, alphabetic and Roman tokens use decimals
+ * below 1 (and Roman ones above 5000), and every conversion takes O(log n)
+ * steps, so a huge value cannot stall the transformation.
  */
 
 "use strict";
@@ -46,6 +52,9 @@ const ROMAN_NUMERALS = Object.freeze([
   ["I", 1],
 ]);
 
+/** Largest number written with Roman numerals, as in libxslt. */
+const MAX_ROMAN = 5000;
+
 /**
  * Convert a positive integer to a Roman numeral.
  *
@@ -60,10 +69,8 @@ export function toRoman(value) {
   let result = "";
 
   for (const [numeral, amount] of ROMAN_NUMERALS) {
-    while (remaining >= amount) {
-      result += numeral;
-      remaining -= amount;
-    }
+    result += numeral.repeat(Math.floor(remaining / amount));
+    remaining %= amount;
   }
 
   return result;
@@ -87,6 +94,71 @@ function groupDigits(digits, { separator, size }) {
   return result;
 }
 
+/** A Unicode decimal digit (general category Nd). */
+const DECIMAL_DIGIT = /^\p{Nd}$/u;
+
+/**
+ * Whether a code point is a Unicode decimal digit.
+ *
+ * @param {number} codePoint - Any code point
+ * @returns {boolean} True for characters of category Nd
+ */
+function isDecimalDigit(codePoint) {
+  return DECIMAL_DIGIT.test(String.fromCodePoint(codePoint));
+}
+
+/**
+ * The zero of the digit family of a decimal format token: a token whose
+ * last character has the digit value 1 and whose other characters are the
+ * zero of that family (XSLT 1.0 section 7.7.1), e.g. `1`, `01`, `٠١`.
+ * Digit families are runs of ten code points, which may follow each other
+ * (the mathematical digits), so the value is counted from the run start.
+ *
+ * @param {string} token - A format token
+ * @returns {number|null} The code point of the family's zero, or null
+ */
+function decimalTokenZero(token) {
+  const digits = Array.from(token, (char) => char.codePointAt(0));
+  const one = digits.at(-1);
+  if (!isDecimalDigit(one)) return null;
+  let start = one;
+  while (isDecimalDigit(start - 1)) start--;
+  const zero = one - 1;
+  if ((one - start) % 10 !== 1) return null;
+  return digits.slice(0, -1).every((digit) => digit === zero) ? zero : null;
+}
+
+/**
+ * The decimal digits of a non-negative integer, without exponent notation.
+ *
+ * @param {number} value - A finite, non-negative integer
+ * @returns {string} Its ASCII decimal digits
+ */
+function decimalDigits(value) {
+  return Number.isSafeInteger(value) ? String(value) : BigInt(value).toString();
+}
+
+/**
+ * Write a number with decimal digits of a family, padded with zeros to a
+ * minimum width and grouped.
+ *
+ * @param {number} value - A finite, non-negative integer
+ * @param {number} zero - Code point of the family's zero
+ * @param {number} width - Minimum number of digits
+ * @param {{separator?: string, size?: number}} grouping - Digit grouping
+ * @returns {string} The rendered number
+ */
+function formatDecimal(value, zero, width, grouping) {
+  const ascii = decimalDigits(value).padStart(width, "0");
+  const digits =
+    zero === 0x30
+      ? ascii
+      : Array.from(ascii, (digit) =>
+          String.fromCodePoint(zero + Number(digit)),
+        ).join("");
+  return groupDigits(digits, grouping);
+}
+
 /**
  * Render one number with a single `xsl:number` format token.
  *
@@ -96,24 +168,25 @@ function groupDigits(digits, { separator, size }) {
  * @returns {string} The rendered number
  */
 function formatToken(value, token, grouping) {
+  if (Number.isNaN(value) || value === Infinity) return String(value);
+  // Negative numbers are an error that libxslt recovers from with 0
+  const number = value < 0 ? 0 : Math.round(value);
+
   if (/^\d+$/.test(token)) {
-    return groupDigits(String(value).padStart(token.length, "0"), grouping);
+    return formatDecimal(number, 0x30, token.length, grouping);
+  }
+  const zero = decimalTokenZero(token);
+  if (zero !== null) {
+    return formatDecimal(number, zero, Array.from(token).length, grouping);
   }
 
-  if (value <= 0) return String(value);
-
-  switch (token) {
-    case "a":
-      return toAlphabetic(value, false);
-    case "A":
-      return toAlphabetic(value, true);
-    case "i":
-      return toRoman(value).toLowerCase();
-    case "I":
-      return toRoman(value);
-    default:
-      return String(value);
+  const alphabetic = token === "a" || token === "A";
+  const roman = token === "i" || token === "I";
+  if (number < 1 || (roman && number > MAX_ROMAN) || (!alphabetic && !roman)) {
+    return decimalDigits(number);
   }
+  if (alphabetic) return toAlphabetic(number, token === "A");
+  return token === "I" ? toRoman(number) : toRoman(number).toLowerCase();
 }
 
 /**
@@ -123,8 +196,8 @@ function formatToken(value, token, grouping) {
  * @returns {{prefix: string, suffix: string, tokens: string[], separators: string[]}} The parsed format
  */
 function parseFormat(format) {
-  const parts = format.match(/[a-zA-Z0-9]+|[^a-zA-Z0-9]+/g) || [];
-  const isToken = (part) => /^[a-zA-Z0-9]+$/.test(part);
+  const parts = format.match(/[\p{L}\p{N}]+|[^\p{L}\p{N}]+/gu) || [];
+  const isToken = (part) => /^[\p{L}\p{N}]+$/u.test(part);
 
   const tokens = [];
   const separators = [];

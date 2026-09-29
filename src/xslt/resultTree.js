@@ -100,3 +100,35 @@ export function wrapTextResult(doc, text) {
   doc.appendChild(html);
   return doc;
 }
+
+/**
+ * Whether a document is an HTML document (as opposed to an XML one).
+ *
+ * @param {Document} doc - Any document
+ * @returns {boolean} True for documents of content type text/html
+ */
+export function isHtmlDocument(doc) {
+  return doc.contentType === "text/html";
+}
+
+/**
+ * Parse serialized `html` output into a fragment of an HTML document, as
+ * Chrome's `XSLTProcessor.transformToFragment` does: the elements are
+ * created by the HTML parser, so `<a>` is an `HTMLAnchorElement` and
+ * `<script>` elements run when inserted. Like Blink, the markup is parsed
+ * in the context of a (detached) `body` element, that is in the "in body"
+ * insertion mode: `<html>`, `<head>` and `<body>` tags are dropped and their
+ * content becomes children of the fragment.
+ *
+ * @param {string} markup - HTML markup
+ * @param {Document} doc - The HTML document that will own the fragment
+ * @returns {DocumentFragment} The parsed fragment
+ *
+ * @example
+ * parseHtmlFragment('<a href="u">x</a>', document).firstChild; // HTMLAnchorElement
+ */
+export function parseHtmlFragment(markup, doc) {
+  const range = doc.createRange();
+  range.selectNodeContents(doc.createElement("body"));
+  return range.createContextualFragment(markup);
+}

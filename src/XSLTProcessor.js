@@ -34,7 +34,28 @@ let nativeProcessor = null;
  * const fragment = processor.transformToFragment(xmlDoc, document);
  */
 export class XSLTProcessor {
-  constructor() {
+  /**
+   * @param {object} [options] - Non-standard options (the native constructor
+   *   takes none)
+   * @param {boolean} [options.legacyNameTests] - Deprecated: let unprefixed
+   *   name tests (`item`, `@a`) also match nodes in a namespace, as before
+   *   1.2.0. XPath 1.0 and Chrome only match nodes in no namespace.
+   * @param {boolean} [options.enableDynamicEvaluate] - Allow EXSLT
+   *   `dyn:evaluate()`, which evaluates XPath built from strings; enable it
+   *   only for trusted input.
+   * @param {() => Date} [options.clock] - Clock for EXSLT current-time
+   *   functions (reproducible output).
+   *
+   * @example
+   * // Temporary migration aid for stylesheets written against 1.1.x
+   * const processor = new XSLTProcessor({ legacyNameTests: true });
+   */
+  constructor(options = {}) {
+    this._options = {
+      legacyNameTests: options?.legacyNameTests === true,
+      enableDynamicEvaluate: options?.enableDynamicEvaluate === true,
+      clock: options?.clock ?? null,
+    };
     this._engine = null;
     this._stylesheet = null;
     this._parameters = new Map();
@@ -187,6 +208,9 @@ export class XSLTProcessor {
     }
 
     const engine = new XsltEngine({
+      legacyNameTests: this._options.legacyNameTests,
+      enableDynamicEvaluate: this._options.enableDynamicEvaluate,
+      clock: this._options.clock,
       stylesheetLoader: this._stylesheetLoader,
       documentLoader: this._documentLoader,
     });
@@ -206,6 +230,13 @@ export class XSLTProcessor {
   /**
    * Transforms the node source by applying the XSLT stylesheet.
    * Returns a document fragment.
+   *
+   * As in Chrome, when `output` is an HTML document and the output method is
+   * `html` (declared, or detected from an `<html>` result root), the result
+   * is serialized and parsed by the HTML parser of `output`, so it holds
+   * real `HTMLElement`s (`<a>` is an `HTMLAnchorElement`, `<script>` runs
+   * when inserted). Other results keep the element names and namespaces of
+   * the result tree.
    *
    * @param {Node} source - The XML document to transform
    * @param {Document} output - The document that will own the generated fragment
@@ -253,7 +284,7 @@ export class XSLTProcessor {
     }
 
     try {
-      return this._engine.transform(source, output);
+      return this._engine.transformToFragment(source, output);
     } catch (error) {
       // Match native behavior - return null on error
       console.error("XSLT transformation error:", error);

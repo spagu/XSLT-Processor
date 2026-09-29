@@ -75,6 +75,25 @@ describe("compilePattern", () => {
   it("rejects expressions that are not location paths", () => {
     assert.throws(() => compilePattern("1 + 2"), /Unsupported pattern/);
     assert.throws(() => compilePattern("$v/a"), /Unsupported pattern/);
+    // id() and key() only take literals in patterns (XSLT 1.0 section 5.2)
+    assert.throws(() => compilePattern("id($v)"), /id\(\) expects 1 literal/);
+    assert.throws(() => compilePattern("id(@x)/a"), /id\(\) expects 1 literal/);
+    assert.throws(
+      () => compilePattern("id('a', 'b')"),
+      /id\(\) expects 1 literal/,
+    );
+    assert.throws(
+      () => compilePattern("key('k', $v)"),
+      /key\(\) expects 2 literal/,
+    );
+    assert.throws(
+      () => compilePattern("key('k')"),
+      /key\(\) expects 2 literal/,
+    );
+    assert.throws(
+      () => compilePattern("key(concat('k',''), 'v')"),
+      /key\(\) expects 2 literal/,
+    );
   });
 
   it("rejects a trailing //", () => {
@@ -115,15 +134,9 @@ describe("PatternMatcher", () => {
     assert.strictEqual(counting.matches(second, "key('k','1')"), false);
     assert.strictEqual(calls, 1);
 
-    // A variable argument is evaluated for every candidate
-    const host = { xpathVariables: { v: "2" }, namespaces: {} };
-    assert.strictEqual(counting.matches(second, "key('k',$v)", host), true);
-    assert.strictEqual(counting.matches(first, "key('k',$v)", host), false);
-    assert.strictEqual(calls, 3);
-
     counting.reset();
     assert.strictEqual(counting.matches(first, "key('k','1')"), true);
-    assert.strictEqual(calls, 4);
+    assert.strictEqual(calls, 2);
   });
 
   it("matches '/' against root nodes only", () => {
@@ -239,5 +252,13 @@ describe("PatternMatcher", () => {
     matcher = new PatternMatcher(evaluator);
     assert.deepStrictEqual(matching(doc, "key('k', '1')/d"), ["d"]);
     assert.deepStrictEqual(matching(doc, "key('k', '1')//d"), ["d"]);
+  });
+
+  it("matches nothing when an anchor function returns no node-set", () => {
+    const doc = parseXML("<r><a/></r>");
+    const evaluator = new XPathEvaluator();
+    evaluator.registerFunctions({ key: () => "not a node-set" });
+    matcher = new PatternMatcher(evaluator);
+    assert.deepStrictEqual(matching(doc, "key('k', '1')"), []);
   });
 });

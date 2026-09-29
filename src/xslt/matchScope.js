@@ -9,21 +9,13 @@
 "use strict";
 
 import { XPathContext } from "../xpath/evaluator.js";
-import { NodeType } from "../xpath/parser.js";
+import { parentOf } from "../xpath/axes.js";
 
 const XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/";
 const EMPTY_VARIABLES = Object.freeze({});
 const EMPTY_NAMESPACES = Object.freeze({});
 
-/**
- * Parent of a node in the XPath data model.
- *
- * @param {Node} node - Any node
- * @returns {Node|null} The owner element of an attribute, else the parent
- */
-export function parentOf(node) {
-  return node.nodeType === 2 ? node.ownerElement : node.parentNode;
-}
+export { parentOf };
 
 /**
  * The root of the tree holding a node (its document, or the top of a
@@ -38,17 +30,6 @@ export function rootOf(node) {
     root = parent;
   }
   return root;
-}
-
-/**
- * Whether an `id()`/`key()` anchor only has literal arguments, so that its
- * node-set only depends on the document (and can be cached per root).
- *
- * @param {object} anchor - Function call AST
- * @returns {boolean} True when every argument is a string literal
- */
-export function isStaticAnchor(anchor) {
-  return anchor.args.every((arg) => arg.type === NodeType.LITERAL);
 }
 
 /**

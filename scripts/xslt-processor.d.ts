@@ -14,7 +14,10 @@
  * @param href - The resolved URI of the referenced stylesheet
  * @param baseUri - The URI of the importing/including stylesheet, if known
  */
-export type StylesheetLoader = (href: string, baseUri?: string) => Document | string;
+export type StylesheetLoader = (
+  href: string,
+  baseUri?: string,
+) => Document | string;
 
 /**
  * Loader used by the XSLT document() function.
@@ -26,7 +29,10 @@ export type StylesheetLoader = (href: string, baseUri?: string) => Document | st
  * @param uri - The resolved URI of the requested document
  * @param baseUri - The base URI the reference was resolved against, if known
  */
-export type DocumentLoader = (uri: string, baseUri?: string) => Document | string | null;
+export type DocumentLoader = (
+  uri: string,
+  baseUri?: string,
+) => Document | string | null;
 
 /**
  * Anything with a DOMParser-like parseFromString method (a browser, jsdom or
@@ -40,7 +46,18 @@ export interface DomParserLike {
  * XSLTProcessor - Applies XSLT stylesheet transformations to XML documents.
  */
 export class XSLTProcessor {
-  constructor();
+  constructor(options?: {
+    /**
+     * @deprecated Let unprefixed name tests (`item`, `@a`) also match nodes
+     * in a namespace, as before 1.2.0. XPath 1.0 and Chrome match only nodes
+     * in no namespace.
+     */
+    legacyNameTests?: boolean;
+    /** Allow EXSLT `dyn:evaluate()`; it evaluates XPath built from data. */
+    enableDynamicEvaluate?: boolean;
+    /** Clock for EXSLT current-time functions (reproducible output). */
+    clock?: () => Date;
+  });
 
   /**
    * The underlying XSLT engine (advanced usage).
@@ -104,7 +121,11 @@ export class XSLTProcessor {
    * @param localName - The local name of the parameter
    * @param value - The value to set
    */
-  setParameter(namespaceURI: string | null, localName: string, value: unknown): void;
+  setParameter(
+    namespaceURI: string | null,
+    localName: string,
+    value: unknown,
+  ): void;
 
   /**
    * Gets the value of a parameter from the XSLT stylesheet.
@@ -182,7 +203,7 @@ export class XPathContext {
     size?: number,
     variables?: Record<string, unknown>,
     namespaces?: Record<string, string>,
-    hostContext?: unknown
+    hostContext?: unknown,
   );
 
   node: Node;
@@ -203,7 +224,7 @@ export class XPathContext {
 export type XPathFunction = (
   this: XPathEvaluator,
   args: unknown[],
-  context: XPathContext
+  context: XPathContext,
 ) => unknown;
 
 /**
@@ -217,6 +238,12 @@ export class XPathEvaluator {
     maxResultSize?: number;
     /** Longest string a function may produce (default XPathLimits.MAX_STRING_LENGTH). */
     maxStringLength?: number;
+    /**
+     * @deprecated Let unprefixed name tests (`item`, `@a`) also match nodes
+     * in a namespace, as before 1.2.0. XPath 1.0 and Chrome match only nodes
+     * in no namespace.
+     */
+    legacyNameTests?: boolean;
   });
 
   evaluate(ast: unknown, context: XPathContext): unknown;
@@ -238,7 +265,10 @@ export class XPathEvaluator {
 export function evaluateXPath(
   expression: string,
   contextNode: Node,
-  options?: { variables?: Record<string, unknown>; namespaces?: Record<string, string> }
+  options?: {
+    variables?: Record<string, unknown>;
+    namespaces?: Record<string, string>;
+  },
 ): unknown;
 
 /**
@@ -247,7 +277,10 @@ export function evaluateXPath(
 export function selectXPath(
   expression: string,
   contextNode: Node,
-  options?: { variables?: Record<string, unknown>; namespaces?: Record<string, string> }
+  options?: {
+    variables?: Record<string, unknown>;
+    namespaces?: Record<string, string>;
+  },
 ): Node[];
 
 /**
@@ -256,7 +289,10 @@ export function selectXPath(
 export function selectFirstXPath(
   expression: string,
   contextNode: Node,
-  options?: { variables?: Record<string, unknown>; namespaces?: Record<string, string> }
+  options?: {
+    variables?: Record<string, unknown>;
+    namespaces?: Record<string, string>;
+  },
 ): Node | null;
 
 /**
@@ -322,12 +358,50 @@ export class XsltEngine {
     maxResultSize?: number;
     /** Deepest XPath expression nesting (default XSLT_MAX_EXPRESSION_DEPTH). */
     maxRecursionDepth?: number;
+    /**
+     * @deprecated Let unprefixed name tests (`item`, `@a`) also match nodes
+     * in a namespace, as before 1.2.0. XPath 1.0 and Chrome match only nodes
+     * in no namespace.
+     */
+    legacyNameTests?: boolean;
+    /** Allow EXSLT `dyn:evaluate()`; it evaluates XPath built from data. */
+    enableDynamicEvaluate?: boolean;
+    /** Clock for EXSLT current-time functions (reproducible output). */
+    clock?: () => Date;
   });
+
+  /** Whether EXSLT `dyn:evaluate()` is allowed. */
+  enableDynamicEvaluate: boolean;
+  /** Clock for EXSLT current-time functions, or null for the system clock. */
+  clock: (() => Date) | null;
 
   setStylesheetLoader(loader: StylesheetLoader | null): this;
   setDocumentLoader(loader: DocumentLoader | null): this;
   importStylesheet(stylesheetNode: Node, stylesheetUri?: string): void;
   transform(sourceNode: Node, ownerDocument: Document): DocumentFragment;
+  /**
+   * Like transform(), but html output into an HTML document is parsed as
+   * HTML (real HTMLElements), as Chrome's transformToFragment does.
+   */
+  transformToFragment(
+    sourceNode: Node,
+    ownerDocument: Document,
+  ): DocumentFragment;
+  /**
+   * Register the implementation of an extension element (XSLT 1.0 section
+   * 14.1), used instead of its xsl:fallback children.
+   * @returns This engine, to allow chaining
+   */
+  registerExtensionElement(
+    namespaceUri: string,
+    localName: string,
+    handler: (
+      node: Element,
+      context: XsltContext,
+      output: Node,
+      engine: XsltEngine,
+    ) => void,
+  ): this;
   transformToDocument(sourceNode: Node): Document;
   transformToString(sourceNode: Node): string;
 
@@ -341,12 +415,12 @@ export class XsltEngine {
  * A null method means "not declared": html or xml is picked from the result.
  */
 export interface OutputSettings {
-  method?: 'xml' | 'html' | 'xhtml' | 'text' | 'auto' | (string & {}) | null;
+  method?: "xml" | "html" | "xhtml" | "text" | "auto" | (string & {}) | null;
   version?: string;
   encoding?: string;
-  standalone?: 'yes' | 'no' | string | null;
-  indent?: 'yes' | 'no' | boolean;
-  omitXmlDeclaration?: 'yes' | 'no' | boolean;
+  standalone?: "yes" | "no" | string | null;
+  indent?: "yes" | "no" | boolean;
+  omitXmlDeclaration?: "yes" | "no" | boolean;
   doctypePublic?: string | null;
   doctypeSystem?: string | null;
   mediaType?: string | null;
@@ -355,8 +429,7 @@ export interface OutputSettings {
    * engine resolves them from xsl:output.
    */
   cdataSectionElements?:
-    | string
-    | Array<string | { namespaceUri: string | null; localName: string }>;
+    string | Array<string | { namespaceUri: string | null; localName: string }>;
 }
 
 /**
@@ -367,7 +440,7 @@ export interface OutputSettings {
  */
 export function serializeResult(
   node: Node | null,
-  outputSettings?: OutputSettings
+  outputSettings?: OutputSettings,
 ): string;
 
 /**
@@ -385,8 +458,12 @@ export function isRawText(node: Node | null): boolean;
  */
 export function resolveOutputSettings(
   outputSettings: OutputSettings | null,
-  node: Node | null
-): Required<OutputSettings> & { indent: boolean; omitXmlDeclaration: boolean; cdataSectionElements: Set<string> };
+  node: Node | null,
+): Required<OutputSettings> & {
+  indent: boolean;
+  omitXmlDeclaration: boolean;
+  cdataSectionElements: Set<string>;
+};
 
 /**
  * Version information.

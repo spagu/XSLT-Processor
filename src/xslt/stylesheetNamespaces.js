@@ -33,8 +33,12 @@ const EMPTY_SCOPE = Object.freeze({});
 /** Namespaces excluded above the stylesheet document element. */
 const BASE_EXCLUSIONS = new Set([XSLT_NAMESPACE]);
 
+/** No extension namespaces, above the stylesheet document element. */
+const NO_EXTENSIONS = new Set();
+
 const scopes = new WeakMap();
 const exclusions = new WeakMap();
+const extensions = new WeakMap();
 const namespaceNodes = new WeakMap();
 
 /**
@@ -101,24 +105,84 @@ const EXCLUSION_ATTRIBUTES = [
   "extension-element-prefixes",
 ];
 
+/** Attributes declaring extension namespaces (XSLT 1.0 section 14.1). */
+const EXTENSION_ATTRIBUTES = ["extension-element-prefixes"];
+
 /**
- * Read the exclusion attributes of one stylesheet element: unqualified on
+ * Read prefix list attributes of one stylesheet element: unqualified on
  * `xsl:stylesheet`, `xsl:`-qualified on literal result elements.
  *
  * @param {Element} element - A stylesheet element
- * @returns {Array<{prefix: string, attribute: string}>} Excluded prefixes
- *   declared on this element, with the attribute declaring each
+ * @param {string[]} attributes - Local names of the attributes to read
+ * @returns {Array<{prefix: string, attribute: string}>} Prefixes declared on
+ *   this element, with the attribute declaring each
  */
-function ownExclusions(element) {
+function ownPrefixes(element, attributes) {
   const isXslt = element.namespaceURI === XSLT_NAMESPACE;
   const read = (localName) =>
     isXslt
       ? element.getAttribute(localName)
       : element.getAttributeNS(XSLT_NAMESPACE, localName);
-  return EXCLUSION_ATTRIBUTES.flatMap((attribute) =>
+  return attributes.flatMap((attribute) =>
     prefixList(read(attribute)).map((prefix) => ({ prefix, attribute })),
   );
 }
+
+/**
+ * Namespace URIs named by prefix list attributes on a stylesheet element or
+ * its ancestors, cached per element.
+ *
+ * @param {Node|null} node - A stylesheet element
+ * @param {object} kind - What to collect
+ * @param {string[]} kind.attributes - The prefix list attributes
+ * @param {WeakMap<Element, Set<string>>} kind.cache - Results by element
+ * @param {Set<string>} kind.base - The set above the document element
+ * @param {boolean} kind.report - Whether undeclared prefixes are reported
+ * @returns {Set<string>} The namespace URIs
+ */
+function declaredNamespaces(node, kind) {
+  if (node?.nodeType !== 1) return kind.base;
+
+  let found = kind.cache.get(node);
+  if (found) return found;
+
+  found = declaredNamespaces(node.parentNode, kind);
+  const prefixes = ownPrefixes(node, kind.attributes);
+  if (prefixes.length > 0) {
+    const scope = inScopeNamespaces(node);
+    found = new Set(found);
+    for (const { prefix, attribute } of prefixes) {
+      const uri = resolvePrefix(scope, prefix);
+      if (uri) {
+        found.add(uri);
+      } else if (kind.report) {
+        // An error in XSLT 1.0 (section 7.1.1) that libxslt reports and
+        // recovers from; reported once, as the result is cached per element
+        console.warn(
+          `XSLT: ${attribute}: undefined namespace prefix "${prefix || "#default"}" is ignored`,
+        );
+      }
+    }
+  }
+  kind.cache.set(node, found);
+  return found;
+}
+
+/** Excluded namespaces: excluded and extension prefixes, plus XSLT. */
+const EXCLUDED = {
+  attributes: EXCLUSION_ATTRIBUTES,
+  cache: exclusions,
+  base: BASE_EXCLUSIONS,
+  report: true,
+};
+
+/** Extension namespaces (reported through EXCLUDED already). */
+const EXTENSIONS = {
+  attributes: EXTENSION_ATTRIBUTES,
+  cache: extensions,
+  base: NO_EXTENSIONS,
+  report: false,
+};
 
 /**
  * Namespace URIs excluded from the result tree around a stylesheet element:
@@ -131,31 +195,27 @@ function ownExclusions(element) {
  * @returns {Set<string>} Excluded namespace URIs
  */
 function excludedNamespaces(node) {
-  if (node?.nodeType !== 1) return BASE_EXCLUSIONS;
+  return declaredNamespaces(node, EXCLUDED);
+}
 
-  let excluded = exclusions.get(node);
-  if (excluded) return excluded;
-
-  excluded = excludedNamespaces(node.parentNode);
-  const prefixes = ownExclusions(node);
-  if (prefixes.length > 0) {
-    const scope = inScopeNamespaces(node);
-    excluded = new Set(excluded);
-    for (const { prefix, attribute } of prefixes) {
-      const uri = resolvePrefix(scope, prefix);
-      if (uri) {
-        excluded.add(uri);
-      } else {
-        // An error in XSLT 1.0 (section 7.1.1) that libxslt reports and
-        // recovers from; reported once, as the result is cached per element
-        console.warn(
-          `XSLT: ${attribute}: undefined namespace prefix "${prefix || "#default"}" is ignored`,
-        );
-      }
-    }
-  }
-  exclusions.set(node, excluded);
-  return excluded;
+/**
+ * Whether a stylesheet element is an extension element: an element in a
+ * namespace that an `extension-element-prefixes` attribute on it or on an
+ * ancestor declares as an extension namespace (XSLT 1.0 section 14.1).
+ *
+ * @param {Element} element - A stylesheet element that is not in the XSLT namespace
+ * @returns {boolean} True for extension elements
+ *
+ * @example
+ * // <xsl:stylesheet xmlns:e="urn:e" extension-element-prefixes="e">
+ * isExtensionElement(eElement); // true
+ */
+export function isExtensionElement(element) {
+  const uri = element.namespaceURI;
+  if (!uri) return false;
+  // Resolving the exclusions first reports undeclared prefixes once
+  excludedNamespaces(element);
+  return declaredNamespaces(element, EXTENSIONS).has(uri);
 }
 
 /**

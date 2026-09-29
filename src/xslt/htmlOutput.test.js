@@ -105,18 +105,27 @@ describe("html attribute values", () => {
     );
   });
 
-  it("%-escape non-ASCII characters of URI attributes as UTF-8", () => {
-    const doc = parseXml("<html><a/><img/><form/><p/></html>");
-    const [a, img, form, p] = doc.documentElement.childNodes;
-    a.setAttribute("href", "http://x/é ü?q=é&r=%41#😀");
+  it("%-escape spaces, controls and non-ASCII characters of URI attributes like libxml2", () => {
+    const doc = parseXml("<html><a/><img/><form/><p/><a/></html>");
+    const [a, img, form, p, named] = doc.documentElement.childNodes;
+    a.setAttribute("href", " \thttp://x/é ü?q=é&r=%41#😀\u007f\t{x}[y]|");
     img.setAttribute("SRC", "é");
-    form.setAttribute("formaction", "ü");
+    form.setAttribute("action", "a b");
+    form.setAttribute("formaction", "a b");
     p.setAttribute("title", "é");
+    p.setAttribute("cite", "a b");
+    named.setAttribute("name", "a b");
     assert.strictEqual(
       serializeResult(doc, { method: "html" }),
-      '<html><a href="http://x/%C3%A9 %C3%BC?q=%C3%A9&amp;r=%41#%F0%9F%98%80"></a>' +
-        '<img SRC="%C3%A9"><form formaction="%C3%BC"></form><p title="é"></p></html>',
+      '<html><a href=" \thttp://x/%C3%A9%20%C3%BC?q=%C3%A9&amp;r=%41#%F0%9F%98%80%7F%09{x}[y]|"></a>' +
+        '<img SRC="%C3%A9"><form action="a%20b" formaction="a b"></form>' +
+        '<p title="é" cite="a b"></p><a name="a%20b"></a></html>',
     );
+  });
+
+  it("do not %-escape attributes of elements in a namespace", () => {
+    const doc = parseXml('<html><a xmlns="urn:x" href="a b"/></html>');
+    assert.match(serializeResult(doc, { method: "html" }), /href="a b"/);
   });
 
   it("do not %-escape attributes in a namespace", () => {

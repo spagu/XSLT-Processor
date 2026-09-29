@@ -20,8 +20,15 @@ import {
   precedingAxis,
   precedingSiblingAxis,
   isTextNode,
+  parentOf,
   rootNodeOf,
 } from "./axes.js";
+import {
+  NAMESPACE_NODE,
+  matchNamespaceNameTest,
+  namespaceAxis,
+} from "./namespaceNodes.js";
+import { compareNodeOrder } from "./documentOrder.js";
 import { createNodeSetFunctions } from "./nodeSetFunctions.js";
 import {
   codePointLength,
@@ -80,6 +87,23 @@ function isPositionCall(expr) {
     !expr.prefix &&
     expr.args.length === 0
   );
+}
+
+/**
+ * Whether a node has the principal node type of an axis, the only type a
+ * name test can match there: attributes on the attribute axis, namespace
+ * nodes on the namespace axis, elements elsewhere (XPath 1.0 section 2.3).
+ *
+ * @param {Node} node - Candidate node
+ * @param {string|null} axis - The axis, or null when the caller checks types
+ * @returns {boolean} True when a name test may match the node
+ */
+function isPrincipalNodeType(node, axis) {
+  if (axis === null) return true;
+  const type = node.nodeType;
+  if (axis === "attribute") return type === 2;
+  if (axis === "namespace") return type === NAMESPACE_NODE;
+  return type === 1;
 }
 
 /**
@@ -165,7 +189,17 @@ export class XPathContext {
  * XPath Evaluator
  */
 export class XPathEvaluator {
+  /**
+   * @param {object} [options] - Evaluator options
+   * @param {number} [options.maxRecursionDepth] - Deepest expression nesting
+   * @param {number} [options.maxResultSize] - Largest node-set of one step
+   * @param {number} [options.maxStringLength] - Longest string literal
+   * @param {boolean} [options.legacyNameTests] - Deprecated: let unprefixed
+   *   name tests also match nodes in a namespace, as before 1.2.0
+   */
   constructor(options = {}) {
+    this.legacyNameTests = options.legacyNameTests === true;
+    this.resetNamespaceNodes();
     this.functions = Object.assign(
       Object.create(null),
       this.initCoreFunctions(),
@@ -176,6 +210,18 @@ export class XPathEvaluator {
     this.maxStringLength =
       options.maxStringLength ?? XPathLimits.MAX_STRING_LENGTH;
     this.recursionDepth = 0;
+  }
+
+  /**
+   * Forget the namespace nodes synthesized so far (see namespaceNodes.js),
+   * e.g. before a new transformation: the declarations of the source tree
+   * may have changed. Until then each element keeps the same namespace node
+   * objects, so they have a stable identity.
+   *
+   * @returns {void}
+   */
+  resetNamespaceNodes() {
+    this.namespaceNodes = new WeakMap();
   }
 
   /**
@@ -446,7 +492,7 @@ export class XPathEvaluator {
       first = 1;
     } else {
       nodes = this.getAxisNodes(step.axis, context.node).filter((n) =>
-        this.matchNodeTest(step.nodeTest, n, context),
+        this.matchNodeTest(step.nodeTest, n, context, step.axis),
       );
     }
 
@@ -496,7 +542,9 @@ export class XPathEvaluator {
     let remaining = position;
     let found = null;
     AXIS_WALKERS[step.axis](context.node, (node) => {
-      if (!this.matchNodeTest(step.nodeTest, node, context)) return false;
+      if (!this.matchNodeTest(step.nodeTest, node, context, step.axis)) {
+        return false;
+      }
       remaining--;
       if (remaining > 0) return false;
       found = node;
@@ -518,8 +566,7 @@ export class XPathEvaluator {
       case "child":
         return childAxis(node);
       case "parent": {
-        const parent =
-          node.nodeType === 2 ? node.ownerElement : node.parentNode;
+        const parent = parentOf(node);
         return parent ? [parent] : [];
       }
       case "self":
@@ -543,16 +590,30 @@ export class XPathEvaluator {
       case "attribute":
         return attributeAxis(node);
       case "namespace":
-        return [];
+        return namespaceAxis(node, this.namespaceNodes);
       default:
         throw new Error(`Unknown axis: ${axis}`);
     }
   }
 
-  matchNodeTest(nodeTest, node, context) {
+  /**
+   * Match a node test against a node.
+   *
+   * @param {object} nodeTest - Node test AST node
+   * @param {Node} node - Candidate node
+   * @param {XPathContext} context - Evaluation context (for prefixes)
+   * @param {string|null} [axis] - Axis of the step, which decides the
+   *   principal node type of name tests; null for XSLT patterns, whose
+   *   matcher checks node types itself
+   * @returns {boolean} Whether the node matches
+   */
+  matchNodeTest(nodeTest, node, context, axis = null) {
     switch (nodeTest.type) {
       case NodeType.NAME_TEST:
-        return this.matchNameTest(nodeTest, node, context);
+        return (
+          isPrincipalNodeType(node, axis) &&
+          this.matchNameTest(nodeTest, node, context)
+        );
 
       case NodeType.NODE_TYPE_TEST:
         return this.matchNodeTypeTest(nodeTest.nodeType, node);
@@ -579,6 +640,7 @@ export class XPathEvaluator {
    */
   matchNameTest(nodeTest, node, context) {
     const type = node.nodeType;
+    if (type === NAMESPACE_NODE) return matchNamespaceNameTest(nodeTest, node);
     // Only element and attribute nodes have names
     if (type !== 1 && type !== 2) return false;
 
@@ -587,12 +649,17 @@ export class XPathEvaluator {
     if (!prefix) {
       if (name === "*") return true;
       const nodeName = node.localName || node.nodeName;
-      if (nodeName === name) return true;
-      // HTML documents match element names case-insensitively
+      const isHtmlElement =
+        type === 1 && node.ownerDocument?.contentType === "text/html";
+      if (nodeName !== name) {
+        // HTML documents match element names case-insensitively
+        return isHtmlElement && nodeName.toLowerCase() === name.toLowerCase();
+      }
+      // A QName without prefix only matches nodes in no namespace (2.3).
+      // HTML elements are in the XHTML namespace in the DOM but in none for
+      // libxslt, which receives HTML documents re-parsed from their markup.
       return (
-        type === 1 &&
-        nodeName.toLowerCase() === name.toLowerCase() &&
-        node.ownerDocument?.contentType === "text/html"
+        isHtmlElement || this.legacyNameTests || node.namespaceURI === null
       );
     }
 
@@ -817,6 +884,7 @@ export class XPathEvaluator {
       case 2: // Attribute
       case 7: // Processing Instruction
       case 8: // Comment
+      case NAMESPACE_NODE: // The namespace URI
         return node.nodeValue || "";
 
       default:
@@ -916,12 +984,17 @@ export class XPathEvaluator {
     }
   }
 
+  /**
+   * Sort nodes in document order; attributes and namespace nodes sort after
+   * their element and before its children (see documentOrder.js).
+   *
+   * @param {Node[]} nodes - The nodes, sorted in place
+   * @returns {Node[]} The same array
+   */
   sortByDocumentOrder(nodes) {
     if (nodes.length <= 1) return nodes;
 
-    return nodes.sort((a, b) => {
-      if (a === b) return 0;
-
+    const compareDom = (a, b) => {
       const position = a.compareDocumentPosition
         ? a.compareDocumentPosition(b)
         : this.compareDocumentPositionFallback(a, b);
@@ -929,7 +1002,10 @@ export class XPathEvaluator {
       if (position & 4) return -1; // a before b
       if (position & 2) return 1; // a after b
       return 0;
-    });
+    };
+    return nodes.sort((a, b) =>
+      a === b ? 0 : compareNodeOrder(a, b, compareDom),
+    );
   }
 
   compareDocumentPositionFallback(a, b) {

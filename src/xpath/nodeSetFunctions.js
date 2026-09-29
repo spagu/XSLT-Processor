@@ -14,6 +14,8 @@
 "use strict";
 
 import { splitXmlSpace } from "./strings.js";
+import { parentOf } from "./axes.js";
+import { NAMESPACE_NODE } from "./namespaceNodes.js";
 
 /** Qualified name of the attribute read by `lang()`. */
 const XML_LANG = "xml:lang";
@@ -31,16 +33,27 @@ function hasQualifiedName(node) {
 }
 
 /**
+ * Whether a node has a name without a namespace part: processing
+ * instructions (their target) and namespace nodes (their prefix).
+ *
+ * @param {Node} node - Any node
+ * @returns {boolean} True for processing instruction and namespace nodes
+ */
+function hasLocalNameOnly(node) {
+  const type = node.nodeType;
+  return type === 7 || type === NAMESPACE_NODE;
+}
+
+/**
  * The element whose `xml:lang` decides the language of a node: the node
- * itself for an element, the owner element of an attribute, the parent of any
- * other node.
+ * itself for an element, the element of an attribute or namespace node, the
+ * parent of any other node.
  *
  * @param {Node} node - Context node
  * @returns {Node|null} The first node to inspect
  */
 function languageStart(node) {
-  if (node.nodeType === 1) return node;
-  return node.nodeType === 2 ? node.ownerElement : node.parentNode;
+  return node.nodeType === 1 ? node : parentOf(node);
 }
 
 /**
@@ -106,7 +119,7 @@ export function createNodeSetFunctions(evaluator) {
       const node = nameTarget("local-name", args, ctx);
       if (!node) return "";
       if (hasQualifiedName(node)) return node.localName;
-      return node.nodeType === 7 ? node.nodeName : "";
+      return hasLocalNameOnly(node) ? node.nodeName : "";
     },
 
     "namespace-uri": (args, ctx) => {
@@ -117,7 +130,9 @@ export function createNodeSetFunctions(evaluator) {
     name: (args, ctx) => {
       const node = nameTarget("name", args, ctx);
       if (!node) return "";
-      return hasQualifiedName(node) || node.nodeType === 7 ? node.nodeName : "";
+      return hasQualifiedName(node) || hasLocalNameOnly(node)
+        ? node.nodeName
+        : "";
     },
 
     sum: (args, ctx) =>

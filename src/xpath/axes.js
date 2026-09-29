@@ -23,6 +23,8 @@
  * @module xpath/axes
  */
 
+import { NAMESPACE_NODE } from "./namespaceNodes.js";
+
 /** Namespace of `xmlns` and `xmlns:*` attributes (Namespaces in XML 1.0). */
 export const XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/";
 
@@ -328,9 +330,9 @@ export function precedingSiblingAxis(node) {
  * @returns {boolean} True when the visitor stopped the walk
  */
 export function walkFollowing(node, visit) {
-  // An attribute precedes the children of its owner element.
+  // An attribute or namespace node precedes the children of its element.
   if (
-    node.nodeType === 2 &&
+    hasOwnerElement(node) &&
     node.ownerElement &&
     walkDescendants(node.ownerElement, false, visit)
   ) {
@@ -434,22 +436,35 @@ export function rootNodeOf(node) {
 }
 
 /**
- * Parent of a node; for an attribute this is its owner element.
+ * Whether a node's parent is its `ownerElement`: attributes and (synthesized)
+ * namespace nodes, which are not children of their element.
+ *
+ * @param {Node} node - Any node
+ * @returns {boolean} True for attribute and namespace nodes
+ */
+function hasOwnerElement(node) {
+  const type = node.nodeType;
+  return type === 2 || type === NAMESPACE_NODE;
+}
+
+/**
+ * Parent of a node in the XPath data model; for an attribute or a namespace
+ * node this is its element.
  *
  * @param {Node} node - Any node
  * @returns {Node|null} The parent
  */
-function parentOf(node) {
-  return node.nodeType === 2 ? node.ownerElement : node.parentNode;
+export function parentOf(node) {
+  return hasOwnerElement(node) ? node.ownerElement : node.parentNode;
 }
 
 /**
- * Starting point for the following/preceding axes: an attribute behaves as
- * if it were positioned at its owner element.
+ * Starting point for the following/preceding axes: an attribute or
+ * namespace node behaves as if it were positioned at its element.
  *
  * @param {Node} node - Context node
  * @returns {Node} The node whose siblings and ancestors are walked
  */
 function startOf(node) {
-  return node.nodeType === 2 ? node.ownerElement : node;
+  return hasOwnerElement(node) ? node.ownerElement : node;
 }

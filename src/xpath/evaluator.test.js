@@ -403,10 +403,13 @@ describe("XPath Evaluator", () => {
       assert.strictEqual(preceding.length, 2);
     });
 
-    it("should use namespace axis (empty result)", () => {
+    it("should use namespace axis (the implicit xml binding)", () => {
       const root = selectFirst("/root", doc);
       const namespaces = select("namespace::*", root);
-      assert.strictEqual(namespaces.length, 0);
+      assert.deepStrictEqual(
+        namespaces.map((node) => node.localName),
+        ["xml"],
+      );
     });
   });
 

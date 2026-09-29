@@ -733,3 +733,23 @@ describe("node-set() extension functions", () => {
     );
   });
 });
+
+describe("element-available() and registered extension elements", () => {
+  it("reports an extension element once an implementation is registered", async () => {
+    const { XSLTProcessor } = await import("../XSLTProcessor.js");
+    const { JSDOM } = await import("jsdom");
+    const { window } = new JSDOM("");
+    const parse = (s) =>
+      new window.DOMParser().parseFromString(s, "application/xml");
+    const stylesheet = `<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+        xmlns:my="urn:my" extension-element-prefixes="my">
+      <xsl:output method="text"/>
+      <xsl:template match="/"><xsl:value-of select="element-available('my:log')"/></xsl:template>
+    </xsl:stylesheet>`;
+    const processor = new XSLTProcessor();
+    processor.importStylesheet(parse(stylesheet));
+    assert.strictEqual(processor.transformToString(parse("<r/>")), "false");
+    processor.engine.registerExtensionElement("urn:my", "log", () => {});
+    assert.strictEqual(processor.transformToString(parse("<r/>")), "true");
+  });
+});

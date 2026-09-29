@@ -13,11 +13,12 @@ import {
   RAW_TEXT_ELEMENTS,
   TEXT_MODE,
   URI_ATTRIBUTES,
+  URI_ATTRIBUTES_OF_A,
 } from "./constants.js";
 import {
   escapeHtmlAttribute,
   escapeHtmlText,
-  escapeUriNonAscii,
+  escapeUriAttribute,
 } from "./escape.js";
 import { htmlCharacterReference } from "./htmlEntities.js";
 import { XmlWriter } from "./xmlSerializer.js";
@@ -47,6 +48,25 @@ function hasContentTypeMeta(head) {
     }
   }
   return false;
+}
+
+/**
+ * Whether the html output method %-escapes an attribute, as libxml2 does:
+ * `href`, `action` and `src`, and `name` on `a` (names compared
+ * case-insensitively), when neither the attribute nor its element is in a
+ * namespace.
+ *
+ * @param {Attr} attribute - Attribute being written
+ * @returns {boolean} True for URI attributes
+ */
+function isUriAttribute(attribute) {
+  const element = attribute.ownerElement;
+  if (attribute.namespaceURI || element.namespaceURI) return false;
+  const name = attribute.localName.toLowerCase();
+  return (
+    URI_ATTRIBUTES.has(name) ||
+    (URI_ATTRIBUTES_OF_A.has(name) && element.localName.toLowerCase() === "a")
+  );
 }
 
 export class HtmlWriter extends XmlWriter {
@@ -140,8 +160,8 @@ export class HtmlWriter extends XmlWriter {
   }
 
   /**
-   * Boolean attributes are minimized to their name alone; the non-ASCII
-   * characters of URI attributes are %-escaped.
+   * Boolean attributes are minimized to their name alone; URI attributes
+   * are %-escaped (see isUriAttribute).
    *
    * @param {Attr} attribute - Attribute to write
    * @returns {string} Attribute markup, starting with a space
@@ -151,10 +171,9 @@ export class HtmlWriter extends XmlWriter {
     if (String(value).toLowerCase() === name.toLowerCase()) {
       return ` ${name}`;
     }
-    const isUri =
-      !attribute.namespaceURI &&
-      URI_ATTRIBUTES.has(attribute.localName.toLowerCase());
-    const written = isUri ? escapeUriNonAscii(value) : value;
+    const written = isUriAttribute(attribute)
+      ? escapeUriAttribute(value)
+      : value;
     return ` ${name}="${this.escapeAttribute(written)}"`;
   }
 

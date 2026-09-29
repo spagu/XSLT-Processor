@@ -152,7 +152,7 @@ This implementation provides full compatibility with the [MDN XSLTProcessor API]
 | `xsl:for-each` | Supported |
 | `xsl:if` | Supported |
 | `xsl:message` | Supported |
-| `xsl:number` | Supported (`lang` and `letter-value` are ignored) |
+| `xsl:number` | Supported (`lang` and `letter-value` are ignored; decimal tokens in any Unicode digit family) |
 | `xsl:output` | Supported |
 | `xsl:param` | Supported |
 | `xsl:processing-instruction` | Supported |
@@ -170,7 +170,7 @@ This implementation provides full compatibility with the [MDN XSLTProcessor API]
 | `xsl:decimal-format` | Supported (see `format-number()`) |
 | `xsl:namespace-alias` | Supported |
 | `xsl:strip-space` / `xsl:preserve-space` | Supported |
-| `xsl:fallback` | Partial: accepted, but never instantiated (see [Known Deviations](#known-deviations)) |
+| `xsl:fallback` | Supported: used for unknown XSLT instructions and extension elements; an extension element without a fallback or a registered implementation outputs nothing (with a warning) |
 
 ## XPath Functions Supported
 
@@ -231,7 +231,10 @@ Not supported, as in libexslt: `date:format-date`, `date:parse-date`,
 - Without `xsl:output method`, a result whose root element is `<html>` is serialized as HTML
 - XML whitespace means space, tab, CR and LF only; a non-breaking space is ordinary text
 - The identity transform `<xsl:template match="@*|node()"><xsl:copy><xsl:apply-templates select="@*|node()"/></xsl:copy></xsl:template>` round-trips a document exactly
-- `xsl:number` supports `level="single|multiple|any"` with `count`, `from`, `grouping-separator`/`grouping-size` and the `1`, `01`, `a`, `A`, `i`, `I` format tokens
+- `xsl:number` supports `level="single|multiple|any"` with `count`, `from`, `grouping-separator`/`grouping-size`, the `1`, `01`, `a`, `A`, `i`, `I` format tokens and decimal tokens of any Unicode digit family
+- Unprefixed name tests (`item`, `@a`) match only nodes in no namespace (XPath 1.0 section 2.3); in HTML documents element names are matched case-insensitively regardless of namespace, as browsers do
+- The `namespace::` axis returns a namespace node for every binding in scope, including `xml`
+- `transformToFragment()` into an HTML document parses html output as HTML, like Chrome, so the fragment contains real `HTMLElement`s
 - The result tree is built in a neutral XML document and imported into the output
   document at the end, so element names and namespaces survive an HTML owner document
 
@@ -240,33 +243,28 @@ Not supported, as in libexslt: `date:format-date`, `date:parse-date`,
 Differences from the XSLT 1.0 / XPath 1.0 specifications and from libxslt
 (the engine behind Chrome's native `XSLTProcessor`):
 
-- **`namespace::` axis**: not implemented, it always selects an empty node-set
-  (`count(namespace::*)` is `0`). Namespace nodes are not part of the data model.
-- **Unprefixed name tests match namespaced nodes**: `a` in a pattern or path
-  also selects `<q:a xmlns:q="urn:q"/>` and `<a xmlns="urn:d"/>`; per XPath 1.0
-  it should only match `a` in no namespace. Use `local-name()` and
-  `namespace-uri()` when the distinction matters.
-- **`xsl:fallback`** is never instantiated, and an unknown XSLT or extension
-  element produces no output (with an `Unknown XSLT element` warning) even in
-  forward-compatible mode (`version="2.0"`).
-- **`transformToFragment()` into an HTML document**: the fragment contains
-  elements in no namespace built by the XML DOM, not `HTMLElement`s as a browser
-  would create for `method="html"`. They serialize and render as markup when
-  inserted, but `instanceof HTMLElement` is `false` and HTML-only properties are
-  missing.
 - **Recursion depth**: roughly 1,000 to 1,500 nested template invocations fit
   in Node's default stack (libxslt allows about 3,000). Deeper recursion stops
   with `Template recursion too deep`; raise the limit with
   `node --stack-size=...` or rewrite the recursion.
-- **`xsl:number`**: `lang` and `letter-value` are ignored, and only the Latin
-  format tokens listed above are recognized.
+- **`xsl:number`**: `lang` and `letter-value` are ignored. Decimal format
+  tokens in any Unicode digit family work; negative values are numbered 0 with
+  a warning, as in libxslt.
 - **`unparsed-entity-uri()`** always returns `''` because the DOM does not
   expose unparsed entities.
+- **`xsl:strip-space` / `xsl:preserve-space`** name tests compare names
+  without resolving namespaces.
+- **HTML URI attributes** are %-escaped like libxml2 (`href`, `action`, `src`
+  and `a/@name`: spaces, control characters and non-ASCII), not the full
+  HTML 4 URI attribute list.
+- **`legacyNameTests`** (deprecated, to be removed in a future major release):
+  `new XSLTProcessor({ legacyNameTests: true })` restores the pre-1.2.0 matching
+  where unprefixed name tests also selected namespaced nodes.
 
 ## Test Coverage
 
-`npm test` runs 1,060 tests with Node's built-in test runner (100% line and
-function coverage, 97% branch coverage for 1.1.3):
+`npm test` runs 1,428 tests with Node's built-in test runner (100% line and
+function coverage, 98% branch coverage for 1.2.0):
 
 | Area | Test files |
 |------|-----------|
@@ -287,5 +285,5 @@ and CI fails only on new failures. Details: [`tests/conformance/README.md`](../t
 
 | Result | Cases |
 |---|---|
-| Passing | 249 of 300 counted (83.0%) |
+| Passing | 266 of 303 counted (87.8%) |
 | Skipped | 31 implementation-defined or extension-only cases |

@@ -193,13 +193,10 @@ See [Command Line Tool](docs/CLI.md) for all options, the base directory,
 
 The main differences from XSLT 1.0 / XPath 1.0 and from libxslt:
 
-- the `namespace::` axis always selects an empty node-set;
-- unprefixed name tests also match namespaced nodes;
-- `xsl:fallback` is never instantiated;
-- `transformToFragment()` into an HTML document creates XML DOM elements, not `HTMLElement`s;
-- about 1,000 to 1,500 nested template invocations fit in Node's default stack;
+- about 1,000 to 1,500 nested template invocations fit in Node's default stack (libxslt: about 3,000);
 - `xsl:number` ignores `lang` and `letter-value`;
-- `unparsed-entity-uri()` always returns `''`.
+- `unparsed-entity-uri()` always returns `''`;
+- `xsl:strip-space`/`xsl:preserve-space` name tests ignore namespaces.
 
 Details and workarounds: [Known Deviations](docs/CONFORMANCE.md#known-deviations).
 

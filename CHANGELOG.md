@@ -7,8 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.0] - Unreleased
 
+### Changed
+
+- **Unprefixed name tests are namespace-strict** (task 0003): `item`, `@a` and names in patterns match only nodes in no namespace (XPath 1.0 section 2.3), like Chrome/libxslt. Elements of HTML documents are still matched by unprefixed, case-insensitive names. Migration: bind a prefix to the namespace, or use `local-name()`; the deprecated `new XSLTProcessor({ legacyNameTests: true })` (also on `XsltEngine`/`XPathEvaluator`) restores the old matching for now.
+- **`transformToFragment(source, htmlDocument)`** with html output (declared or detected) returns real HTML elements parsed by the owner document, like Chrome: `<a>` is an `HTMLAnchorElement` and scripts run when inserted. The markup is parsed as body content, so `html`/`head`/`body` tags are dropped. XML output keeps the XML DOM nodes.
+- **Extension elements** (`extension-element-prefixes`) are no longer copied to the result: their `xsl:fallback` children run; without a fallback nothing is output and a warning is shown. New `XsltEngine#registerExtensionElement(uri, localName, handler)`; `element-available()` reports registered elements.
+- **HTML URI attributes** are %-escaped like libxml2: only `href`, `action`, `src` and `a/@name` on elements in no namespace; spaces, control characters, DEL and non-ASCII characters are escaped (`a b` becomes `a%20b`).
+- `id()`/`key()` in patterns accept only string literals (XSLT 1.0 section 5.2); other arguments are an import error.
+- `xsl:number` numbers negative values as 0 with a warning; alphabetic and Roman formats fall back to decimals below 1, and Roman above 5000 (libxslt).
+
 ### Fixed
 
+- **`xsl:number` hung on huge values** (`format="I"` or `"a"` with `9007199254740992`), a denial of service found by the conformance suite; conversion now takes logarithmic time. Values from 1e21 print as full digits, NaN and Infinity as `NaN`/`Infinity`.
+- `xsl:number` format tokens of any Unicode digit family (`٠١`, `１`, ...) use that family's digits; `count="@*" level="any"` counts the attribute itself.
+- A global `xsl:param` with higher import precedence wins over an imported `xsl:variable` of the same name (XSLT 1.0 section 11.4).
+- `self::*` and other non-attribute axes no longer match attribute or namespace nodes.
+- Node-sets holding an element and its own attributes are sorted in document order under jsdom.
 - The CLI entry point handles an unexpected rejection from `main()` instead of leaving the promise unhandled (SonarCloud S9383).
 
 ### Security
@@ -18,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`namespace::` axis** (task 0004): namespace nodes for every binding in scope (including `xml`), with `name()`, string value, parent, `generate-id()`, union deduplication, and `xsl:copy`/`xsl:copy-of` adding the declaration.
+- `XSLTProcessor`/`XsltEngine` options `enableDynamicEvaluate` and `clock` for EXSLT `dyn:evaluate()` and reproducible current-time functions.
 - **EXSLT** (task 0002): the common, math, sets, strings, dates-and-times and dynamic functions libexslt provides, with libexslt's behaviour (new `src/xslt/exslt/`). `dyn:evaluate` is opt-in through `engine.enableDynamicEvaluate` because it evaluates XPath built from data.
 - **Conformance suite**: `npm run test:conformance` runs libxslt 1.1.45's test corpus (MIT, downloaded and checksum-verified) against the library, reports pass rates per spec section and fails CI only on regressions against `tests/conformance/baseline.json`. Initial result: 249 of 300 counted cases pass (83%).
 
