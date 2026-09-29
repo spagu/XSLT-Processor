@@ -31,7 +31,7 @@ Security problems are reported privately, see [SECURITY.md](SECURITY.md).
 4. Ensure all tests pass (`npm test`)
 5. Run the linter and the formatter check (`npm run lint`, `npm run format:check`)
 6. Build the bundles (`npm run build`) when the public API or the TypeScript declarations change
-7. Update `README.md` and `CHANGELOG.md`
+7. Update `README.md`, the relevant `docs/*.md` page and `CHANGELOG.md`
 8. Commit with clear messages and open a Pull Request
 
 ### Development Setup
@@ -67,7 +67,7 @@ in Docker, `make docker-test`.
 
 ### Areas for Contribution
 
-- Bug fixes and XSLT/XPath conformance (see "Known Deviations" in the [README](README.md))
+- Bug fixes and XSLT/XPath conformance (see [Known Deviations](docs/CONFORMANCE.md#known-deviations))
 - Test coverage
 - Documentation improvements
 - Performance of large transformations

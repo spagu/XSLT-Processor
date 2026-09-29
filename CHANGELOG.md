@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The CLI entry point handles an unexpected rejection from `main()` instead of leaving the promise unhandled (SonarCloud S9383).
 
+### Documentation
+
+- README.md shortened from about 1,080 to 220 lines; the details moved to `docs/` (API, loaders, examples, CLI, conformance and known deviations, security limits, development, browser support, style guide) with an index in `docs/README.md`.
+- `npm run docs:check` (scripts/check-links.mjs) verifies every relative link and heading anchor in the Markdown files; CI runs it.
+
 ## [1.1.3] - 2026-09-29
 
 ### Fixed

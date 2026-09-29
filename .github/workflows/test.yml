@@ -36,6 +36,9 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+      - name: Check documentation links
+        run: npm run docs:check
+
       - name: Run tests with coverage
         run: npm test
 
