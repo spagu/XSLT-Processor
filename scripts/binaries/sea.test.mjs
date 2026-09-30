@@ -15,6 +15,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -22,6 +23,7 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import { systemTool } from "../lib/fsSafety.mjs";
 import { bundleCli } from "./bundle.mjs";
 import { assertSeaVersion, officialNode, sha256 } from "./node-dist.mjs";
 import { buildExecutable } from "./sea.mjs";
@@ -53,13 +55,17 @@ describe("officialNode", () => {
   const files = new Map();
 
   before(async () => {
-    dir = mkdtempSync(join(tmpdir(), "xslt-dist-"));
+    // Real path: confinePath() resolves /var -> /private/var (macOS) and
+    // short 8.3 names (Windows), and the assertions compare against it
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "xslt-dist-")));
     const stage = join(dir, "stage");
     const member = `node-${VERSION}-linux-x64/bin`;
     mkdirSync(join(stage, member), { recursive: true });
     writeFileSync(join(stage, member, "node"), "fake linux node");
     const archive = join(dir, "node.tar.gz");
-    execFileSync("tar", [
+    // The tar node-dist.mjs uses: Git Bash puts GNU tar first on PATH on
+    // Windows, which reads "C:\\..." as a remote host
+    execFileSync(systemTool("tar"), [
       "-czf",
       archive,
       "-C",
@@ -125,7 +131,7 @@ describe("officialNode", () => {
 
 describe("single executable", { skip: !canBuildSea() || !hostTarget() }, () => {
   it("builds a working xslt executable from the running node", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "xslt-sea-"));
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "xslt-sea-")));
     try {
       const bundle = join(dir, "xslt.cjs");
       const { bytes } = await bundleCli(bundle);
