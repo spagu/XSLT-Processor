@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-09-30
+
+Same library as 1.2.0, which was released on GitHub without its macOS and
+Windows executables and was never published to npm. Upgrade from 1.1.x
+straight to 1.2.1; everything listed under 1.2.0 applies.
+
+### Fixed
+
+- **Standalone executables for macOS and Windows** were missing from the 1.2.0 release: the tests of the binary build scripts failed on those runners, so the release workflow skipped every upload. On macOS the tests compared against the unresolved temporary directory (`/var/...`) while the scripts return real paths (`/private/var/...`); on Windows the test archive was built with GNU tar from Git Bash, which reads `C:\...` as a remote host, instead of the system tar the scripts use.
+
+### Internal
+
+- CI runs the binary build script tests on macOS and Windows for every pull request (`binary scripts` job), so a platform-only failure shows up before a release.
+
 ## [1.2.0] - 2026-09-30
 
 ### Changed

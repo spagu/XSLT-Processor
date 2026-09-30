@@ -7,7 +7,13 @@
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { describe, it } from "node:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { URL } from "node:url";
@@ -124,7 +130,8 @@ describe("checksums", () => {
   });
 
   it("hashes only release executables", () => {
-    const dir = mkdtempSync(join(tmpdir(), "xslt-sums-"));
+    // Real path, as confinePath() returns it (/private/var on macOS)
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "xslt-sums-")));
     try {
       writeFileSync(join(dir, "xslt-linux-x64"), "abc");
       writeFileSync(join(dir, "xslt-linux-x64.tmp"), "ignored");
@@ -141,7 +148,8 @@ describe("checksums", () => {
   });
 
   it("refuses an empty directory", () => {
-    const dir = mkdtempSync(join(tmpdir(), "xslt-sums-"));
+    // Real path, as confinePath() returns it (/private/var on macOS)
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "xslt-sums-")));
     try {
       assert.throws(
         () => writeChecksums(dir),
