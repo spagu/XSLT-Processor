@@ -146,7 +146,7 @@ and tables on this page are generated from
 - **Numbers vary by machine.** Compare factors, not absolute times, and
   rerun `npm run bench` on your own hardware; run-to-run spread is visible
   in the p95 and min columns.
-- **What changed in 1.2.0** (see the [CHANGELOG](../CHANGELOG.md#120---unreleased)):
+- **What changed in 1.2.0** (see the [CHANGELOG](../CHANGELOG.md#120---2026-09-30)):
   - Serialization walks the result tree on an explicit stack and writes
     bounded chunks that are joined once (task 0024 and the chunked
     serializer of task 0010): the identity transform, the catalogue and the

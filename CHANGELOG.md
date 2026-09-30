@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - Unreleased
+## [1.2.0] - 2026-09-30
 
 ### Changed
 
@@ -647,6 +647,13 @@ Minor release: new public API (`setStylesheetLoader`, `setDocumentLoader`, `tran
 - Native test runner (Node.js 25+)
 - esbuild for bundling
 
+[1.2.0]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.2.0
+[1.1.3]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.1.3
+[1.1.2]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.1.2
+[1.1.1]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.1.1
+[1.1.0]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.1.0
+[1.0.8]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.8
+[1.0.6]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.6
 [1.0.3]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.3
 [1.0.2]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.2
 [1.0.1]: https://github.com/spagu/XSLT-Processor/releases/tag/v1.0.1
