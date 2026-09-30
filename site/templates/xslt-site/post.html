@@ -1,2 +1,4 @@
-{{/* The site publishes no posts; ssg still expects the role template. */}}
-{{define "post.html"}}<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>{{ .Post.Title }}</title></head><body><main>{{ .Post.Content | safeHTML }}</main></body></html>{{end}}
+{{/* The site publishes no posts; ssg still expects the role template. It uses the shared chrome so GTM and meta tags stay complete if it is ever rendered. */}}
+{{define "post.html"}}{{template "head-with" (dict "Ctx" . "Title" .Post.Title "Description" .Post.Excerpt "Link" "" "Robots" "" "Layout" "doc" "Canonical" (.Post.GetCanonical .Domain))}}
+<main id="main" class="wrap prose"><h1>{{ .Post.Title }}</h1>{{ .Post.Content | safeHTML }}</main>
+{{template "footer" .}}{{end}}

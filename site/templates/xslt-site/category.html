@@ -1,2 +1,4 @@
 {{/* The site has no categories; ssg still expects the role template. */}}
-{{define "category.html"}}<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>{{ .Name }}</title></head><body><main><h1>{{ .Name }}</h1></main></body></html>{{end}}
+{{define "category.html"}}{{template "head-with" (dict "Ctx" . "Title" .Category.Name "Description" (printf "Pages in category %s" .Category.Name) "Link" "" "Robots" "noindex" "Layout" "doc" "Canonical" (printf "https://%s/category/%s/" .Domain .Category.Slug))}}
+<main id="main" class="wrap prose"><h1>{{ .Category.Name }}</h1></main>
+{{template "footer" .}}{{end}}
