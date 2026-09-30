@@ -15,6 +15,7 @@
  * image and on current macOS and Linux installs.
  */
 
+import { systemTool } from "./lib/fsSafety.mjs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -89,7 +90,7 @@ export async function fetchCorpus({ force = false } = {}) {
   const prefix = `${CORPUS.name}-${CORPUS.version}`;
   try {
     execFileSync(
-      "tar",
+      systemTool("tar"),
       [
         "-xJf",
         archive,

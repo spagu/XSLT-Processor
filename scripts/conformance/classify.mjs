@@ -140,7 +140,7 @@ export function buildBaseline(results, corpus) {
   const knownFailures = results
     .filter(isFailing)
     .map((result) => result.id)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   return {
     corpus,
     total: results.length,

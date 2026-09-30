@@ -12,6 +12,7 @@
 
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
+import { realpathSync } from "node:fs";
 import { dirname, extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,6 +25,9 @@ export const repoRoot = join(
 
 /** URL prefixes that may be served. */
 const ALLOWED_PREFIXES = Object.freeze(["/dist/", "/tests/browser/fixtures/"]);
+
+/** Canonical repository root, for containment checks. */
+const realRepoRoot = realpathSync(repoRoot);
 
 /** Content types by file extension. */
 const CONTENT_TYPES = Object.freeze({
@@ -50,7 +54,20 @@ export function resolveRequestPath(urlPath) {
   if (!ALLOWED_PREFIXES.some((prefix) => clean.startsWith(prefix))) {
     return null;
   }
-  return join(repoRoot, clean);
+  const candidate = join(repoRoot, clean);
+  let canonical;
+  try {
+    canonical = realpathSync(candidate);
+  } catch {
+    return null;
+  }
+  // Canonical containment check: symlinks and ".." cannot leave the roots
+  const allowed = ALLOWED_PREFIXES.some((prefix) =>
+    canonical.startsWith(
+      join(realRepoRoot, prefix) + (prefix.endsWith("/") ? "" : sep),
+    ),
+  );
+  return allowed ? canonical : null;
 }
 
 /**
@@ -62,7 +79,8 @@ export function createStaticServer() {
   return createServer(async (request, response) => {
     let urlPath;
     try {
-      urlPath = decodeURIComponent(new URL(request.url, "http://x").pathname);
+      // Only the path part is needed, so no URL base (and scheme) is involved
+      urlPath = decodeURIComponent((request.url ?? "/").split(/[?#]/)[0]);
     } catch {
       urlPath = "";
     }

@@ -8,6 +8,7 @@
  * (macOS) or `Get-FileHash` (Windows).
  */
 
+import { confinePath } from "../lib/fsSafety.mjs";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { sha256 } from "./node-dist.mjs";
@@ -42,7 +43,8 @@ export function formatChecksums(entries) {
  * @returns {string} Path of the written checksum file
  * @throws {Error} When the directory holds no executable
  */
-export function writeChecksums(dir) {
+export function writeChecksums(outDir) {
+  const dir = confinePath(outDir);
   const entries = readdirSync(dir)
     .filter((name) => BINARY_NAME.test(name))
     .map((name) => ({ name, digest: sha256(readFileSync(join(dir, name))) }));

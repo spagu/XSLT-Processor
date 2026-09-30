@@ -16,6 +16,7 @@
  *   Mac (`codesign --sign - xslt-darwin-*`) before they run on arm64.
  */
 
+import { systemTool } from "../lib/fsSafety.mjs";
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -70,7 +71,7 @@ export function buildExecutable({
     if (signOnHost) {
       executable = join(workDir, "node");
       copyFileSync(targetNode, executable);
-      execFileSync("codesign", ["--remove-signature", executable]);
+      execFileSync(systemTool("codesign"), ["--remove-signature", executable]);
     }
 
     const config = join(workDir, "sea-config.json");
@@ -83,7 +84,7 @@ export function buildExecutable({
     execFileSync(builderNode, ["--build-sea", config], { stdio: "inherit" });
 
     if (signOnHost) {
-      execFileSync("codesign", ["--sign", "-", "--force", outfile]);
+      execFileSync(systemTool("codesign"), ["--sign", "-", "--force", outfile]);
     }
     return { signed: signOnHost };
   } finally {

@@ -18,8 +18,9 @@
  * several machines). Needs network access to nodejs.org on first use.
  */
 
+import { confinePath } from "../lib/fsSafety.mjs";
 import { mkdirSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { bundleCli } from "./bundle.mjs";
 import { writeChecksums } from "./checksums.mjs";
@@ -104,7 +105,7 @@ async function main() {
       out: { type: "string", default: DIST_BIN_DIR },
     },
   });
-  const out = resolve(values.out);
+  const out = confinePath(values.out);
 
   if (positionals[0] === "checksums") {
     console.log(`wrote    ${writeChecksums(out)}`);

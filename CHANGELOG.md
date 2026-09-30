@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Build, conformance and browser-test scripts confine paths from command line arguments and HTTP requests to the repository (or the temporary directory) after canonicalizing them, and run `tar`/`codesign` from fixed system directories instead of looking them up in `PATH` (SonarCloud S8707, S2083, S4036).
 - CI, release and Docker builds install dependencies with `npm ci --ignore-scripts`, so lifecycle scripts of dependencies never run during builds (SonarCloud S6505).
 - The GitHub Pages workflow grants `pages: write` and `id-token: write` only to the deploy job instead of the whole workflow (SonarCloud S8233).
 

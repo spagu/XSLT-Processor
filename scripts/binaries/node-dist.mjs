@@ -9,6 +9,7 @@
  * dist-bin/.node/<version>/.
  */
 
+import { confinePath, systemTool } from "../lib/fsSafety.mjs";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -104,7 +105,7 @@ export async function officialNode(
   cacheDir,
   distUrl = NODE_DIST_URL,
 ) {
-  const dir = join(cacheDir, version, target.nodeDist);
+  const dir = confinePath(join(cacheDir, version, target.nodeDist));
   const binary = join(dir, target.os === "windows" ? "node.exe" : "node");
   if (existsSync(binary)) return binary;
 
@@ -127,7 +128,7 @@ export async function officialNode(
   const archive = join(dir, "node.tar.gz");
   writeFileSync(archive, data);
   const member = target.member.replaceAll("{version}", version);
-  execFileSync("tar", ["-xzf", archive, "-C", dir, member]);
+  execFileSync(systemTool("tar"), ["-xzf", archive, "-C", dir, member]);
   writeFileSync(binary, readFileSync(join(dir, member)), { mode: 0o755 });
   return binary;
 }

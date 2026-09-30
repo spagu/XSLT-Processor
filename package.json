@@ -49,7 +49,7 @@
     "prepublishOnly": "npm run build && npm run test",
     "docs:check": "node scripts/check-links.mjs",
     "test:browser": "playwright test -c tests/browser/playwright.config.mjs",
-    "test:binaries": "node --test \"scripts/binaries/*.test.mjs\"",
+    "test:binaries": "node --test \"scripts/binaries/*.test.mjs\" \"scripts/lib/*.test.mjs\"",
     "test:site": "node --test --experimental-test-coverage --test-coverage-include=\"site/**\" --test-coverage-lines=96 \"site/scripts/*.test.mjs\"",
     "site:content": "node site/scripts/build-content.mjs"
   },
