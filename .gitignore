@@ -54,3 +54,6 @@ temp/
 /site/public/
 /site/public-local/
 /site/.ssg-cache/
+
+# Wrangler (Cloudflare Pages) local state
+.wrangler/

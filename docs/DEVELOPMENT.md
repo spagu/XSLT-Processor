@@ -132,15 +132,22 @@ make site-serve                # preview on http://localhost:8888 with rebuilds
 make site-test                 # unit tests of the content generator and checks
 ```
 
-`make site` builds `site/public` for the published address
-(`https://spagu.github.io/XSLT-Processor/`), so every link starts with
-`/XSLT-Processor/` and the pages are unstyled when that folder is served from
-a server root. For a local preview use `make site-serve`, which builds
+`make site` builds `site/public` for the published address,
+`https://xslt-processor.tradik.com/`, whose canonical URLs, sitemap and Open
+Graph tags point there. For a local preview use `make site-serve`, which builds
 `site/public-local` for `http://localhost:8888/` from `site/ssg.local.yaml`; if
 port 8888 is taken, ssg serves on the next free port and prints it.
 
+The site is hosted on Cloudflare Pages, project `xslt-processor`
+(`wrangler.toml`). `.github/workflows/site.yml` builds and checks it on every
+pull request and deploys it on every push to `main`; it needs the repository
+secrets `CLOUDFLARE_API_TOKEN` (permission Account > Cloudflare Pages > Edit)
+and `CLOUDFLARE_ACCOUNT_ID`. `make site-deploy` deploys by hand after
+`npx wrangler login`. The domain is attached to the project in the Cloudflare
+dashboard (Workers & Pages > xslt-processor > Custom domains).
+
 The Google Tag Manager container id is a placeholder (`variables.gtm_id` in
-`site/ssg.yaml`). The GitHub Pages source must be set to "GitHub Actions".
+`site/ssg.yaml`).
 
 ## DOM matrix
 

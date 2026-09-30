@@ -37,7 +37,7 @@ This library ensures your XSLT-based applications continue to work regardless of
 
 ## Documentation
 
-The documentation is also published as a website with an interactive playground: <https://spagu.github.io/XSLT-Processor/> ([playground](https://spagu.github.io/XSLT-Processor/playground/)).
+The documentation is also published as a website with an interactive playground: <https://xslt-processor.tradik.com/> ([playground](https://xslt-processor.tradik.com/playground/)).
 
 | Guide | Contents |
 |-------|----------|

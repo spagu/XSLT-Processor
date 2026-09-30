@@ -10,14 +10,15 @@
 # data/, static/vendor/ and public/ are generated (site/scripts/build-content.mjs
 # and ssg) and ignored by git.
 #
-# The site is served from https://spagu.github.io/XSLT-Processor/. A domain
-# with a path gives the right canonical URLs, sitemap and robots.txt; the theme
-# prefixes its own links with variables.base_path, and generated content uses
-# relative links, so both work under the /XSLT-Processor/ prefix. With a custom
-# domain, set domain to it and base_path to "".
+# The site is served from https://xslt-processor.tradik.com/ on Cloudflare
+# Pages (wrangler.toml, .github/workflows/site.yml). domain gives the canonical
+# URLs, sitemap and robots.txt. The theme prefixes its own links with
+# variables.base_path and generated content uses relative links, so the site
+# can also be hosted under a path: set domain to host/path and base_path to
+# /path.
 source: xslt
 template: xslt-site
-domain: spagu.github.io/XSLT-Processor
+domain: xslt-processor.tradik.com
 title: "@tradik/xslt-processor"
 description: "XSLT 1.0 and XPath 1.0 in JavaScript: a drop-in XSLTProcessor for browsers without native XSLT, Node.js and the command line."
 content_dir: content
@@ -27,29 +28,41 @@ static_dir: static
 output_dir: public
 clean: true
 
-# Every indexable page must have a title and a meta description, and every
-# image an alt attribute. ssg's check_links resolves links against the output
-# root and does not know the /XSLT-Processor/ prefix, so it is on in
-# ssg.local.yaml (served at the root) and the production output is checked by
-# site/scripts/check-site.mjs, which also verifies #anchors.
+# Every indexable page must have a title and a meta description, every image
+# an alt attribute and every internal link a target. site/scripts/check-site.mjs
+# also verifies #anchors and the colour contrast.
 check_meta: warn
 check_images: strict
+check_links: strict
 
 # JSON-LD structured data. The theme writes its own Open Graph and Twitter
 # tags, so ssg only adds what is missing (see its CONFIGURATION.md, "SEO").
 seo: true
 marketing:
   og_site_name: "@tradik/xslt-processor"
-  og_image: "https://spagu.github.io/XSLT-Processor/images/og-card.png"
+  og_image: "https://xslt-processor.tradik.com/images/og-card.png"
 
 # Minified HTML and CSS. JavaScript is left as written: the playground is an
 # ES module and its import paths must stay intact.
 minify_html: true
 minify_css: true
 
+# Cache policy of the generated _headers (Cloudflare Pages). ssg caches
+# /css/*, /js/* and /images/* for a year as immutable, which is only safe for
+# content-hashed names. The theme's CSS and JS keep their names, and
+# fingerprint: true breaks the playground's module imports
+# (https://github.com/spagu/ssg/issues/309), so CSS and JS are revalidated on
+# every visit (a 304 when unchanged). Images keep ssg's year: replace an image
+# under a new file name.
+headers:
+  /css/*:
+    Cache-Control: "public, max-age=0, must-revalidate"
+  /js/*:
+    Cache-Control: "public, max-age=0, must-revalidate"
+
 variables:
   # Path prefix of the site on its host, no trailing slash ("" at a root).
-  base_path: /XSLT-Processor
+  base_path: ""
   repo_url: https://github.com/spagu/XSLT-Processor
   npm_url: https://www.npmjs.com/package/@tradik/xslt-processor
   # Google Tag Manager container. GTM-XXXXXXX is a placeholder: replace it

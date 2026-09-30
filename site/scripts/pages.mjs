@@ -35,7 +35,7 @@ export const GETTING_STARTED_URL = "/docs/getting-started/";
  * titled with the package name; docs/README.md is titled "Documentation",
  * and ssg turns every Markdown list item whose whole text equals a page
  * title into a root-absolute link to that page (the CHANGELOG has a
- * "- Documentation" item), which breaks under the /XSLT-Processor/ prefix.
+ * "- Documentation" item), which breaks when the site is hosted under a path.
  */
 const TITLES = {
   "README.md": "Getting started",

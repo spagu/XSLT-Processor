@@ -49,7 +49,10 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap">
 <link rel="stylesheet" href="{{ $b }}/css/tokens.css">
 <link rel="stylesheet" href="{{ $b }}/css/site.css">
-{{ if eq .Layout "landing" }}<link rel="stylesheet" href="{{ $b }}/css/landing.css">{{ end }}
+{{ if eq .Layout "landing" }}<link rel="stylesheet" href="{{ $b }}/css/landing.css">
+<link rel="preload" as="image" type="image/webp" href="{{ $b }}/images/hero/coast-640.webp" media="(max-width: 52rem)">
+<link rel="preload" as="image" type="image/webp" href="{{ $b }}/images/hero/coast-1024.webp" media="(min-width: 52.001rem) and (max-width: 64rem)">
+<link rel="preload" as="image" type="image/webp" href="{{ $b }}/images/hero/coast-1420.webp" media="(min-width: 64.001rem)">{{ end }}
 {{ if eq .Layout "playground" }}<link rel="stylesheet" href="{{ $b }}/css/playground.css">{{ end }}
 </head>
 <body>

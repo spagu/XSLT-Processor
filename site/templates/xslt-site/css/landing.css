@@ -1,8 +1,44 @@
 /* Home page: hero, feature cards and the guide list. */
 
+/*
+ * Hero background: a photo of layered coastal rock and sea under a scrim of
+ * the page background. The scrim is at least 92% opaque behind the text
+ * column; at that opacity every text colour of the hero keeps WCAG 2.2 AA
+ * over the brightest and darkest pixel of the photo (worst case: muted text
+ * 5.06:1 light, 4.80:1 dark). It thins out to the right, over the artwork,
+ * where the sea shows through. --color-hero is the fallback while the image
+ * loads or when images are off.
+ */
 .hero {
-  background: var(--color-hero);
+  --hero-scrim: 255 255 255;
+  --hero-photo: image-set(
+    url("../images/hero/coast-1420.webp") type("image/webp"),
+    url("../images/hero/coast-1420.jpg") type("image/jpeg")
+  );
+  background:
+    linear-gradient(
+      to right,
+      rgb(var(--hero-scrim) / 0.92) 0 62%,
+      rgb(var(--hero-scrim) / 0.5) 100%
+    ),
+    var(--hero-photo) center / cover no-repeat,
+    var(--color-hero);
   padding-block: var(--space-6);
+}
+
+@media (prefers-color-scheme: dark) {
+  .hero {
+    --hero-scrim: 32 33 36; /* --color-bg, Google Grey 900 */
+  }
+}
+
+@media (max-width: 64rem) {
+  .hero {
+    --hero-photo: image-set(
+      url("../images/hero/coast-1024.webp") type("image/webp"),
+      url("../images/hero/coast-1420.jpg") type("image/jpeg")
+    );
+  }
 }
 
 .hero__inner {
@@ -10,6 +46,11 @@
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: var(--space-5);
   align-items: center;
+}
+
+/* The artwork is a flat card; round it so it sits on the photo. */
+.hero__art {
+  border-radius: var(--radius);
 }
 
 .eyebrow {
@@ -101,6 +142,18 @@
 }
 
 @media (max-width: 52rem) {
+  /* Stacked layout: text spans the full width, so the scrim does too. */
+  .hero {
+    --hero-photo: image-set(
+      url("../images/hero/coast-640.webp") type("image/webp"),
+      url("../images/hero/coast-1420.jpg") type("image/jpeg")
+    );
+    background:
+      linear-gradient(rgb(var(--hero-scrim) / 0.92), rgb(var(--hero-scrim) / 0.92)),
+      var(--hero-photo) center / cover no-repeat,
+      var(--color-hero);
+  }
+
   .hero__inner {
     grid-template-columns: minmax(0, 1fr);
   }

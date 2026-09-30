@@ -1,4 +1,4 @@
-.PHONY: install test test-watch test-browser test-dom conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help site site-content site-serve site-test site-clean
+.PHONY: install test test-watch test-browser test-dom conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help site site-content site-serve site-test site-clean site-deploy
 
 # Default target
 help:
@@ -25,6 +25,7 @@ help:
 	@echo "  site-serve   - Preview the website on http://localhost:8888 with rebuilds"
 	@echo "  site-test    - Test the website's content scripts and playground"
 	@echo "  site-clean   - Remove the website's generated files"
+	@echo "  site-deploy  - Build and deploy the website to Cloudflare Pages"
 
 # Install dependencies
 install:
@@ -91,17 +92,23 @@ format-check:
 # Project website (spagu/ssg, https://github.com/spagu/ssg). SSG may point
 # at a binary outside PATH: make site SSG=/path/to/ssg
 SSG ?= ssg
+# Wrangler release used by site-deploy; keep in sync with .github/workflows/site.yml
+WRANGLER_VERSION ?= 4.144.0
 
 # Generate site content from README.md, CHANGELOG.md and docs/*.md
 site-content: build
 	npm run site:content
 
-# Production build (served under /XSLT-Processor/), then the site checks
+# Production build for https://xslt-processor.tradik.com/, then the site checks
 site: site-content
 	cd site && $(SSG) --config ssg.yaml
-	node site/scripts/check-site.mjs site/public /XSLT-Processor
-	@echo "site/public is built for https://spagu.github.io/XSLT-Processor/ (links start with /XSLT-Processor/),"
-	@echo "so it is not styled when served from a server root. Preview locally with: make site-serve"
+	node site/scripts/check-site.mjs site/public
+	@echo "site/public is built for https://xslt-processor.tradik.com/. Preview locally with: make site-serve"
+
+# Deploy site/public to Cloudflare Pages (wrangler.toml). Needs a Cloudflare
+# login (npx wrangler login) or CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+site-deploy: site
+	npx --yes wrangler@$(WRANGLER_VERSION) pages deploy --branch=main
 
 # Local preview at the server root, rebuilt on change
 site-serve: site-content

@@ -54,3 +54,5 @@ test-results/
 playwright-report/
 # Project website (not part of the package image)
 site/
+
+.wrangler/

@@ -69,6 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The website publishes images embedded with `<img>` in `docs/*.md` (copied to `/assets/`), so the benchmark charts render there too.
 - README.md shortened from about 1,080 to 220 lines; the details moved to `docs/` (API, loaders, examples, CLI, conformance and known deviations, security limits, development, browser support, style guide) with an index in `docs/README.md`.
 - `npm run docs:check` (scripts/check-links.mjs) verifies every relative link and heading anchor in the Markdown files; CI runs it.
+- **Website moved to <https://xslt-processor.tradik.com/>** on Cloudflare Pages (`wrangler.toml`, `make site-deploy`); the Site workflow deploys with `cloudflare/wrangler-action` instead of GitHub Pages and needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets. The site is built for the domain root, so ssg's link check now runs on the production build too. `package.json` `homepage` points to the site. CSS and JS are served with `max-age=0, must-revalidate` (ssg's default one-year `immutable` needs content-hashed names, and ssg's fingerprinting breaks ES module imports: spagu/ssg#309).
+- The home page hero has a photo background (layered coastal rock and sea, WebP at 640/1024/1420 px with a JPEG fallback, preloaded per breakpoint) under a scrim of the page colour that keeps every hero text colour at WCAG 2.2 AA in light and dark mode.
 
 ## [1.1.3] - 2026-09-29
 
