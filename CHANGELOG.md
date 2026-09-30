@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Internal
+
+- The release workflow's `release-binaries` job failed with `Cannot find package 'esbuild'`: `scripts/binaries/build.mjs checksums` loaded the bundler although that job installs no dependencies. esbuild is now loaded only when a binary is built. The v1.2.1 executables and `checksums.sha256` were attached by hand from the release run's artifacts, checked with `sha256sum --check` and `scripts/install.sh`.
+- The Site workflow creates the Cloudflare Pages project `xslt-processor` on its first deployment (`preCommands` of `cloudflare/wrangler-action`), in the account the secrets point at; the first deploy failed with "The Pages project does not exist".
+
 ## [1.2.1] - 2026-09-30
 
 Same library as 1.2.0, which was released on GitHub without its macOS and

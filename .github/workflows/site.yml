@@ -112,6 +112,12 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: ${{ env.WRANGLER_VERSION }}
+          # Creates the Pages project on the first deployment, in the account
+          # the secrets point at, so the deploy never depends on a project
+          # made by hand in some other account
+          preCommands: |
+            npx wrangler pages project list | grep -q '\bxslt-processor\b' ||
+              npx wrangler pages project create xslt-processor --production-branch=main
           command: pages deploy --branch=main
 
   # The site used to live at https://spagu.github.io/XSLT-Processor/. GitHub

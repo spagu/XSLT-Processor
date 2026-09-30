@@ -15,14 +15,15 @@
  * Writes <out>/xslt-<os>-<arch>[.exe] and <out>/checksums.sha256, which
  * covers every executable present in <out>. The `checksums` command only
  * rewrites checksums.sha256 (used after collecting binaries built on
- * several machines). Needs network access to nodejs.org on first use.
+ * several machines) and needs no installed dependencies: esbuild is loaded
+ * only when a binary is built. Needs network access to nodejs.org on first
+ * use.
  */
 
 import { confinePath } from "../lib/fsSafety.mjs";
 import { mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { bundleCli } from "./bundle.mjs";
 import { writeChecksums } from "./checksums.mjs";
 import { assertSeaVersion, officialNode } from "./node-dist.mjs";
 import { buildExecutable } from "./sea.mjs";
@@ -53,6 +54,9 @@ async function buildBinaries({ target, nodeVersion, out }) {
   mkdirSync(out, { recursive: true });
 
   const bundle = join(out, ".bundle", "xslt.cjs");
+  // Loaded here, not at the top: bundle.mjs imports esbuild, and the
+  // checksums command runs where dependencies are not installed
+  const { bundleCli } = await import("./bundle.mjs");
   const { bytes, version: cliVersion } = await bundleCli(bundle);
   console.log(`bundle   xslt ${cliVersion}, ${(bytes / MIB).toFixed(1)} MiB`);
 
