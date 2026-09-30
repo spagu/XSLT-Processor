@@ -45,14 +45,15 @@ export class SequenceFrame {
    * @param {Element|object} node - The parent stylesheet element
    * @param {XsltContext} context - The current context
    * @param {Node} output - The result node receiving the output
-   * @param {(() => void)|null} [then] - Called once the children are done
+   * @param {(() => void)|null} [onDone] - Called once the children are done
    */
-  constructor(engine, node, context, output, then = null) {
+  constructor(engine, node, context, output, onDone = null) {
     this.scope = engine.declaresVariables(node) ? context.clone() : context;
     this.saved = this.scope.namespaces;
     this.next = node.firstChild;
     this.output = output;
-    this.then = then;
+    // Not named `then`: an object with a `then` method is treated as a promise
+    this.onDone = onDone;
     // Whether the frame is a template instantiation (counted in the depth)
     this.template = false;
   }
@@ -102,7 +103,7 @@ export class SequenceFrame {
    */
   finish(engine) {
     this.release(engine);
-    if (this.then) this.then();
+    if (this.onDone) this.onDone();
   }
 }
 
