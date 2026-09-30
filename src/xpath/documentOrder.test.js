@@ -97,6 +97,31 @@ describe("DocumentOrderIndex", () => {
     assert.ok(order.positionOf(other.documentElement) > order.positionOf(l));
   });
 
+  it("reads attribute lists only to order attributes of one element", () => {
+    const tree = new JSDOM('<r><p x="1" y="2"/><q z="3"/></r>', {
+      contentType: "application/xml",
+    }).window.document.documentElement;
+    const [p, q] = [tree.firstChild, tree.lastChild];
+    let reads = 0;
+    const list = p.attributes;
+    Object.defineProperty(p, "attributes", {
+      get: () => {
+        reads++;
+        return list;
+      },
+    });
+    const [x, y, z] = [
+      p.getAttributeNode("x"),
+      p.getAttributeNode("y"),
+      q.getAttributeNode("z"),
+    ];
+    const order = new DocumentOrderIndex();
+    assert.deepStrictEqual(order.sort([z, x]), [x, z]);
+    assert.strictEqual(reads, 0);
+    assert.deepStrictEqual(order.sort([z, y, x]), [x, y, z]);
+    assert.strictEqual(reads, 1);
+  });
+
   it("numbers detached attributes and orphans of inconsistent trees", () => {
     const order = new DocumentOrderIndex();
     assert.strictEqual(order.positionOf(source.createAttribute("d")), 0);

@@ -99,16 +99,26 @@ function isPositionCall(expr) {
  * name test can match there: attributes on the attribute axis, namespace
  * nodes on the namespace axis, elements elsewhere (XPath 1.0 section 2.3).
  *
- * @param {Node} node - Candidate node
+ * @param {number} type - The candidate node's `nodeType`
  * @param {string|null} axis - The axis, or null when the caller checks types
  * @returns {boolean} True when a name test may match the node
  */
-function isPrincipalNodeType(node, axis) {
+function isPrincipalNodeType(type, axis) {
   if (axis === null) return true;
-  const type = node.nodeType;
   if (axis === "attribute") return type === 2;
   if (axis === "namespace") return type === NAMESPACE_NODE;
   return type === 1;
+}
+
+/**
+ * Whether a node belongs to an HTML document (`contentType` "text/html").
+ * Two jsdom getters, so name tests read it last.
+ *
+ * @param {Node} node - An element
+ * @returns {boolean} True for a node of an HTML document
+ */
+function isInHtmlDocument(node) {
+  return node.ownerDocument?.contentType === "text/html";
 }
 
 /**
@@ -615,11 +625,13 @@ export class XPathEvaluator {
    */
   matchNodeTest(nodeTest, node, context, axis = null) {
     switch (nodeTest.type) {
-      case NodeType.NAME_TEST:
+      case NodeType.NAME_TEST: {
+        const type = node.nodeType;
         return (
-          isPrincipalNodeType(node, axis) &&
-          this.matchNameTest(nodeTest, node, context)
+          isPrincipalNodeType(type, axis) &&
+          this.matchNameTest(nodeTest, node, context, type)
         );
+      }
 
       case NodeType.NODE_TYPE_TEST:
         return this.matchNodeTypeTest(nodeTest.nodeType, node);
@@ -642,32 +654,17 @@ export class XPathEvaluator {
    * @param {object} nodeTest - Name test AST node
    * @param {Node} node - Candidate node
    * @param {XPathContext} context - Evaluation context (for prefixes)
+   * @param {number} [type] - The node's `nodeType`, when already read
    * @returns {boolean} Whether the node matches
    */
-  matchNameTest(nodeTest, node, context) {
-    const type = node.nodeType;
+  matchNameTest(nodeTest, node, context, type = node.nodeType) {
     if (type === NAMESPACE_NODE) return matchNamespaceNameTest(nodeTest, node);
     // Only element and attribute nodes have names
     if (type !== 1 && type !== 2) return false;
 
     const { name, prefix } = nodeTest;
 
-    if (!prefix) {
-      if (name === "*") return true;
-      const nodeName = node.localName || node.nodeName;
-      const isHtmlElement =
-        type === 1 && node.ownerDocument?.contentType === "text/html";
-      if (nodeName !== name) {
-        // HTML documents match element names case-insensitively
-        return isHtmlElement && nodeName.toLowerCase() === name.toLowerCase();
-      }
-      // A QName without prefix only matches nodes in no namespace (2.3).
-      // HTML elements are in the XHTML namespace in the DOM but in none for
-      // libxslt, which receives HTML documents re-parsed from their markup.
-      return (
-        isHtmlElement || this.legacyNameTests || node.namespaceURI === null
-      );
-    }
+    if (!prefix) return this.matchUnprefixedName(name, node, type);
 
     const namespaceUri = resolveNamespacePrefix(prefix, context.namespaces);
     if (!namespaceUri) {
@@ -677,6 +674,34 @@ export class XPathEvaluator {
     }
     if ((node.namespaceURI || null) !== namespaceUri) return false;
     return name === "*" || (node.localName || node.nodeName) === name;
+  }
+
+  /**
+   * Match a name test without prefix (`name` or `*`) against an element or
+   * attribute. The owner document's content type (two jsdom getters) is
+   * read last, only for HTML-specific outcomes.
+   *
+   * @param {string} name - The tested name, or "*"
+   * @param {Node} node - An element or attribute
+   * @param {number} type - The node's `nodeType`
+   * @returns {boolean} Whether the node matches
+   */
+  matchUnprefixedName(name, node, type) {
+    if (name === "*") return true;
+    const nodeName = node.localName || node.nodeName;
+    if (nodeName !== name) {
+      // HTML documents match element names case-insensitively
+      return (
+        type === 1 &&
+        nodeName.toLowerCase() === name.toLowerCase() &&
+        isInHtmlDocument(node)
+      );
+    }
+    // A QName without prefix only matches nodes in no namespace (2.3).
+    // HTML elements are in the XHTML namespace in the DOM but in none for
+    // libxslt, which receives HTML documents re-parsed from their markup.
+    if (this.legacyNameTests || node.namespaceURI === null) return true;
+    return type === 1 && isInHtmlDocument(node);
   }
 
   matchNodeTypeTest(nodeType, node) {

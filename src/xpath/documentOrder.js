@@ -143,7 +143,7 @@ const ATTRIBUTE_KEY = 2 ** 30;
  * The first time a node of a tree is looked up, the whole tree is numbered
  * in document order (attributes are not: they are ordered through their
  * element, and among themselves by their index in the element's attribute
- * list, looked up only when attributes are sorted). Trees are numbered in
+ * list, looked up only when two attributes of one element are sorted). Trees are numbered in
  * the order they are first seen, so nodes of different documents have a
  * stable, implementation-defined order (XPath 1.0 section 5). A node added
  * to a tree after it was numbered makes the tree numbered again; nodes
@@ -231,7 +231,11 @@ export class DocumentOrderIndex {
 
   /**
    * The sort key of a node: the position of the node, or of the element it
-   * hangs off, then its rank among the nodes anchored at that element.
+   * hangs off, then its rank among the nodes anchored at that element. All
+   * attributes of an element share one key (see
+   * {@link DocumentOrderIndex#compareKeys}): walking the attribute list of
+   * every element up front would dominate sorting `$items/@v`, where no two
+   * attributes share an element.
    *
    * @param {Node} node - A DOM node or namespace node
    * @returns {{node: Node, major: number, minor: number}} The key
@@ -243,13 +247,23 @@ export class DocumentOrderIndex {
     }
     if (node.nodeType === 2 && node.ownerElement) {
       const major = this.positionOf(node.ownerElement);
-      return {
-        node,
-        major,
-        minor: ATTRIBUTE_KEY + this.attributeIndexOf(node),
-      };
+      return { node, major, minor: ATTRIBUTE_KEY };
     }
     return { node, major: this.positionOf(node), minor: 0 };
+  }
+
+  /**
+   * Order of two sort keys; attributes of the same element are ordered by
+   * their index in its attribute list, looked up only for such a tie.
+   *
+   * @param {{node: Node, major: number, minor: number}} a - First key
+   * @param {{node: Node, major: number, minor: number}} b - Second key
+   * @returns {number} Negative when a comes first, positive when b does
+   */
+  compareKeys(a, b) {
+    const order = a.major - b.major || a.minor - b.minor;
+    if (order !== 0 || a.minor !== ATTRIBUTE_KEY) return order;
+    return this.attributeIndexOf(a.node) - this.attributeIndexOf(b.node);
   }
 
   /**
@@ -261,7 +275,7 @@ export class DocumentOrderIndex {
    */
   sort(nodes) {
     const keyed = nodes.map((node) => this.keyOf(node));
-    keyed.sort((a, b) => a.major - b.major || a.minor - b.minor);
+    keyed.sort((a, b) => this.compareKeys(a, b));
     for (let i = 0; i < keyed.length; i++) nodes[i] = keyed[i].node;
     return nodes;
   }

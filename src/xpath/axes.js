@@ -517,8 +517,12 @@ export const AXIS_WALKERS = Object.freeze({
  * rootNodeOf(fragment.firstChild); // fragment
  */
 export function rootNodeOf(node) {
+  const owner = node.ownerDocument;
   let top = parentOf(node) ?? node;
-  while (top.parentNode) top = top.parentNode;
+  // Stop at the owner document without reading its properties: a jsdom
+  // Document is a Proxy (named properties), slow on every access
+  while (top !== owner && top.parentNode) top = top.parentNode;
+  if (top === owner) return owner;
   const type = top.nodeType;
   return type === 9 || type === 11 ? top : node.ownerDocument || top;
 }
