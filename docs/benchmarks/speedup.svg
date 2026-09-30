@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="472" viewBox="0 0 720 472" role="img" aria-labelledby="t d">
 <title id="t">Speed-up of 1.2.0 over 1.1.3 per scenario (log scale)</title>
-<desc id="d">1.2.0 is faster than 1.1.3 in 9 of 10 compared scenarios; the largest speed-up is 1.80× (100 MB text result, string).</desc>
+<desc id="d">1.2.0 is faster than 1.1.3 in 10 of 10 compared scenarios; the largest speed-up is 1.81× (100 MB text result, string).</desc>
 <style>
 svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--new:#2a78d6;--old:#eb6834;
 font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
@@ -17,45 +17,43 @@ font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
 <text class="title" x="16" y="24">Speed-up of 1.2.0 over 1.1.3 per scenario (log scale)</text>
 <text class="t2" x="16" y="44" text-anchor="start">1.1.3 median time ÷ 1.2.0 median time; right of the dashed line 1.2.0 is faster</text>
 <line class="grid" x1="250" x2="250" y1="66" y2="346"/>
-<text class="t2" x="250" y="362" text-anchor="middle">0.5×</text>
-<line class="grid" x1="370.4" x2="370.4" y1="66" y2="346"/>
-<text class="t2" x="370.4" y="362" text-anchor="middle">1×</text>
-<line class="grid" x1="490.8" x2="490.8" y1="66" y2="346"/>
-<text class="t2" x="490.8" y="362" text-anchor="middle">2×</text>
+<text class="t2" x="250" y="362" text-anchor="middle">1×</text>
+<line class="grid" x1="422.3" x2="422.3" y1="66" y2="346"/>
+<text class="t2" x="422.3" y="362" text-anchor="middle">2×</text>
 <line class="grid" x1="650" x2="650" y1="66" y2="346"/>
 <text class="t2" x="650" y="362" text-anchor="middle">5×</text>
-<line class="ref" x1="370.4" x2="370.4" y1="62" y2="346"/>
-<text class="t2" x="374.4" y="60" text-anchor="start">same speed</text>
+<line class="ref" x1="250" x2="250" y1="62" y2="346"/>
+<text class="t2" x="254" y="60" text-anchor="start">same speed</text>
 <text class="t1" x="234" y="84" text-anchor="end">100 MB text result, string</text>
-<circle class="new ring" cx="472.7" cy="80" r="5"><title>100 MB text result, string: 1.2.0 is 1.80× as fast as 1.1.3 (7.05 s vs 3.91 s)</title></circle>
-<text class="t1" x="482.7" y="84" text-anchor="start">1.80×</text>
-<text class="t1" x="234" y="112" text-anchor="end">following-sibling::x[1], 8,000</text>
-<circle class="new ring" cx="442.5" cy="108" r="5"><title>following-sibling::x[1], 8,000: 1.2.0 is 1.51× as fast as 1.1.3 (169 ms vs 112 ms)</title></circle>
-<text class="t1" x="452.5" y="112" text-anchor="start">1.51×</text>
-<text class="t1" x="234" y="140" text-anchor="end">xsl:number level=&quot;any&quot;, 8,000</text>
-<circle class="new ring" cx="438.6" cy="136" r="5"><title>xsl:number level=&quot;any&quot;, 8,000: 1.2.0 is 1.48× as fast as 1.1.3 (144 ms vs 97 ms)</title></circle>
-<text class="t1" x="448.6" y="140" text-anchor="start">1.48×</text>
-<text class="t1" x="234" y="168" text-anchor="end">apply-templates item[@id], 8,000</text>
-<circle class="new ring" cx="434.6" cy="164" r="5"><title>apply-templates item[@id], 8,000: 1.2.0 is 1.45× as fast as 1.1.3 (251 ms vs 174 ms)</title></circle>
-<text class="t1" x="444.6" y="168" text-anchor="start">1.45×</text>
-<text class="t1" x="234" y="196" text-anchor="end">Identity transform, 5 MB</text>
-<circle class="new ring" cx="423.1" cy="192" r="5"><title>Identity transform, 5 MB: 1.2.0 is 1.35× as fast as 1.1.3 (2.85 s vs 2.11 s)</title></circle>
-<text class="t1" x="433.1" y="196" text-anchor="start">1.35×</text>
-<text class="t1" x="234" y="224" text-anchor="end">call-template depth 900</text>
-<circle class="new ring" cx="412.2" cy="220" r="5"><title>call-template depth 900: 1.2.0 is 1.27× as fast as 1.1.3 (31 ms vs 25 ms)</title></circle>
-<text class="t1" x="422.2" y="224" text-anchor="start">1.27×</text>
-<text class="t1" x="234" y="252" text-anchor="end">CLI end to end, jsdom</text>
-<circle class="new ring" cx="411.4" cy="248" r="5"><title>CLI end to end, jsdom: 1.2.0 is 1.27× as fast as 1.1.3 (4.82 s vs 3.80 s)</title></circle>
-<text class="t1" x="421.4" y="252" text-anchor="start">1.27×</text>
-<text class="t1" x="234" y="280" text-anchor="end">Issue #9 catalogue (3 MB HTML)</text>
-<circle class="new ring" cx="411.2" cy="276" r="5"><title>Issue #9 catalogue (3 MB HTML): 1.2.0 is 1.26× as fast as 1.1.3 (3.64 s vs 2.88 s)</title></circle>
-<text class="t1" x="421.2" y="280" text-anchor="start">1.26×</text>
-<text class="t1" x="234" y="308" text-anchor="end">Sort 20,000 by two keys</text>
-<circle class="new ring" cx="411.1" cy="304" r="5"><title>Sort 20,000 by two keys: 1.2.0 is 1.26× as fast as 1.1.3 (530 ms vs 419 ms)</title></circle>
-<text class="t1" x="421.1" y="308" text-anchor="start">1.26×</text>
+<circle class="new ring" cx="397.8" cy="80" r="5"><title>100 MB text result, string: 1.2.0 is 1.81× as fast as 1.1.3 (7.14 s vs 3.94 s)</title></circle>
+<text class="t1" x="407.8" y="84" text-anchor="start">1.81×</text>
+<text class="t1" x="234" y="112" text-anchor="end">xsl:number level=&quot;any&quot;, 8,000</text>
+<circle class="new ring" cx="365.2" cy="108" r="5"><title>xsl:number level=&quot;any&quot;, 8,000: 1.2.0 is 1.59× as fast as 1.1.3 (153 ms vs 96 ms)</title></circle>
+<text class="t1" x="375.2" y="112" text-anchor="start">1.59×</text>
+<text class="t1" x="234" y="140" text-anchor="end">following-sibling::x[1], 8,000</text>
+<circle class="new ring" cx="350.2" cy="136" r="5"><title>following-sibling::x[1], 8,000: 1.2.0 is 1.50× as fast as 1.1.3 (168 ms vs 113 ms)</title></circle>
+<text class="t1" x="360.2" y="140" text-anchor="start">1.50×</text>
+<text class="t1" x="234" y="168" text-anchor="end">Identity transform, 5 MB</text>
+<circle class="new ring" cx="325.1" cy="164" r="5"><title>Identity transform, 5 MB: 1.2.0 is 1.35× as fast as 1.1.3 (2.88 s vs 2.13 s)</title></circle>
+<text class="t1" x="335.1" y="168" text-anchor="start">1.35×</text>
+<text class="t1" x="234" y="196" text-anchor="end">apply-templates item[@id], 8,000</text>
+<circle class="new ring" cx="324.5" cy="192" r="5"><title>apply-templates item[@id], 8,000: 1.2.0 is 1.35× as fast as 1.1.3 (240 ms vs 178 ms)</title></circle>
+<text class="t1" x="334.5" y="196" text-anchor="start">1.35×</text>
+<text class="t1" x="234" y="224" text-anchor="end">Sort 20,000 by two keys</text>
+<circle class="new ring" cx="323.4" cy="220" r="5"><title>Sort 20,000 by two keys: 1.2.0 is 1.34× as fast as 1.1.3 (548 ms vs 407 ms)</title></circle>
+<text class="t1" x="333.4" y="224" text-anchor="start">1.34×</text>
+<text class="t1" x="234" y="252" text-anchor="end">Issue #9 catalogue (3 MB HTML)</text>
+<circle class="new ring" cx="318.8" cy="248" r="5"><title>Issue #9 catalogue (3 MB HTML): 1.2.0 is 1.32× as fast as 1.1.3 (3.73 s vs 2.83 s)</title></circle>
+<text class="t1" x="328.8" y="252" text-anchor="start">1.32×</text>
+<text class="t1" x="234" y="280" text-anchor="end">CLI end to end, jsdom</text>
+<circle class="new ring" cx="318" cy="276" r="5"><title>CLI end to end, jsdom: 1.2.0 is 1.31× as fast as 1.1.3 (4.86 s vs 3.70 s)</title></circle>
+<text class="t1" x="328" y="280" text-anchor="start">1.31×</text>
+<text class="t1" x="234" y="308" text-anchor="end">call-template depth 900</text>
+<circle class="new ring" cx="316" cy="304" r="5"><title>call-template depth 900: 1.2.0 is 1.30× as fast as 1.1.3 (31 ms vs 24 ms)</title></circle>
+<text class="t1" x="326" y="308" text-anchor="start">1.30×</text>
 <text class="t1" x="234" y="336" text-anchor="end">Muenchian grouping, 8,000</text>
-<circle class="new ring" cx="349" cy="332" r="5"><title>Muenchian grouping, 8,000: 1.2.0 is 0.88× as fast as 1.1.3 (140 ms vs 159 ms)</title></circle>
-<text class="t1" x="339" y="336" text-anchor="end">0.88×</text>
+<circle class="new ring" cx="270.6" cy="332" r="5"><title>Muenchian grouping, 8,000: 1.2.0 is 1.09× as fast as 1.1.3 (157 ms vs 144 ms)</title></circle>
+<text class="t1" x="280.6" y="336" text-anchor="start">1.09×</text>
 <text class="t2" x="16" y="388" text-anchor="start">Not compared (see the tables):</text>
 <text class="t2" x="16" y="404" text-anchor="start">· call-template depth 3,000 (1.1.3: error)</text>
 <text class="t2" x="16" y="420" text-anchor="start">· 100 MB text result, stream (1.2.0 only)</text>

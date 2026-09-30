@@ -124,23 +124,38 @@ export function timeTable(list) {
  * @returns {string} Markdown
  */
 export function memoryTable(list) {
-  const mb = (m) =>
-    m?.maxRssMb == null
-      ? m?.status === "ok"
-        ? "not measured"
-        : status(m)
-      : `${m.maxRssMb} MB`;
+  const mb = (m) => {
+    if (m?.maxRssMb != null) return `${m.maxRssMb} MB`;
+    return m?.status === "ok" ? "not measured" : status(m);
+  };
   return table(
     ["Scenario", "1.1.3 peak RSS", "1.2.0 peak RSS", "Change"],
     list.map((row) => {
       const a = row.old?.maxRssMb;
       const b = row.cur?.maxRssMb;
       const percent = a && b ? Math.round(((b - a) / a) * 100) : null;
-      const change =
-        percent === null ? "n/a" : `${percent > 0 ? "+" : ""}${percent}%`;
+      const sign = percent > 0 ? "+" : "";
+      const change = percent === null ? "n/a" : `${sign}${percent}%`;
       return [row.label, mb(row.old), mb(row.cur), change];
     }),
   );
+}
+
+/**
+ * The item with the largest value of `valueOf`, or undefined for an empty
+ * list.
+ *
+ * @template T
+ * @param {T[]} items - Items
+ * @param {(item: T) => number} valueOf - Value to maximize
+ * @returns {T|undefined} The first item with the largest value
+ */
+function maxBy(items, valueOf) {
+  let best;
+  for (const item of items) {
+    if (best === undefined || valueOf(item) > valueOf(best)) best = item;
+  }
+  return best;
 }
 
 /**
@@ -152,24 +167,33 @@ export function memoryTable(list) {
  */
 export function hero(list) {
   const compared = list.filter((row) => row.factor);
-  const best = compared.reduce((a, b) => (b.factor > a.factor ? b : a));
+  const best = maxBy(compared, (row) => row.factor);
   const mean = Math.exp(
     compared.reduce((sum, row) => sum + Math.log(row.factor), 0) /
       compared.length,
   );
-  const saving = compared
-    .filter((row) => row.old.maxRssMb && row.cur.maxRssMb)
-    .map((row) => ({ row, cut: 1 - row.cur.maxRssMb / row.old.maxRssMb }))
-    .reduce((a, b) => (b.cut > a.cut ? b : a));
+  const saving = maxBy(
+    compared
+      .filter((row) => row.old.maxRssMb && row.cur.maxRssMb)
+      .map((row) => ({ row, cut: 1 - row.cur.maxRssMb / row.old.maxRssMb })),
+    (item) => item.cut,
+  );
   const failing = list.filter(
     (row) => row.cur?.status === "ok" && row.old && row.old.status !== "ok",
   );
-  const parts = [
-    `**${formatFactor(best.factor)} faster** on ${best.label}`,
-    `**${formatFactor(mean)}** geometric mean over ${compared.length} scenarios`,
-    `**${Math.round(saving.cut * 100)}% less peak memory** on ${saving.row.label} ` +
-      `(${saving.row.old.maxRssMb} MB to ${saving.row.cur.maxRssMb} MB)`,
-  ];
+  const parts = [];
+  if (best) {
+    parts.push(
+      `**${formatFactor(best.factor)} faster** on ${best.label}`,
+      `**${formatFactor(mean)}** geometric mean over ${compared.length} scenarios`,
+    );
+  }
+  if (saving) {
+    parts.push(
+      `**${Math.round(saving.cut * 100)}% less peak memory** on ${saving.row.label} ` +
+        `(${saving.row.old.maxRssMb} MB to ${saving.row.cur.maxRssMb} MB)`,
+    );
+  }
   if (failing.length) {
     parts.push(
       `${failing.map((row) => row.label).join(", ")}: runs on 1.2.0, ${failing[0].old.status} on 1.1.3`,
