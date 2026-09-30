@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Deeply nested result trees** no longer overflow the call stack when serialized (task 0024): `transformToString`, `transformToStream`, `serializeResult` and `serializeChunks` walk the result tree on an explicit stack of open elements, so trees nested 50,000 elements deep serialize with the xml, html, xhtml and text methods. Output is byte-identical, and serialization is 10 to 30% faster on large documents.
 - **Document order** is computed once per transformation (`DocumentOrderIndex`) instead of calling `compareDocumentPosition` for every comparison, except where that method is native (browsers). With xmldom a union-heavy transformation dropped from about 150 s to 0.7 s.
 - **Deep template recursion** (task 0005): recursive `xsl:call-template` and `xsl:apply-templates` stopped at about 1,000 to 1,400 levels with `Template recursion too deep`. Templates now run from an explicit work stack, so the JavaScript stack no longer grows with template depth: libxslt's limit of 3,000 nested templates fits in Node.js and every browser, and more with a higher limit.
 - **`transformToDocument()` returned `null`** when the result had whitespace text around its root element (common with built-in templates), found by the browser tests; document-level whitespace is dropped and a DocumentType node is created from `doctype-public`/`doctype-system`.

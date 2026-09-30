@@ -248,8 +248,7 @@ Differences from the XSLT 1.0 / XPath 1.0 specifications and from libxslt
   stops with `Template recursion too deep`. Raise the limit with
   `new XSLTProcessor({ maxTemplateDepth: 10000 })`. libxslt also counts the
   content of `xsl:if`, `xsl:choose` and `xsl:for-each`, so this engine allows
-  somewhat deeper recursion. Serializing a result tree nested deeper than about
-  900 elements to a string is still limited by the call stack.
+  somewhat deeper recursion.
 - **`xsl:number`**: `lang` and `letter-value` are ignored. Decimal format
   tokens in any Unicode digit family work; negative values are numbered 0 with
   a warning, as in libxslt.

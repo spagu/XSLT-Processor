@@ -4,14 +4,14 @@
  * Walks a result tree and turns it into markup. Everything that differs
  * between the xml, xhtml and html output methods of XSLT 1.0 section 16 is
  * delegated to the dialect hooks implemented by the concrete writers.
+ *
+ * The walk is iterative: the elements whose children are being written are
+ * frames on an explicit stack (see frames.js), so a result tree nested
+ * deeper than the JavaScript call stack allows (tens of thousands of
+ * levels, as deep template recursion builds) is written like any other.
  */
 
-import {
-  INDENT_UNIT,
-  NODE_TYPE,
-  TEXT_MODE,
-  XMLNS_NAMESPACE,
-} from "./constants.js";
+import { NODE_TYPE, TEXT_MODE, XMLNS_NAMESPACE } from "./constants.js";
 import { wrapCdata } from "./escape.js";
 import {
   getOutputEncoding,
@@ -26,6 +26,7 @@ import { getIndentableChildren } from "./indent.js";
 import { isRawText } from "./rawText.js";
 import { findRootElement } from "./settings.js";
 import { ChunkBuffer } from "./chunks.js";
+import { ContentFrame, IndentFrame, TopLevelFrame } from "./frames.js";
 
 /**
  * Make comment text well-formed: XSLT 1.0 section 7.4 recovery inserts a
@@ -40,9 +41,6 @@ import { ChunkBuffer } from "./chunks.js";
 export function safeCommentText(text) {
   return text.replace(/-(?=-|$)/g, "- ");
 }
-
-/** What a writing step yields when no chunk is full yet. */
-const NO_CHUNKS = Object.freeze([]);
 
 export class BaseWriter {
   /**
@@ -114,7 +112,33 @@ export class BaseWriter {
   *chunks(node, chunkSize) {
     this.buffer = new ChunkBuffer(chunkSize);
     this.writeProlog(node);
-    yield* this.writeNode(node, createNamespaceScope(), 0, TEXT_MODE.ESCAPE);
+
+    const open = [];
+    const root = this.openNode(
+      node,
+      createNamespaceScope(),
+      0,
+      TEXT_MODE.ESCAPE,
+    );
+    if (root) open.push(root);
+
+    while (open.length > 0) {
+      const frame = open[open.length - 1];
+      const child = frame.nextChild(this);
+      if (child) {
+        const opened = this.openNode(
+          child,
+          frame.scope,
+          frame.depth,
+          frame.textMode,
+        );
+        if (opened) open.push(opened);
+      } else {
+        open.pop();
+        this.write(frame.end);
+      }
+      if (this.buffer.full) yield* this.buffer.take();
+    }
     yield* this.buffer.take(true);
   }
 
@@ -126,16 +150,6 @@ export class BaseWriter {
    */
   write(text) {
     this.buffer.write(text);
-  }
-
-  /**
-   * Yield the full chunks buffered so far. Called between nodes; a no-op
-   * (no generator created) while the buffer is not full.
-   *
-   * @returns {Iterable<string>} Full chunks, possibly none
-   */
-  flush() {
-    return this.buffer.full ? this.buffer.take() : NO_CHUNKS;
   }
 
   /**
@@ -160,20 +174,22 @@ export class BaseWriter {
   }
 
   /**
-   * Write any result tree node. Leaves (character data, comments, processing
-   * instructions) are written at once; elements and result roots return the
-   * generator writing them, so no generator is created per leaf.
+   * Start writing any result tree node. Leaves (character data, comments,
+   * processing instructions) are written at once; for an element with
+   * children or a result root, the start is written and the frame of its
+   * children is returned for the walk in {@link BaseWriter#chunks}.
    *
    * @param {Node} node - Node to write
    * @param {Map<string, string>} scope - Namespace scope in effect
    * @param {number} depth - Current indentation depth
    * @param {string} textMode - {@link TEXT_MODE} for character data children
-   * @returns {Iterable<string>} Full chunks to yield (see {@link BaseWriter#chunks})
+   * @returns {object|null} The frame of the children (see frames.js), or
+   *   null when the node is written completely
    */
-  writeNode(node, scope, depth, textMode) {
+  openNode(node, scope, depth, textMode) {
     switch (node.nodeType) {
       case NODE_TYPE.ELEMENT:
-        return this.writeElement(node, scope, depth);
+        return this.openElement(node, scope, depth);
       case NODE_TYPE.TEXT:
       case NODE_TYPE.CDATA_SECTION:
         this.writeText(node, textMode);
@@ -186,79 +202,29 @@ export class BaseWriter {
         break;
       case NODE_TYPE.DOCUMENT:
       case NODE_TYPE.DOCUMENT_FRAGMENT:
-        return this.writeTopLevelNodes(node, scope, depth, textMode);
+        return new TopLevelFrame(
+          node,
+          scope,
+          depth,
+          textMode,
+          this.topLevelLineBreaks === true,
+        );
       default:
         break;
     }
-    return NO_CHUNKS;
+    return null;
   }
 
   /**
-   * Write the children of the result root (document or fragment), with a
-   * line break after a comment that another node follows when the dialect
-   * asks for it (`topLevelLineBreaks`).
-   *
-   * @param {Node} node - The result root
-   * @param {Map<string, string>} scope - Namespace scope in effect
-   * @param {number} depth - Current indentation depth
-   * @param {string} textMode - {@link TEXT_MODE} for character data children
-   * @returns {void}
-   */
-  *writeTopLevelNodes(node, scope, depth, textMode) {
-    for (const child of node.childNodes) {
-      yield* this.writeNode(child, scope, depth, textMode);
-      const breaks =
-        this.topLevelLineBreaks &&
-        child.nodeType === NODE_TYPE.COMMENT &&
-        child.nextSibling;
-      if (breaks) this.write("\n");
-      yield* this.flush();
-    }
-  }
-
-  /**
-   * Write every child of a node without adding whitespace.
-   *
-   * In CDATA mode (`cdata-section-elements`), adjacent character data nodes
-   * are one text node of the XPath data model, so they are written as one
-   * CDATA section, as libxslt does, not one section per DOM node; text
-   * written with `disable-output-escaping` ends the run.
-   *
-   * @param {Node} node - Parent node
-   * @param {Map<string, string>} scope - Namespace scope in effect
-   * @param {number} depth - Current indentation depth
-   * @param {string} textMode - {@link TEXT_MODE} for character data children
-   * @returns {void}
-   */
-  *writeChildNodes(node, scope, depth, textMode) {
-    let run = "";
-    for (const child of node.childNodes) {
-      const type = child.nodeType;
-      const joins =
-        textMode === TEXT_MODE.CDATA &&
-        (type === NODE_TYPE.TEXT || type === NODE_TYPE.CDATA_SECTION) &&
-        !isRawText(child);
-      if (joins) {
-        run += child.nodeValue;
-        continue;
-      }
-      if (run) this.write(this.cdataMarkup(run));
-      run = "";
-      yield* this.writeNode(child, scope, depth, textMode);
-      yield* this.flush();
-    }
-    if (run) this.write(this.cdataMarkup(run));
-  }
-
-  /**
-   * Write an element with its namespaces, attributes and children.
+   * Write the start tag of an element with its namespaces and attributes,
+   * or the whole element when it is empty.
    *
    * @param {Element} element - Element to write
    * @param {Map<string, string>} scope - Namespace scope inherited from the parent
    * @param {number} depth - Current indentation depth
-   * @returns {void}
+   * @returns {object|null} The frame of its children, null when empty
    */
-  *writeElement(element, scope, depth) {
+  openElement(element, scope, depth) {
     const namespaces = collectNamespaceDeclarations(element, scope);
     const name = element.nodeName;
 
@@ -270,42 +236,42 @@ export class BaseWriter {
     const leading = this.leadingChildMarkup(element);
     if (!element.firstChild && !leading) {
       this.write(this.emptyElementMarkup(element, name));
-      return;
+      return null;
     }
 
     this.write(">");
-    yield* this.writeElementChildren(element, namespaces.scope, depth, leading);
-    this.write(`</${name}>`);
+    return this.childrenFrame(
+      element,
+      namespaces.scope,
+      depth,
+      leading,
+      `</${name}>`,
+    );
   }
 
   /**
-   * Write the children of an element, indenting element-only content.
+   * Frame of the children of an element, indenting element-only content.
    *
    * @param {Element} element - Parent element
    * @param {Map<string, string>} scope - Namespace scope in effect
    * @param {number} depth - Depth of the parent element
-   * @param {string} [leading] - Markup the serializer adds before the
+   * @param {string} leading - Markup the serializer adds before the
    *   children, indented like a child (see leadingChildMarkup)
-   * @returns {void}
+   * @param {string} endTag - End tag of the element
+   * @returns {ContentFrame|IndentFrame} The frame
    */
-  *writeElementChildren(element, scope, depth, leading = "") {
+  childrenFrame(element, scope, depth, leading, endTag) {
     const textMode = this.childTextMode(element);
     const indentable = this.indentableChildren(element, textMode);
 
     if (!indentable) {
       this.write(leading);
-      yield* this.writeChildNodes(element, scope, depth, textMode);
-      return;
+      return new ContentFrame(element, scope, depth, textMode, endTag);
     }
 
-    const childIndent = `\n${INDENT_UNIT.repeat(depth + 1)}`;
-    if (leading) this.write(childIndent + leading);
-    for (const child of indentable) {
-      this.write(childIndent);
-      yield* this.writeNode(child, scope, depth + 1, textMode);
-      yield* this.flush();
-    }
-    this.write(`\n${INDENT_UNIT.repeat(depth)}`);
+    const frame = new IndentFrame(indentable, scope, depth, textMode, endTag);
+    if (leading) this.write(frame.lineStart + leading);
+    return frame;
   }
 
   /**

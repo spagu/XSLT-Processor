@@ -55,3 +55,54 @@ test("3000 nested call-template and apply-templates instantiations", async ({
     expect.stringMatching(/^Template recursion too deep: more than 3000/),
   ]);
 });
+
+test("result trees nested 5,000 and 50,000 elements deep serialize", async ({
+  page,
+  browserName,
+}) => {
+  test.setTimeout(120_000);
+  // 50,000 levels take about 30 s in Chromium; the other engines check 5,000
+  // (the unit tests cover 50,000 levels for every output method).
+  const depths = browserName === "chromium" ? [5000, 50000] : [5000];
+  const result = await page.evaluate(async (depthList) => {
+    const { XSLTProcessor } = window.lib;
+    const { parseXml } = window.harness;
+    const nesting = (depth, method) =>
+      `<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:output method="${method}" omit-xml-declaration="yes"/>
+       <xsl:template match="/"><xsl:call-template name="r"><xsl:with-param name="n" select="${depth}"/></xsl:call-template></xsl:template>
+       <xsl:template name="r"><xsl:param name="n"/><xsl:if test="$n > 0"><e><xsl:call-template name="r"><xsl:with-param name="n" select="$n - 1"/></xsl:call-template></e></xsl:if><xsl:if test="$n = 0">x</xsl:if></xsl:template></xsl:stylesheet>`;
+    const readAll = async (stream) => {
+      let text = "";
+      const reader = stream.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) return text;
+        text += value;
+      }
+    };
+    const outcomes = [];
+    for (const depth of depthList) {
+      const nested = `${"<e>".repeat(depth)}x${"</e>".repeat(depth)}`;
+      for (const method of ["xml", "html", "xhtml", "text"]) {
+        const processor = new XSLTProcessor({ maxTemplateDepth: depth + 10 });
+        processor.importStylesheet(parseXml(nesting(depth, method)));
+        const source = parseXml("<d/>");
+        const expected = method === "text" ? "x" : nested;
+        const string = processor.transformToString(source);
+        const streamed = await readAll(processor.transformToStream(source));
+        outcomes.push(
+          `${depth} ${method} ${string === expected} ${streamed === expected}`,
+        );
+      }
+    }
+    return outcomes;
+  }, depths);
+
+  expect(result).toEqual(
+    depths.flatMap((depth) =>
+      ["xml", "html", "xhtml", "text"].map(
+        (method) => `${depth} ${method} true true`,
+      ),
+    ),
+  );
+});

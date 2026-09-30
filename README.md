@@ -205,7 +205,6 @@ See [Command Line Tool](docs/CLI.md) for all options, the base directory,
 
 The main differences from XSLT 1.0 / XPath 1.0 and from libxslt:
 
-- result trees nested deeper than about 900 elements cannot be serialized to a string (template recursion itself reaches libxslt's 3,000 levels);
 - `xsl:number` ignores `lang` and `letter-value`;
 - `unparsed-entity-uri()` always returns `''`;
 - numbers convert to strings in the XPath 1.0 form (`10000000000`), where libxslt writes `1e+10`.
