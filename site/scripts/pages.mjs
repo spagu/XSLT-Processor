@@ -21,6 +21,7 @@ import {
   stripTitle,
   subsections,
   truncate,
+  relativeUrl,
 } from "./markdown.mjs";
 
 /** Web URL of the repository, for links to files the site does not publish. */
@@ -124,6 +125,46 @@ export function buildPage({ repoPath, text, pages }) {
   });
   const file = `${url.replace(/^\/|\/$/g, "") || "index"}.md`;
   return { file, content: `${head}\n${body}\n`, title, url, description };
+}
+
+/** Relative `<img src="...">` targets in HTML embedded in Markdown. */
+const HTML_IMAGE = /(<img\b[^>]*?\bsrc=")([^"#?]+)(")/g;
+
+/**
+ * Whether an image target is a local file relative to the document.
+ *
+ * @param {string} src - The `src` value
+ * @returns {boolean} True for relative paths without a scheme
+ */
+function isLocalImage(src) {
+  return !/^([a-z][a-z0-9+.-]*:|\/)/i.test(src);
+}
+
+/**
+ * Publish the local images that a document embeds with `<img>`: each is
+ * served from `/assets/<directory of the document>/<src>`, and its `src` is
+ * rewritten to a URL relative to the page, so it works under any base path.
+ * Markdown image syntax is handled by the link rewriter already.
+ *
+ * @param {object} options - Options
+ * @param {string} options.repoPath - Repository path of the document
+ * @param {string} options.pageUrl - Site URL of the page
+ * @param {string} options.content - Generated page content
+ * @returns {{ content: string, assets: { from: string, to: string }[] }} The
+ *   rewritten content and the files to copy (repository path to site path)
+ */
+export function publishImages({ repoPath, pageUrl, content }) {
+  const dir = posix.dirname(repoPath);
+  const assets = [];
+  const rewritten = content.replace(HTML_IMAGE, (match, open, src, close) => {
+    if (!isLocalImage(src)) return match;
+    const from = posix.normalize(posix.join(dir, src));
+    if (from.startsWith("..")) return match;
+    const to = `/assets/${from}`;
+    assets.push({ from, to });
+    return `${open}${relativeUrl(pageUrl, to)}${close}`;
+  });
+  return { content: rewritten, assets };
 }
 
 /**

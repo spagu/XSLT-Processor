@@ -83,6 +83,7 @@ export default [
       'site/content/**',
       'site/data/**',
       'site/static/vendor/**',
+      'site/static/assets/**',
       'site/public/**',
       'site/public-local/**'
     ]

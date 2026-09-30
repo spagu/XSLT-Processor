@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="482" viewBox="0 0 720 482" role="img" aria-labelledby="t d">
+<title id="t">Peak memory (RSS) per scenario, MB</title>
+<desc id="d">Peak resident set size of the process of each scenario; the largest is 100 MB text result, string (1.1.3: 1556 MB, 1.2.0: 665 MB).</desc>
+<style>
+svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--new:#2a78d6;--old:#eb6834;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
+@media (prefers-color-scheme:dark){svg{--surface:#202124;--text:#e8eaed;--muted:#9aa0a6;--grid:#3c4043;--axis:#5f6368;--new:#3987e5;--old:#d95926}}
+.bg{fill:var(--surface)}.t1{fill:var(--text)}.t2{fill:var(--muted)}
+.title{fill:var(--text);font-size:13px;font-weight:600}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--axis);stroke-width:1}
+.ref{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.link{stroke:var(--axis);stroke-width:2}
+.new{fill:var(--new)}.old{fill:var(--old)}
+.ring{stroke:var(--surface);stroke-width:2}
+</style>
+<rect class="bg" width="720" height="482" rx="8"/>
+<text class="title" x="16" y="24">Peak memory (RSS) per scenario, MB</text>
+<rect class="old" x="250" y="41" width="10" height="10" rx="2"/>
+<text class="t1" x="265" y="50" text-anchor="start">1.1.3</text>
+<rect class="new" x="322" y="41" width="10" height="10" rx="2"/>
+<text class="t1" x="337" y="50" text-anchor="start">1.2.0</text>
+<line class="grid" x1="250" x2="250" y1="66" y2="456"/>
+<text class="t2" x="250" y="472" text-anchor="middle">0 MB</text>
+<line class="grid" x1="350" x2="350" y1="66" y2="456"/>
+<text class="t2" x="350" y="472" text-anchor="middle">500 MB</text>
+<line class="grid" x1="450" x2="450" y1="66" y2="456"/>
+<text class="t2" x="450" y="472" text-anchor="middle">1000 MB</text>
+<line class="grid" x1="550" x2="550" y1="66" y2="456"/>
+<text class="t2" x="550" y="472" text-anchor="middle">1500 MB</text>
+<line class="grid" x1="650" x2="650" y1="66" y2="456"/>
+<text class="t2" x="650" y="472" text-anchor="middle">2000 MB</text>
+<text class="t1" x="234" y="85" text-anchor="end">100 MB text result, string</text>
+<path class="old" d="M250 70H557.2A4 4 0 0 1 561.2 74V76A4 4 0 0 1 557.2 80H250Z"><title>100 MB text result, string, 1.1.3: peak RSS 1556 MB</title></path>
+<path class="new" d="M250 82H379A4 4 0 0 1 383 86V88A4 4 0 0 1 379 92H250Z"><title>100 MB text result, string, 1.2.0: peak RSS 665 MB</title></path>
+<text class="t1" x="234" y="115" text-anchor="end">Identity transform, 5 MB</text>
+<path class="old" d="M250 100H443.2A4 4 0 0 1 447.2 104V106A4 4 0 0 1 443.2 110H250Z"><title>Identity transform, 5 MB, 1.1.3: peak RSS 986 MB</title></path>
+<path class="new" d="M250 112H377A4 4 0 0 1 381 116V118A4 4 0 0 1 377 122H250Z"><title>Identity transform, 5 MB, 1.2.0: peak RSS 655 MB</title></path>
+<text class="t1" x="234" y="145" text-anchor="end">CLI end to end, jsdom</text>
+<path class="old" d="M250 130H430A4 4 0 0 1 434 134V136A4 4 0 0 1 430 140H250Z"><title>CLI end to end, jsdom, 1.1.3: peak RSS 920 MB</title></path>
+<path class="new" d="M250 142H371.6A4 4 0 0 1 375.6 146V148A4 4 0 0 1 371.6 152H250Z"><title>CLI end to end, jsdom, 1.2.0: peak RSS 628 MB</title></path>
+<text class="t1" x="234" y="175" text-anchor="end">Issue #9 catalogue (3 MB HTML)</text>
+<path class="old" d="M250 160H428.6A4 4 0 0 1 432.6 164V166A4 4 0 0 1 428.6 170H250Z"><title>Issue #9 catalogue (3 MB HTML), 1.1.3: peak RSS 913 MB</title></path>
+<path class="new" d="M250 172H374.4A4 4 0 0 1 378.4 176V178A4 4 0 0 1 374.4 182H250Z"><title>Issue #9 catalogue (3 MB HTML), 1.2.0: peak RSS 642 MB</title></path>
+<text class="t1" x="234" y="205" text-anchor="end">100 MB text result, stream</text>
+<path class="new" d="M250 202H355.8A4 4 0 0 1 359.8 206V208A4 4 0 0 1 355.8 212H250Z"><title>100 MB text result, stream, 1.2.0: peak RSS 549 MB</title></path>
+<text class="t1" x="234" y="235" text-anchor="end">CLI end to end, XSLT_DOM=xmldom</text>
+<path class="new" d="M250 232H336A4 4 0 0 1 340 236V238A4 4 0 0 1 336 242H250Z"><title>CLI end to end, XSLT_DOM=xmldom, 1.2.0: peak RSS 450 MB</title></path>
+<text class="t1" x="234" y="265" text-anchor="end">Sort 20,000 by two keys</text>
+<path class="old" d="M250 250H313.6A4 4 0 0 1 317.6 254V256A4 4 0 0 1 313.6 260H250Z"><title>Sort 20,000 by two keys, 1.1.3: peak RSS 338 MB</title></path>
+<path class="new" d="M250 262H306A4 4 0 0 1 310 266V268A4 4 0 0 1 306 272H250Z"><title>Sort 20,000 by two keys, 1.2.0: peak RSS 300 MB</title></path>
+<text class="t1" x="234" y="295" text-anchor="end">apply-templates item[@id], 8,000</text>
+<path class="old" d="M250 280H304A4 4 0 0 1 308 284V286A4 4 0 0 1 304 290H250Z"><title>apply-templates item[@id], 8,000, 1.1.3: peak RSS 290 MB</title></path>
+<path class="new" d="M250 292H302A4 4 0 0 1 306 296V298A4 4 0 0 1 302 302H250Z"><title>apply-templates item[@id], 8,000, 1.2.0: peak RSS 280 MB</title></path>
+<text class="t1" x="234" y="325" text-anchor="end">xsl:number level=&quot;any&quot;, 8,000</text>
+<path class="old" d="M250 310H302.2A4 4 0 0 1 306.2 314V316A4 4 0 0 1 302.2 320H250Z"><title>xsl:number level=&quot;any&quot;, 8,000, 1.1.3: peak RSS 281 MB</title></path>
+<path class="new" d="M250 322H292.4A4 4 0 0 1 296.4 326V328A4 4 0 0 1 292.4 332H250Z"><title>xsl:number level=&quot;any&quot;, 8,000, 1.2.0: peak RSS 232 MB</title></path>
+<text class="t1" x="234" y="355" text-anchor="end">following-sibling::x[1], 8,000</text>
+<path class="old" d="M250 340H301.2A4 4 0 0 1 305.2 344V346A4 4 0 0 1 301.2 350H250Z"><title>following-sibling::x[1], 8,000, 1.1.3: peak RSS 276 MB</title></path>
+<path class="new" d="M250 352H295.6A4 4 0 0 1 299.6 356V358A4 4 0 0 1 295.6 362H250Z"><title>following-sibling::x[1], 8,000, 1.2.0: peak RSS 248 MB</title></path>
+<text class="t1" x="234" y="385" text-anchor="end">Muenchian grouping, 8,000</text>
+<path class="old" d="M250 370H298.4A4 4 0 0 1 302.4 374V376A4 4 0 0 1 298.4 380H250Z"><title>Muenchian grouping, 8,000, 1.1.3: peak RSS 262 MB</title></path>
+<path class="new" d="M250 382H299.6A4 4 0 0 1 303.6 386V388A4 4 0 0 1 299.6 392H250Z"><title>Muenchian grouping, 8,000, 1.2.0: peak RSS 268 MB</title></path>
+<text class="t1" x="234" y="415" text-anchor="end">call-template depth 3,000</text>
+<path class="new" d="M250 412H289.6A4 4 0 0 1 293.6 416V418A4 4 0 0 1 289.6 422H250Z"><title>call-template depth 3,000, 1.2.0: peak RSS 218 MB</title></path>
+<text class="t1" x="234" y="445" text-anchor="end">call-template depth 900</text>
+<path class="old" d="M250 430H282A4 4 0 0 1 286 434V436A4 4 0 0 1 282 440H250Z"><title>call-template depth 900, 1.1.3: peak RSS 180 MB</title></path>
+<path class="new" d="M250 442H283.6A4 4 0 0 1 287.6 446V448A4 4 0 0 1 283.6 452H250Z"><title>call-template depth 900, 1.2.0: peak RSS 188 MB</title></path>
+<line class="axis" x1="250" x2="250" y1="66" y2="456"/>
+</svg>

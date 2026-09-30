@@ -9,6 +9,7 @@ import {
   pageMap,
   pageUrl,
   stripBadges,
+  publishImages,
 } from "./pages.mjs";
 
 const readme = `# @tradik/xslt-processor
@@ -180,5 +181,38 @@ describe("docs navigation", () => {
       ["/docs/getting-started/", "/docs/api/"],
     );
     assert.equal(nav[1].summary, "Methods");
+  });
+});
+
+describe("publishImages", () => {
+  it("copies local <img> targets to /assets and rewrites them relative to the page", () => {
+    const { content, assets } = publishImages({
+      repoPath: "docs/BENCHMARKS.md",
+      pageUrl: "/docs/benchmarks/",
+      content:
+        '<img src="benchmarks/time.svg" width="720" alt="x"> <img alt="y" src="https://example.com/a.png"> <img src="/abs.png">',
+    });
+    assert.deepStrictEqual(assets, [
+      {
+        from: "docs/benchmarks/time.svg",
+        to: "/assets/docs/benchmarks/time.svg",
+      },
+    ]);
+    assert.match(
+      content,
+      /src="\.\.\/\.\.\/assets\/docs\/benchmarks\/time\.svg"/,
+    );
+    assert.match(content, /src="https:\/\/example\.com\/a\.png"/);
+    assert.match(content, /src="\/abs\.png"/);
+  });
+
+  it("ignores targets that leave the repository", () => {
+    const { content, assets } = publishImages({
+      repoPath: "docs/X.md",
+      pageUrl: "/docs/x/",
+      content: '<img src="../../etc/passwd">',
+    });
+    assert.deepStrictEqual(assets, []);
+    assert.strictEqual(content, '<img src="../../etc/passwd">');
   });
 });

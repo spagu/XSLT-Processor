@@ -50,6 +50,7 @@ temp/
 /site/content/
 /site/data/
 /site/static/vendor/
+/site/static/assets/
 /site/public/
 /site/public-local/
 /site/.ssg-cache/

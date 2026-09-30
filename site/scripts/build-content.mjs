@@ -33,6 +33,7 @@ import {
   homePage,
   landingData,
   pageMap,
+  publishImages,
 } from "./pages.mjs";
 
 const siteDir = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -77,9 +78,20 @@ write(
   JSON.stringify({ categories: [], users: [], tags: [], media: [] }) + "\n",
 );
 
+const assetsDir = join(siteDir, "static", "assets");
+rmSync(assetsDir, { recursive: true, force: true });
 for (const repoPath of sources) {
   const page = buildPage({ repoPath, text: read(repoPath), pages });
-  write(join(pagesDir, page.file), page.content);
+  const { content, assets } = publishImages({
+    repoPath,
+    pageUrl: page.url,
+    content: page.content,
+  });
+  write(join(pagesDir, page.file), content);
+  for (const asset of assets) {
+    mkdirSync(dirname(join(siteDir, "static", asset.to)), { recursive: true });
+    copyFileSync(join(rootDir, asset.from), join(siteDir, "static", asset.to));
+  }
 }
 
 const handWritten = join(siteDir, "pages");

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="472" viewBox="0 0 720 472" role="img" aria-labelledby="t d">
+<title id="t">Speed-up of 1.2.0 over 1.1.3 per scenario (log scale)</title>
+<desc id="d">1.2.0 is faster than 1.1.3 in 9 of 10 compared scenarios; the largest speed-up is 1.80× (100 MB text result, string).</desc>
+<style>
+svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--new:#2a78d6;--old:#eb6834;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
+@media (prefers-color-scheme:dark){svg{--surface:#202124;--text:#e8eaed;--muted:#9aa0a6;--grid:#3c4043;--axis:#5f6368;--new:#3987e5;--old:#d95926}}
+.bg{fill:var(--surface)}.t1{fill:var(--text)}.t2{fill:var(--muted)}
+.title{fill:var(--text);font-size:13px;font-weight:600}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--axis);stroke-width:1}
+.ref{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.link{stroke:var(--axis);stroke-width:2}
+.new{fill:var(--new)}.old{fill:var(--old)}
+.ring{stroke:var(--surface);stroke-width:2}
+</style>
+<rect class="bg" width="720" height="472" rx="8"/>
+<text class="title" x="16" y="24">Speed-up of 1.2.0 over 1.1.3 per scenario (log scale)</text>
+<text class="t2" x="16" y="44" text-anchor="start">1.1.3 median time ÷ 1.2.0 median time; right of the dashed line 1.2.0 is faster</text>
+<line class="grid" x1="250" x2="250" y1="66" y2="346"/>
+<text class="t2" x="250" y="362" text-anchor="middle">0.5×</text>
+<line class="grid" x1="370.4" x2="370.4" y1="66" y2="346"/>
+<text class="t2" x="370.4" y="362" text-anchor="middle">1×</text>
+<line class="grid" x1="490.8" x2="490.8" y1="66" y2="346"/>
+<text class="t2" x="490.8" y="362" text-anchor="middle">2×</text>
+<line class="grid" x1="650" x2="650" y1="66" y2="346"/>
+<text class="t2" x="650" y="362" text-anchor="middle">5×</text>
+<line class="ref" x1="370.4" x2="370.4" y1="62" y2="346"/>
+<text class="t2" x="374.4" y="60" text-anchor="start">same speed</text>
+<text class="t1" x="234" y="84" text-anchor="end">100 MB text result, string</text>
+<circle class="new ring" cx="472.7" cy="80" r="5"><title>100 MB text result, string: 1.2.0 is 1.80× as fast as 1.1.3 (7.05 s vs 3.91 s)</title></circle>
+<text class="t1" x="482.7" y="84" text-anchor="start">1.80×</text>
+<text class="t1" x="234" y="112" text-anchor="end">following-sibling::x[1], 8,000</text>
+<circle class="new ring" cx="442.5" cy="108" r="5"><title>following-sibling::x[1], 8,000: 1.2.0 is 1.51× as fast as 1.1.3 (169 ms vs 112 ms)</title></circle>
+<text class="t1" x="452.5" y="112" text-anchor="start">1.51×</text>
+<text class="t1" x="234" y="140" text-anchor="end">xsl:number level=&quot;any&quot;, 8,000</text>
+<circle class="new ring" cx="438.6" cy="136" r="5"><title>xsl:number level=&quot;any&quot;, 8,000: 1.2.0 is 1.48× as fast as 1.1.3 (144 ms vs 97 ms)</title></circle>
+<text class="t1" x="448.6" y="140" text-anchor="start">1.48×</text>
+<text class="t1" x="234" y="168" text-anchor="end">apply-templates item[@id], 8,000</text>
+<circle class="new ring" cx="434.6" cy="164" r="5"><title>apply-templates item[@id], 8,000: 1.2.0 is 1.45× as fast as 1.1.3 (251 ms vs 174 ms)</title></circle>
+<text class="t1" x="444.6" y="168" text-anchor="start">1.45×</text>
+<text class="t1" x="234" y="196" text-anchor="end">Identity transform, 5 MB</text>
+<circle class="new ring" cx="423.1" cy="192" r="5"><title>Identity transform, 5 MB: 1.2.0 is 1.35× as fast as 1.1.3 (2.85 s vs 2.11 s)</title></circle>
+<text class="t1" x="433.1" y="196" text-anchor="start">1.35×</text>
+<text class="t1" x="234" y="224" text-anchor="end">call-template depth 900</text>
+<circle class="new ring" cx="412.2" cy="220" r="5"><title>call-template depth 900: 1.2.0 is 1.27× as fast as 1.1.3 (31 ms vs 25 ms)</title></circle>
+<text class="t1" x="422.2" y="224" text-anchor="start">1.27×</text>
+<text class="t1" x="234" y="252" text-anchor="end">CLI end to end, jsdom</text>
+<circle class="new ring" cx="411.4" cy="248" r="5"><title>CLI end to end, jsdom: 1.2.0 is 1.27× as fast as 1.1.3 (4.82 s vs 3.80 s)</title></circle>
+<text class="t1" x="421.4" y="252" text-anchor="start">1.27×</text>
+<text class="t1" x="234" y="280" text-anchor="end">Issue #9 catalogue (3 MB HTML)</text>
+<circle class="new ring" cx="411.2" cy="276" r="5"><title>Issue #9 catalogue (3 MB HTML): 1.2.0 is 1.26× as fast as 1.1.3 (3.64 s vs 2.88 s)</title></circle>
+<text class="t1" x="421.2" y="280" text-anchor="start">1.26×</text>
+<text class="t1" x="234" y="308" text-anchor="end">Sort 20,000 by two keys</text>
+<circle class="new ring" cx="411.1" cy="304" r="5"><title>Sort 20,000 by two keys: 1.2.0 is 1.26× as fast as 1.1.3 (530 ms vs 419 ms)</title></circle>
+<text class="t1" x="421.1" y="308" text-anchor="start">1.26×</text>
+<text class="t1" x="234" y="336" text-anchor="end">Muenchian grouping, 8,000</text>
+<circle class="new ring" cx="349" cy="332" r="5"><title>Muenchian grouping, 8,000: 1.2.0 is 0.88× as fast as 1.1.3 (140 ms vs 159 ms)</title></circle>
+<text class="t1" x="339" y="336" text-anchor="end">0.88×</text>
+<text class="t2" x="16" y="388" text-anchor="start">Not compared (see the tables):</text>
+<text class="t2" x="16" y="404" text-anchor="start">· call-template depth 3,000 (1.1.3: error)</text>
+<text class="t2" x="16" y="420" text-anchor="start">· 100 MB text result, stream (1.2.0 only)</text>
+<text class="t2" x="16" y="436" text-anchor="start">· CLI end to end, XSLT_DOM=xmldom (1.2.0 only)</text>
+<text class="t2" x="16" y="452" text-anchor="start">· Standalone binary start-up (1.2.0 only)</text>
+</svg>

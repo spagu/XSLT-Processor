@@ -49,6 +49,7 @@
     "format:check": "prettier --check \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\" \"site/scripts/*.mjs\" \"site/templates/**/js/*.js\"",
     "prepublishOnly": "npm run build && npm run test",
     "docs:check": "node scripts/check-links.mjs",
+    "bench": "node scripts/benchmark/run.mjs",
     "test:browser": "playwright test -c tests/browser/playwright.config.mjs",
     "test:binaries": "node --test \"scripts/binaries/*.test.mjs\" \"scripts/lib/*.test.mjs\"",
     "test:site": "node --test --experimental-test-coverage --test-coverage-include=\"site/**\" --test-coverage-lines=96 \"site/scripts/*.test.mjs\"",

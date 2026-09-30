@@ -1,0 +1,339 @@
+{
+  "environment": {
+    "date": "2026-09-30T12:56:13.237Z",
+    "cpu": "AMD Ryzen 9 7950X 16-Core Processor",
+    "cores": 32,
+    "ramGb": 31,
+    "os": "Linux 6.18.40.1-microsoft-standard-WSL2 (linux)",
+    "node": "v25.9.0",
+    "dom": {
+      "jsdom": "30.1.1",
+      "jsdomBaselineCli": "30.1.1",
+      "xmldom": "0.9.12"
+    },
+    "runs": 7,
+    "warmup": 2,
+    "timeoutMs": 120000,
+    "durationMin": 6.09
+  },
+  "results": [
+    {
+      "id": "catalog",
+      "label": "Issue #9 catalogue (3 MB HTML)",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 3638.55,
+          "p95Ms": 3666.2,
+          "minMs": 3580.67,
+          "maxRssMb": 913
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 2877.29,
+          "p95Ms": 2903.39,
+          "minMs": 2821.37,
+          "maxRssMb": 642
+        }
+      }
+    },
+    {
+      "id": "applyTemplates",
+      "label": "apply-templates item[@id], 8,000",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 251.13,
+          "p95Ms": 310.51,
+          "minMs": 235.45,
+          "maxRssMb": 290
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 173.54,
+          "p95Ms": 178.89,
+          "minMs": 168.63,
+          "maxRssMb": 280
+        }
+      }
+    },
+    {
+      "id": "muenchian",
+      "label": "Muenchian grouping, 8,000",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 140.11,
+          "p95Ms": 143.6,
+          "minMs": 137.43,
+          "maxRssMb": 262
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 158.51,
+          "p95Ms": 169.97,
+          "minMs": 154.06,
+          "maxRssMb": 268
+        }
+      }
+    },
+    {
+      "id": "numberAny",
+      "label": "xsl:number level=\"any\", 8,000",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 143.86,
+          "p95Ms": 166.71,
+          "minMs": 141.92,
+          "maxRssMb": 281
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 97.13,
+          "p95Ms": 102.84,
+          "minMs": 93.12,
+          "maxRssMb": 232
+        }
+      }
+    },
+    {
+      "id": "followingSibling",
+      "label": "following-sibling::x[1], 8,000",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 169.31,
+          "p95Ms": 172.84,
+          "minMs": 161.38,
+          "maxRssMb": 276
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 111.78,
+          "p95Ms": 137.55,
+          "minMs": 109.51,
+          "maxRssMb": 248
+        }
+      }
+    },
+    {
+      "id": "sort",
+      "label": "Sort 20,000 by two keys",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 529.73,
+          "p95Ms": 543.52,
+          "minMs": 524.64,
+          "maxRssMb": 338
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 419.11,
+          "p95Ms": 441.44,
+          "minMs": 409.61,
+          "maxRssMb": 300
+        }
+      }
+    },
+    {
+      "id": "identity",
+      "label": "Identity transform, 5 MB",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 2853.08,
+          "p95Ms": 2896.94,
+          "minMs": 2804.78,
+          "maxRssMb": 986
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 2106.59,
+          "p95Ms": 2125.85,
+          "minMs": 2061.72,
+          "maxRssMb": 655
+        }
+      }
+    },
+    {
+      "id": "recursion900",
+      "label": "call-template depth 900",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 31.22,
+          "p95Ms": 32.65,
+          "minMs": 28.47,
+          "maxRssMb": 180
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 24.55,
+          "p95Ms": 26.01,
+          "minMs": 22.61,
+          "maxRssMb": 188
+        }
+      }
+    },
+    {
+      "id": "recursion3000",
+      "label": "call-template depth 3,000",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "error",
+          "note": "XSLT transformation error: Error: Template recursion too deep: the transformation exceeded the JavaScript call stack (infinite recursion, or recursion deeper than the runtime allows)"
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 59.53,
+          "p95Ms": 71.66,
+          "minMs": 57.98,
+          "maxRssMb": 218
+        }
+      }
+    },
+    {
+      "id": "largeText",
+      "label": "100 MB text result, string",
+      "kind": "lib",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 7052.11,
+          "p95Ms": 7217.7,
+          "minMs": 6988.95,
+          "maxRssMb": 1556
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 3914.02,
+          "p95Ms": 3978.91,
+          "minMs": 3847.82,
+          "maxRssMb": 665
+        }
+      }
+    },
+    {
+      "id": "cli",
+      "label": "CLI end to end, jsdom",
+      "kind": "cli",
+      "versions": {
+        "1.1.3": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 4816.38,
+          "p95Ms": 4927.1,
+          "minMs": 4769.36,
+          "maxRssMb": 920
+        },
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 3804.65,
+          "p95Ms": 3960.75,
+          "minMs": 3767.15,
+          "maxRssMb": 628
+        }
+      }
+    },
+    {
+      "id": "largeTextStream",
+      "label": "100 MB text result, stream",
+      "kind": "stream",
+      "versions": {
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 3837.52,
+          "p95Ms": 3940.31,
+          "minMs": 3812.99,
+          "maxRssMb": 549
+        }
+      }
+    },
+    {
+      "id": "cliXmldom",
+      "label": "CLI end to end, XSLT_DOM=xmldom",
+      "kind": "cli",
+      "versions": {
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 1415.21,
+          "p95Ms": 1432.68,
+          "minMs": 1392.49,
+          "maxRssMb": 450
+        }
+      }
+    },
+    {
+      "id": "binaryStartup",
+      "label": "Standalone binary start-up",
+      "kind": "binary",
+      "versions": {
+        "1.2.0": {
+          "status": "ok",
+          "warmup": 2,
+          "runs": 7,
+          "medianMs": 24.44,
+          "p95Ms": 30.17,
+          "minMs": 22.51,
+          "maxRssMb": null
+        }
+      }
+    }
+  ]
+}

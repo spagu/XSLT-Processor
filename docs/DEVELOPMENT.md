@@ -143,3 +143,6 @@ the conformance suite with jsdom and with @xmldom/xmldom.
 `src/domEnvironment.test.js` with xmldom; mark jsdom-only tests with
 `jsdomOnly("feature")`.
 
+## Benchmarks
+
+`npm run bench` (about 6 minutes) measures 1.1.3 against the working tree and writes `scripts/benchmark/results.json`; `node scripts/benchmark/charts.mjs` redraws `docs/benchmarks/*.svg` and the tables in [BENCHMARKS.md](BENCHMARKS.md).

@@ -65,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- **Benchmarks** (task 0023): `docs/BENCHMARKS.md` compares 1.1.3 and 1.2.0 on 14 scenarios with charts and tables (`npm run bench`, `node scripts/benchmark/charts.mjs`). 1.2.0 is 1.34 times faster on geometric mean, up to 1.8 times on a 100 MB result, with up to 57% less peak memory.
+- The website publishes images embedded with `<img>` in `docs/*.md` (copied to `/assets/`), so the benchmark charts render there too.
 - README.md shortened from about 1,080 to 220 lines; the details moved to `docs/` (API, loaders, examples, CLI, conformance and known deviations, security limits, development, browser support, style guide) with an index in `docs/README.md`.
 - `npm run docs:check` (scripts/check-links.mjs) verifies every relative link and heading anchor in the Markdown files; CI runs it.
 
