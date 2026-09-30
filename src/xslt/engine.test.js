@@ -140,7 +140,7 @@ describe("XsltEngine", () => {
       // No declared method: the serializer detects html or xml
       assert.strictEqual(engine.outputSettings.method, null);
       assert.strictEqual(engine.outputSettings.encoding, "UTF-8");
-      assert.strictEqual(engine.outputSettings.indent, "no");
+      assert.strictEqual(engine.outputSettings.indent, undefined);
       assert.deepStrictEqual(engine.templates, []);
       assert.deepStrictEqual(engine.keys, {});
     });
@@ -302,7 +302,10 @@ describe("XsltEngine", () => {
 
       engine.importStylesheet(xslt);
 
-      assert.deepStrictEqual(engine.stripSpace, ["p", "div", "span"]);
+      assert.deepStrictEqual(
+        engine.stripSpace.map((test) => test.localName),
+        ["p", "div", "span"],
+      );
     });
 
     it("should process xsl:preserve-space", () => {
@@ -315,7 +318,10 @@ describe("XsltEngine", () => {
 
       engine.importStylesheet(xslt);
 
-      assert.deepStrictEqual(engine.preserveSpace, ["pre", "code"]);
+      assert.deepStrictEqual(
+        engine.preserveSpace.map((test) => test.localName),
+        ["pre", "code"],
+      );
     });
   });
 
@@ -3141,8 +3147,8 @@ describe("XsltEngine", () => {
         { namespaceUri: "urn:imported-result", qname: "ns2:thing" },
       );
       assert.ok("importedAttrs" in engine.attributeSets);
-      assert.ok(engine.stripSpace.includes("pre"));
-      assert.ok(engine.preserveSpace.includes("code"));
+      assert.ok(engine.stripSpace.some((test) => test.localName === "pre"));
+      assert.ok(engine.preserveSpace.some((test) => test.localName === "code"));
 
       const result = engine.transform(xml, document);
       assert.ok(result.querySelector("imported-item"));
@@ -3482,7 +3488,7 @@ describe("XSLT 1.0 conformance", () => {
   });
 
   describe("xsl:namespace-alias", () => {
-    it("should generate a stylesheet through an alias namespace", () => {
+    it("should generate a stylesheet through an alias namespace, keeping the prefix (libxslt REC/test-7.1.1)", () => {
       const xsl = `<?xml version="1.0"?>
         <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                         xmlns:axsl="http://www.w3.org/1999/XSL/TransformAlias">
@@ -3494,7 +3500,7 @@ describe("XSLT 1.0 conformance", () => {
 
       assert.strictEqual(
         run(xsl, "<r/>"),
-        '<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0"><xsl:template match="/"/></xsl:stylesheet>',
+        '<axsl:stylesheet xmlns:axsl="http://www.w3.org/1999/XSL/Transform" version="1.0"><axsl:template match="/"/></axsl:stylesheet>',
       );
     });
 
@@ -3512,8 +3518,31 @@ describe("XSLT 1.0 conformance", () => {
       assert.strictEqual(element.getAttributeNS("urn:result", "flag"), "on");
       assert.strictEqual(
         element.getAttributeNodeNS("urn:result", "flag").prefix,
-        "b",
+        "a",
       );
+    });
+
+    it("aliases elements in no namespace with #default and keeps other namespaces (libxslt namespaces/tst8)", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:bb="urn:bb">
+          <xsl:namespace-alias stylesheet-prefix="#default" result-prefix="bb"/>
+          <xsl:template match="/"><root a="1"><e xmlns="urn:d"><f/></e><g/></root></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(
+        run(xsl, "<r/>"),
+        '<bb:root xmlns:bb="urn:bb" a="1"><e xmlns="urn:d"><f/></e><bb:g/></bb:root>',
+      );
+    });
+
+    it("aliases to no namespace with #default and no default namespace (libxslt namespaces/tst7)", () => {
+      const xsl = `<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:h="urn:h">
+          <xsl:namespace-alias stylesheet-prefix="h" result-prefix="#default"/>
+          <xsl:template match="/"><h:html h:a="1"/></xsl:template>
+        </xsl:stylesheet>`;
+
+      assert.strictEqual(run(xsl, "<r/>"), '<html a="1"/>');
     });
   });
 

@@ -91,10 +91,14 @@ describe("computed names", () => {
 
   it("rejects xmlns as an attribute name", () => {
     assert.match(computedAttributeName("xmlns", null, {}).error, /7\.1\.3/);
-    assert.match(
-      computedAttributeName("xmlns:a", "urn:a", {}).error,
-      /7\.1\.3/,
-    );
+    assert.match(computedAttributeName("xmlns", "urn:a", {}).error, /7\.1\.3/);
+    assert.match(computedAttributeName("xmlns:a", null, {}).error, /7\.1\.3/);
+  });
+
+  it("accepts xmlns:* with a namespace attribute (libxslt REC/test-7.1.3)", () => {
+    assert.deepStrictEqual(computedAttributeName("xmlns:a", "urn:a", {}), {
+      name: { namespaceUri: "urn:a", qname: "xmlns:a" },
+    });
   });
 });
 
@@ -134,13 +138,13 @@ describe("xsl:element and xsl:attribute with invalid names", () => {
     assert.match(warnings[1], /undefined namespace prefix "zz"/);
   });
 
-  it("rejects xmlns and xmlns:* attributes", () => {
+  it("rejects xmlns and xmlns:* attributes, renaming xmlns:* with a namespace", () => {
     const { output, warnings } = runWarned(
       xml(
-        '<r><xsl:attribute name="xmlns">u</xsl:attribute><xsl:attribute name="xmlns:q" namespace="urn:q">u</xsl:attribute></r>',
+        '<r><xsl:attribute name="xmlns">u</xsl:attribute><xsl:attribute name="xmlns:p">u</xsl:attribute><xsl:attribute name="xmlns:q" namespace="urn:q">u</xsl:attribute></r>',
       ),
     );
-    assert.strictEqual(output, "<r/>");
+    assert.strictEqual(output, '<r xmlns:ns_1="urn:q" ns_1:q="u"/>');
     assert.strictEqual(warnings.length, 2);
   });
 

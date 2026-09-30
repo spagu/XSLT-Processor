@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **libxslt parity** (task 0021): the libxslt 1.1.45 conformance corpus passes completely (299 of 299 counted cases; 32 cases are skipped as DTD-dependent, implementation-defined or extension-only).
+- `importStylesheet()` rejects duplicate named templates or global variables at the same import precedence, text between top-level elements, invalid or undeclared names of templates and attribute sets, and an attribute set that uses itself. An undeclared prefix in an XPath name test is an error instead of matching names in no namespace.
+- `xsl:namespace-alias` keeps the literal prefix and supports `#default` without a default namespace; named templates, attribute sets and decimal formats are compared by expanded name, and attribute sets with the same name are merged across import precedence; `xsl:strip-space`/`xsl:preserve-space` resolve namespaces.
+- HTML output writes namespace declarations and derives the doctype from `version` (`version="5"` gives `<!DOCTYPE html>`); XHTML 1.0 doctypes get libxml2's Content-Type meta and `xmlns`; generated prefixes are `ns_1`, `ns_2`, ... like libxslt.
+- **Browser parity**: `transformToFragment` into an HTML document creates XHTML elements for xml output; `transformToDocument` returns an HTML document for html output and Blink's text page (XHTML doctype, `head`/`title`, `pre`) for text output. `engine.outputSettings.indent` defaults to `undefined`; `engine.stripSpace`/`preserveSpace` hold expanded names.
 - **Unprefixed name tests are namespace-strict** (task 0003): `item`, `@a` and names in patterns match only nodes in no namespace (XPath 1.0 section 2.3), like Chrome/libxslt. Elements of HTML documents are still matched by unprefixed, case-insensitive names. Migration: bind a prefix to the namespace, or use `local-name()`; the deprecated `new XSLTProcessor({ legacyNameTests: true })` (also on `XsltEngine`/`XPathEvaluator`) restores the old matching for now.
 - **`transformToFragment(source, htmlDocument)`** with html output (declared or detected) returns real HTML elements parsed by the owner document, like Chrome: `<a>` is an `HTMLAnchorElement` and scripts run when inserted. The markup is parsed as body content, so `html`/`head`/`body` tags are dropped. XML output keeps the XML DOM nodes.
 - **Extension elements** (`extension-element-prefixes`) are no longer copied to the result: their `xsl:fallback` children run; without a fallback nothing is output and a warning is shown. New `XsltEngine#registerExtensionElement(uri, localName, handler)`; `element-available()` reports registered elements.
@@ -18,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`transformToDocument()` returned `null`** when the result had whitespace text around its root element (common with built-in templates), found by the browser tests; document-level whitespace is dropped and a DocumentType node is created from `doctype-public`/`doctype-system`.
+- A carriage return in XML text is written as `&#13;`; adjacent text nodes in `cdata-section-elements` form one CDATA section; `xsl:copy-of` declares the namespaces in scope; `xml:id` via `xsl:attribute`; `element-available()` with the default namespace; `format-number()` patterns `.`, `#.` and `.#`; `html:div` and other operator names as QName local parts; `xsl:number` on namespace nodes.
 - **`xsl:number` hung on huge values** (`format="I"` or `"a"` with `9007199254740992`), a denial of service found by the conformance suite; conversion now takes logarithmic time. Values from 1e21 print as full digits, NaN and Infinity as `NaN`/`Infinity`.
 - `xsl:number` format tokens of any Unicode digit family (`٠١`, `１`, ...) use that family's digits; `count="@*" level="any"` counts the attribute itself.
 - A global `xsl:param` with higher import precedence wins over an imported `xsl:variable` of the same name (XSLT 1.0 section 11.4).

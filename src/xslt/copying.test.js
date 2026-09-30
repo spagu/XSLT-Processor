@@ -64,6 +64,20 @@ describe("xsl:copy-of", () => {
     );
   });
 
+  it("declares the namespaces in scope on a copied element (libxslt bug-128)", () => {
+    const xsl = xml(
+      `<xsl:template match="/"><o xmlns:a="urn:a"><xsl:copy-of select="*/*"/></o><xsl:copy-of select="*/*"/></xsl:template>`,
+    );
+    assert.strictEqual(
+      run(
+        xsl,
+        '<r xmlns:a="urn:a" xmlns:b="urn:b" xmlns="urn:d"><c:e xmlns:c="urn:c"/></r>',
+      ),
+      '<o xmlns:a="urn:a"><c:e xmlns:c="urn:c" xmlns:b="urn:b" xmlns="urn:d"/></o>' +
+        '<c:e xmlns:c="urn:c" xmlns:a="urn:a" xmlns:b="urn:b" xmlns="urn:d"/>',
+    );
+  });
+
   it("ignores an attribute copied after child nodes", () => {
     const xsl = xml(
       `<xsl:template match="/"><o><c/><xsl:copy-of select="*/@a"/></o></xsl:template>`,

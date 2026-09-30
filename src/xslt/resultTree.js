@@ -24,20 +24,53 @@ export function createResultDocument(ownerDocument) {
 }
 
 /**
+ * Copy an element in no namespace into an HTML document as an element of the
+ * XHTML namespace, as Chrome and Firefox do when they insert XML output into
+ * an HTML document: `<ul><li>` become HTMLElements that render as a list.
+ * The name is kept as written (no case folding).
+ *
+ * @param {Element} element - Element in no namespace
+ * @param {Document} targetDoc - The HTML document that will own the copy
+ * @returns {Element} The shallow copy, with the attributes
+ */
+function importAsHtmlElement(element, targetDoc) {
+  const copy = targetDoc.createElementNS(XHTML_NAMESPACE, element.localName);
+  for (const attribute of element.attributes) {
+    copy.setAttributeNS(
+      attribute.namespaceURI,
+      attribute.name,
+      attribute.value,
+    );
+  }
+  return copy;
+}
+
+/**
  * Deep-import a result tree node into another document.
  *
  * Unlike `Document.importNode` this preserves the internal
- * `_disableOutputEscaping` marker set by `disable-output-escaping`.
+ * `_disableOutputEscaping` marker set by `disable-output-escaping`. With
+ * `htmlElements` and an HTML target document, elements in no namespace
+ * become XHTML elements (see importAsHtmlElement), as in the fragments
+ * browsers return; elements of other namespaces are kept.
  *
  * @param {Node} node - The node to import
  * @param {Document} targetDoc - The document that will own the copy
+ * @param {{htmlElements?: boolean}} [options] - Import options
  * @returns {Node} The imported copy
  *
  * @example
  * const copy = importResultNode(element, window.document);
  */
-export function importResultNode(node, targetDoc) {
-  const copy = targetDoc.importNode(node, false);
+export function importResultNode(node, targetDoc, options = {}) {
+  const asHtml =
+    options.htmlElements === true &&
+    node.nodeType === 1 &&
+    !node.namespaceURI &&
+    isHtmlDocument(targetDoc);
+  const copy = asHtml
+    ? importAsHtmlElement(node, targetDoc)
+    : targetDoc.importNode(node, false);
 
   if (node._disableOutputEscaping) {
     copy._disableOutputEscaping = true;
@@ -45,7 +78,7 @@ export function importResultNode(node, targetDoc) {
 
   if (node.childNodes) {
     for (const child of node.childNodes) {
-      copy.appendChild(importResultNode(child, targetDoc));
+      copy.appendChild(importResultNode(child, targetDoc, options));
     }
   }
 
@@ -57,17 +90,18 @@ export function importResultNode(node, targetDoc) {
  *
  * @param {DocumentFragment} fragment - The fragment built in the neutral document
  * @param {Document} targetDoc - The document that will own the result
+ * @param {{htmlElements?: boolean}} [options] - See {@link importResultNode}
  * @returns {DocumentFragment} A fragment owned by `targetDoc`
  *
  * @example
  * const result = importResultFragment(fragment, window.document);
  */
-export function importResultFragment(fragment, targetDoc) {
+export function importResultFragment(fragment, targetDoc, options = {}) {
   if (fragment.ownerDocument === targetDoc) return fragment;
 
   const imported = targetDoc.createDocumentFragment();
   for (const child of fragment.childNodes) {
-    imported.appendChild(importResultNode(child, targetDoc));
+    imported.appendChild(importResultNode(child, targetDoc, options));
   }
 
   return imported;
@@ -76,28 +110,44 @@ export function importResultFragment(fragment, targetDoc) {
 /** The XHTML namespace. */
 export const XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
 
+/** Public and system identifiers of the XHTML 1.0 Strict DTD. */
+const XHTML_STRICT_DOCTYPE = [
+  "-//W3C//DTD XHTML 1.0 Strict//EN",
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd",
+];
+
 /**
  * Turn an empty document into the one Chrome's `XSLTProcessor` returns from
  * `transformToDocument` for `method="text"`: the text in a `pre` element of
- * an XHTML page, `<html><head/><body><pre>text</pre></body></html>`. A text
- * result has no element to be the document element of an XML document.
+ * the XHTML 1.0 Strict page Blink builds, with its line breaks:
+ * `<!DOCTYPE html PUBLIC ...>` then
+ * `<html>\n<head><title/></head>\n<body>\n<pre>text</pre>\n</body>\n</html>`.
+ * A text result has no element to be the document element of an XML
+ * document.
  *
  * @param {Document} doc - An empty document
  * @param {string} text - The serialized text output
  * @returns {Document} The same document, filled in
  *
  * @example
- * wrapTextResult(emptyDoc, "hello").documentElement.textContent; // "hello"
+ * wrapTextResult(emptyDoc, "hello").documentElement.textContent;
+ * // "\n\n\nhello\n\n"
  */
 export function wrapTextResult(doc, text) {
-  const create = (name) => doc.createElementNS(XHTML_NAMESPACE, name);
-  const html = create("html");
-  const body = create("body");
+  const create = (name, ...children) => {
+    const element = doc.createElementNS(XHTML_NAMESPACE, name);
+    element.append(...children);
+    return element;
+  };
   const pre = create("pre");
   if (text) pre.appendChild(doc.createTextNode(text));
-  body.appendChild(pre);
-  html.append(create("head"), body);
-  doc.appendChild(html);
+  const head = create("head", create("title"));
+  const body = create("body", "\n", pre, "\n");
+  // One node at a time: a doctype cannot pass through a fragment
+  doc.appendChild(
+    doc.implementation.createDocumentType("html", ...XHTML_STRICT_DOCTYPE),
+  );
+  doc.appendChild(create("html", "\n", head, "\n", body, "\n"));
   return doc;
 }
 

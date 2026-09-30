@@ -117,4 +117,14 @@ describe("xsl:number counting attributes (bug-197)", () => {
     );
     assert.strictEqual(run(xsl, '<r a="1"><s x="2"/></r>'), "1,1;2,;");
   });
+
+  it("numbers a namespace node after its element (bug-199)", () => {
+    const xsl = stylesheet(
+      '<xsl:template match="/"><xsl:for-each select="//namespace::a"><xsl:number count="*" level="any"/>.<xsl:number count="*" level="multiple"/>;</xsl:for-each></xsl:template>',
+    );
+    assert.strictEqual(
+      run(xsl, '<r xmlns:a="a"><f xmlns:a="b"><b xmlns:a="c"/></f></r>'),
+      "1.1;2.1.1;3.1.1.1;",
+    );
+  });
 });

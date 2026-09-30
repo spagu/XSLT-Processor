@@ -663,10 +663,13 @@ export class XPathEvaluator {
       );
     }
 
-    const nodeNs = node.namespaceURI || null;
-    if (nodeNs !== resolveNamespacePrefix(prefix, context.namespaces)) {
-      return false;
+    const namespaceUri = resolveNamespacePrefix(prefix, context.namespaces);
+    if (!namespaceUri) {
+      // An undeclared prefix is an error (XPath 1.0 section 2.3), as in
+      // libxslt; it must not silently match names in no namespace
+      throw new Error(`Undefined namespace prefix: ${prefix}`);
     }
+    if ((node.namespaceURI || null) !== namespaceUri) return false;
     return name === "*" || (node.localName || node.nodeName) === name;
   }
 

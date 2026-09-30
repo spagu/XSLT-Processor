@@ -563,6 +563,17 @@ describe("function-available() and element-available()", () => {
     );
   });
 
+  it("expands an unprefixed name with the default namespace (libxslt bug-200)", () => {
+    const engine = new XsltEngine();
+    const evaluate = (namespaces) =>
+      engine.xpathEvaluator.evaluate(
+        parseXPath("element-available('if')"),
+        new XPathContext(parseXML("<root/>"), 1, 1, {}, namespaces),
+      );
+    assert.strictEqual(evaluate({ "": XSLT_NAMESPACE }), true);
+    assert.strictEqual(evaluate({ "": "urn:other" }), false);
+  });
+
   it("should treat an unbound xsl prefix as the XSLT namespace", () => {
     const engine = new XsltEngine();
     const context = new XPathContext(parseXML("<root/>"), 1, 1, {}, {});

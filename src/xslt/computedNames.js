@@ -77,7 +77,11 @@ export function computedElementName(qname, namespace, scope) {
  * // 'xsl:attribute: "xmlns" cannot be used as an attribute name ...'
  */
 export function computedAttributeName(qname, namespace, scope) {
-  if (qname === "xmlns" || qname.startsWith("xmlns:")) {
+  // With a namespace attribute, the prefix of `xmlns:a` is only a hint and
+  // is replaced (libxslt REC/test-7.1.3)
+  const xmlnsName =
+    qname === "xmlns" || (namespace === null && qname.startsWith("xmlns:"));
+  if (xmlnsName) {
     return {
       error: `xsl:attribute: "${qname}" cannot be used as an attribute name (XSLT 1.0 section 7.1.3), the attribute is not created`,
     };

@@ -2,9 +2,13 @@
  * HTML Output Serializer
  *
  * Implements the `html` output method of XSLT 1.0 section 16.2 on top of the
- * XML writer: no XML declaration, no namespace declarations, void elements
- * without a closing slash, minimized boolean attributes and unescaped
- * script/style content.
+ * XML writer: no XML declaration, void elements without a closing slash,
+ * minimized boolean attributes and unescaped script/style content. Like
+ * libxml2 (and so Chrome), namespace declarations of the result tree are
+ * written, and an element in a namespace other than XHTML is not an HTML
+ * element (`<s:img></s:img>`). Unlike libxml2, XHTML elements keep the HTML
+ * rules, so `<br/>` in the XHTML namespace is not written as `<br></br>`
+ * (which HTML parsers read as two line breaks).
  */
 
 import {
@@ -14,6 +18,7 @@ import {
   TEXT_MODE,
   URI_ATTRIBUTES,
   URI_ATTRIBUTES_OF_A,
+  XHTML_NAMESPACE,
 } from "./constants.js";
 import {
   escapeHtmlAttribute,
@@ -21,6 +26,7 @@ import {
   escapeUriAttribute,
 } from "./escape.js";
 import { htmlCharacterReference } from "./htmlEntities.js";
+import { htmlDoctypeMarkup } from "./htmlDoctype.js";
 import { XmlWriter } from "./xmlSerializer.js";
 
 /**
@@ -79,10 +85,18 @@ export class HtmlWriter extends XmlWriter {
   }
 
   /**
-   * The html output method never writes namespace declarations.
+   * No line breaks are added between the top-level nodes of html output.
    * @returns {boolean} Always false
    */
-  get emitsNamespaces() {
+  get topLevelLineBreaks() {
+    return false;
+  }
+
+  /**
+   * HTML output is never an XHTML document.
+   * @returns {boolean} Always false
+   */
+  get isXhtmlDocument() {
     return false;
   }
 
@@ -103,25 +117,17 @@ export class HtmlWriter extends XmlWriter {
   }
 
   /**
-   * Build the document type declaration for the html output method.
+   * Build the document type declaration for the html output method (see
+   * htmlDoctype.js: declared identifiers, else derived from `version`).
    *
    * @param {Element|null} rootElement - Result document element
    * @returns {string} Doctype markup, or an empty string when not applicable
    */
   doctypeMarkup(rootElement) {
-    const { doctypePublic, doctypeSystem } = this.settings;
-    if (!doctypePublic && !doctypeSystem) {
-      return "";
-    }
-
-    const name = rootElement ? rootElement.nodeName : "html";
-    if (doctypePublic && doctypeSystem) {
-      return `<!DOCTYPE ${name} PUBLIC "${doctypePublic}" "${doctypeSystem}">`;
-    }
-    if (doctypePublic) {
-      return `<!DOCTYPE ${name} PUBLIC "${doctypePublic}">`;
-    }
-    return `<!DOCTYPE ${name} SYSTEM "${doctypeSystem}">`;
+    return htmlDoctypeMarkup(
+      this.settings,
+      rootElement ? rootElement.nodeName : "html",
+    );
   }
 
   /**
@@ -156,7 +162,9 @@ export class HtmlWriter extends XmlWriter {
    * @returns {string} Markup terminating the start tag
    */
   emptyElementMarkup(element, name) {
-    return this.isVoidElement(element) ? ">" : `></${name}>`;
+    const namespace = element.namespaceURI;
+    const isHtml = !namespace || namespace === XHTML_NAMESPACE;
+    return isHtml && this.isVoidElement(element) ? ">" : `></${name}>`;
   }
 
   /**
@@ -186,8 +194,8 @@ export class HtmlWriter extends XmlWriter {
    * @returns {string} The meta element markup, or an empty string
    */
   leadingChildMarkup(element) {
+    // libxml2 finds the head element by name, whatever its namespace
     if (
-      element.namespaceURI ||
       element.localName.toLowerCase() !== "head" ||
       hasContentTypeMeta(element)
     ) {

@@ -14,7 +14,10 @@
 
 import { formatNumber, DEFAULT_DECIMAL_FORMAT } from "./formatNumber.js";
 import { isXsltElementAvailable, XSLT_NAMESPACE } from "./elements.js";
-import { expandedFunctionName } from "../xpath/evaluator.js";
+import {
+  expandedFunctionName,
+  resolveNamespacePrefix,
+} from "../xpath/evaluator.js";
 import { rootNodeOf } from "../xpath/axes.js";
 import { EXSLT_COMMON, createExsltFunctions } from "./exslt/index.js";
 
@@ -82,6 +85,29 @@ function splitQName(qname) {
     prefix: qname.substring(0, colon),
     localName: qname.substring(colon + 1),
   };
+}
+
+/**
+ * Expanded name key of the decimal format named by the third argument of
+ * `format-number()`, with the prefix resolved in the expression's scope
+ * (XSLT 1.0 section 12.3); the table is keyed the same way (see
+ * declarationNames.js).
+ *
+ * @param {string} qname - The decimal format QName
+ * @param {{namespaces: Object<string, string>}} ctx - The XPath context
+ * @returns {string} `{uri}local`, or the local name in no namespace
+ * @throws {Error} When the prefix is not declared
+ */
+function decimalFormatKey(qname, ctx) {
+  const { prefix, localName } = splitQName(qname);
+  if (prefix === null) return localName;
+  const namespaceUri = resolveNamespacePrefix(prefix, ctx.namespaces);
+  if (!namespaceUri) {
+    throw new Error(
+      `format-number(): undeclared namespace prefix "${prefix}" in "${qname}"`,
+    );
+  }
+  return `{${namespaceUri}}${localName}`;
 }
 
 /**
@@ -167,7 +193,8 @@ export function createXsltFunctions(engine) {
     "format-number": (args, ctx) => {
       const value = evaluator.toNumber(evaluate(args[0], ctx));
       const pattern = asString(args[1], ctx);
-      const formatName = args.length > 2 ? asString(args[2], ctx) : "";
+      const formatName =
+        args.length > 2 ? decimalFormatKey(asString(args[2], ctx), ctx) : "";
       const format =
         engine.decimalFormats[formatName] || DEFAULT_DECIMAL_FORMAT;
       return formatNumber(value, pattern, format);
@@ -215,10 +242,12 @@ export function createXsltFunctions(engine) {
     /** `element-available(name)` - reflects the XSLT elements the engine runs. */
     "element-available": (args, ctx) => {
       const { prefix, localName } = splitQName(asString(args[0], ctx));
-      if (!prefix) return false;
-
-      const namespaceUri =
-        ctx.namespaces[prefix] ?? (prefix === "xsl" ? XSLT_NAMESPACE : null);
+      // An unprefixed name is in the default namespace (XSLT 1.0 section
+      // 15), which may be the XSLT namespace itself (libxslt bug-200)
+      const namespaceUri = prefix
+        ? (ctx.namespaces[prefix] ?? (prefix === "xsl" ? XSLT_NAMESPACE : null))
+        : ctx.namespaces[""] || null;
+      if (!namespaceUri) return false;
 
       if (namespaceUri === XSLT_NAMESPACE) {
         return isXsltElementAvailable(localName);

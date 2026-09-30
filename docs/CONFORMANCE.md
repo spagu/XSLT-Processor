@@ -252,18 +252,25 @@ Differences from the XSLT 1.0 / XPath 1.0 specifications and from libxslt
   a warning, as in libxslt.
 - **`unparsed-entity-uri()`** always returns `''` because the DOM does not
   expose unparsed entities.
-- **`xsl:strip-space` / `xsl:preserve-space`** name tests compare names
-  without resolving namespaces.
 - **HTML URI attributes** are %-escaped like libxml2 (`href`, `action`, `src`
   and `a/@name`: spaces, control characters and non-ASCII), not the full
   HTML 4 URI attribute list.
+- **Empty XHTML elements** are written as `<br />` and `<a></a>`, as the DOM
+  serializers of Chrome and Firefox do, where libxml2 writes `<br/>` and `<a/>`.
+- **Number to string conversion** follows XPath 1.0 section 4.2 (shortest
+  round-trip form, no exponent): `string(10000000000)` is `10000000000`, while
+  libxml2 rounds to 15 significant digits and uses exponents (`1e+10`), as
+  Chrome does. Firefox follows the specification.
+- **`xsl:exclude-result-prefixes` on a literal result element** also excludes
+  namespaces inherited from the template (XSLT 1.0 section 7.1.1, Firefox);
+  libxslt ignores it for inherited namespaces.
 - **`legacyNameTests`** (deprecated, to be removed in a future major release):
   `new XSLTProcessor({ legacyNameTests: true })` restores the pre-1.2.0 matching
   where unprefixed name tests also selected namespaced nodes.
 
 ## Test Coverage
 
-`npm test` runs 1,428 tests with Node's built-in test runner (100% line and
+`npm test` runs 1,496 tests with Node's built-in test runner (100% line and
 function coverage, 98% branch coverage for 1.2.0):
 
 | Area | Test files |
@@ -285,5 +292,5 @@ and CI fails only on new failures. Details: [`tests/conformance/README.md`](../t
 
 | Result | Cases |
 |---|---|
-| Passing | 266 of 303 counted (87.8%) |
-| Skipped | 31 implementation-defined or extension-only cases |
+| Passing | 299 of 299 counted (100%) |
+| Skipped | 32 DTD-dependent, implementation-defined or extension-only cases |

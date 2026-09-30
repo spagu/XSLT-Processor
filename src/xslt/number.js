@@ -114,6 +114,17 @@ function siblingPosition(node, isCounted, positions) {
 }
 
 /**
+ * Whether a node hangs off an element without being its child: an
+ * attribute or a namespace node, whose parent is `ownerElement`.
+ *
+ * @param {Node} node - Any node
+ * @returns {boolean} True for attribute and namespace nodes
+ */
+function isAttachedNode(node) {
+  return node.nodeType === 2 || node.nodeType === 13;
+}
+
+/**
  * The node before another one in document order (its preceding node or its
  * parent).
  *
@@ -148,8 +159,9 @@ function countAncestors(node, multiple, isCounted, isFrom, positions) {
       numbers.unshift(siblingPosition(current, isCounted, positions));
       if (!multiple) break;
     }
-    current =
-      current.nodeType === 2 ? current.ownerElement : current.parentNode;
+    current = isAttachedNode(current)
+      ? current.ownerElement
+      : current.parentNode;
   }
 
   return numbers;
@@ -158,8 +170,9 @@ function countAncestors(node, multiple, isCounted, isFrom, positions) {
 /**
  * Count a node according to `level="any"`: walk backwards in document order
  * until a `from` node, the root, or a node whose total is memoized. An
- * attribute counts itself, then its element and the nodes before it: other
- * attributes are neither preceding nor ancestor nodes (as in libxslt).
+ * attribute or namespace node counts itself, then its element and the nodes
+ * before it: other attributes are neither preceding nor ancestor nodes (as
+ * in libxslt).
  *
  * @param {Node} node - The node being numbered
  * @param {(candidate: Node) => boolean} isCounted - Counting predicate
@@ -170,7 +183,7 @@ function countAncestors(node, multiple, isCounted, isFrom, positions) {
 function countAny(node, isCounted, isFrom, totals) {
   let total = 0;
   let current = node;
-  if (node.nodeType === 2) {
+  if (isAttachedNode(node)) {
     if (isFrom(node)) return [];
     if (isCounted(node)) total++;
     current = node.ownerElement;

@@ -80,10 +80,10 @@ describe("content type meta element", () => {
     );
   });
 
-  it("is not added to a head element in a namespace", () => {
+  it("is added to a head element in any namespace, as libxml2 finds it by name", () => {
     assert.strictEqual(
       html('<html><h:head xmlns:h="urn:h"/></html>'),
-      "<html><h:head></h:head></html>",
+      `<html><h:head xmlns:h="urn:h">${META_UTF8}</h:head></html>`,
     );
   });
 
@@ -133,7 +133,7 @@ describe("html attribute values", () => {
     doc.documentElement.firstChild.setAttributeNS("urn:x", "x:href", "é");
     assert.strictEqual(
       serializeResult(doc, { method: "html" }),
-      '<html><a x:href="é"></a></html>',
+      '<html><a xmlns:x="urn:x" x:href="é"></a></html>',
     );
   });
 });

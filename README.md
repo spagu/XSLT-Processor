@@ -208,7 +208,7 @@ The main differences from XSLT 1.0 / XPath 1.0 and from libxslt:
 - about 1,000 to 1,500 nested template invocations fit in Node's default stack (libxslt: about 3,000);
 - `xsl:number` ignores `lang` and `letter-value`;
 - `unparsed-entity-uri()` always returns `''`;
-- `xsl:strip-space`/`xsl:preserve-space` name tests ignore namespaces.
+- numbers convert to strings in the XPath 1.0 form (`10000000000`), where libxslt writes `1e+10`.
 
 Details and workarounds: [Known Deviations](docs/CONFORMANCE.md#known-deviations).
 

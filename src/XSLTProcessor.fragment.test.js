@@ -2,7 +2,8 @@
  * transformToFragment() into an HTML document (Chrome parity): with the html
  * output method, declared or detected, the result is serialized and parsed
  * as HTML in the owner document, so it holds real HTMLElements; with the xml
- * method the nodes built by the XML DOM are kept.
+ * method the nodes are kept, elements in no namespace becoming XHTML elements
+ * as in Chrome and Firefox.
  */
 
 import { describe, it } from "node:test";
@@ -75,10 +76,21 @@ describe("transformToFragment into an HTML document", () => {
     assert.strictEqual(fragment.firstChild.firstChild.localName, "b");
   });
 
-  it("keeps the XML DOM nodes for method xml", () => {
-    const fragment = fragmentOf("<a>x</a>", '<xsl:output method="xml"/>');
-    assert.strictEqual(fragment.firstChild.namespaceURI, null);
-    assert.ok(!(fragment.firstChild instanceof window.HTMLElement));
+  it("creates XHTML elements for elements in no namespace with method xml", () => {
+    const fragment = fragmentOf(
+      '<ul class="c"><li>x</li><Item/><s:svg xmlns:s="http://www.w3.org/2000/svg"/></ul>',
+      '<xsl:output method="xml"/>',
+    );
+    const list = fragment.firstChild;
+    assert.strictEqual(list.namespaceURI, "http://www.w3.org/1999/xhtml");
+    assert.ok(list instanceof window.HTMLUListElement);
+    assert.ok(list.firstChild instanceof window.HTMLLIElement);
+    assert.strictEqual(list.getAttribute("class"), "c");
+    assert.strictEqual(list.childNodes[1].localName, "Item");
+    assert.strictEqual(
+      list.lastChild.namespaceURI,
+      "http://www.w3.org/2000/svg",
+    );
   });
 
   it("keeps XHTML-namespace elements, which are already HTML elements", () => {

@@ -113,7 +113,7 @@ describe("CommonJS consumer flow", () => {
     assert.strictEqual(version, VERSION);
     assert.strictEqual(
       markup,
-      "<report><total>1,235.00</total><grouped>2</grouped><external>1.09</external></report>",
+      '<report xmlns="http://www.w3.org/1999/xhtml"><total>1,235.00</total><grouped>2</grouped><external>1.09</external></report>',
     );
   });
 });

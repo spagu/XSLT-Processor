@@ -6,6 +6,11 @@ import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
 import { JSDOM } from "jsdom";
 import { WhitespaceFilter, stripWhitespaceNodes } from "./whitespace.js";
+import {
+  compileSpaceNameTests,
+  matchesNameTest,
+  nameTestPriority,
+} from "./spaceNameTests.js";
 
 let dom;
 
@@ -172,5 +177,61 @@ describe("stripWhitespaceNodes", () => {
     );
 
     assert.strictEqual(stripped.documentElement.childNodes.length, 1);
+  });
+});
+
+describe("expanded name tests (libxslt bug-82, bug-124)", () => {
+  beforeEach(() => {
+    dom = new JSDOM("");
+  });
+
+  it("expands prefixes with the declaring element and matches by namespace", () => {
+    const declaration = parseXML(
+      '<s xmlns:m="urn:m" xmlns="urn:default" elements="m:* p * q:x 1a"/>',
+    ).documentElement;
+    const warnings = [];
+    const tests = compileSpaceNameTests(
+      declaration.getAttribute("elements"),
+      declaration,
+      (message) => warnings.push(message),
+    );
+    assert.deepStrictEqual(tests, [
+      { namespaceUri: "urn:m", localName: "*" },
+      { namespaceUri: null, localName: "p" },
+      { namespaceUri: undefined, localName: "*" },
+    ]);
+    assert.deepStrictEqual(warnings, [
+      'xsl:s elements: "q:x" is not a name test with a declared prefix and is ignored',
+      'xsl:s elements: "1a" is not a name test with a declared prefix and is ignored',
+    ]);
+    assert.deepStrictEqual(compileSpaceNameTests(null, declaration, null), []);
+
+    const doc = parseXML('<p><x:a xmlns:x="urn:m"/><p xmlns="urn:o"/></p>');
+    const [inM, inO] = doc.documentElement.childNodes;
+    assert.strictEqual(matchesNameTest(inM, tests[0]), true);
+    assert.strictEqual(matchesNameTest(inO, tests[0]), false);
+    assert.strictEqual(matchesNameTest(doc.documentElement, tests[1]), true);
+    assert.strictEqual(matchesNameTest(inO, tests[1]), false);
+    assert.strictEqual(matchesNameTest(inO, tests[2]), true);
+    assert.deepStrictEqual(tests.map(nameTestPriority), [-0.25, 0, -0.5]);
+  });
+
+  it("strips by expanded name, preserve-space winning ties", () => {
+    const doc = parseXML(
+      '<r><c> <p/> </c><c xmlns="urn:n"> <p/> </c><m:c xmlns:m="urn:n"> </m:c></r>',
+    );
+    const filter = new WhitespaceFilter(
+      [
+        { namespaceUri: null, localName: "c" },
+        { namespaceUri: "urn:n", localName: "*" },
+      ],
+      [{ namespaceUri: undefined, localName: "*" }],
+    );
+    const stripped = stripWhitespaceNodes(doc, filter, emptyDocument());
+    const counts = Array.from(
+      stripped.documentElement.childNodes,
+      (child) => child.childNodes.length,
+    );
+    assert.deepStrictEqual(counts, [1, 1, 0]);
   });
 });

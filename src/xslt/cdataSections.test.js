@@ -97,3 +97,37 @@ describe("cdata-section-elements", () => {
     );
   });
 });
+
+describe("character data serialization (libxslt bug-90, bug-105, bug-106)", () => {
+  it("writes adjacent text nodes as one CDATA section", () => {
+    const doc = new window.DOMParser().parseFromString(
+      "<o><d>a</d></o>",
+      "application/xml",
+    );
+    const d = doc.documentElement.firstChild;
+    d.append(doc.createTextNode("b"), doc.createCDATASection("c"));
+    const raw = doc.createTextNode("<x/>");
+    raw._disableOutputEscaping = true;
+    d.append(raw, doc.createTextNode("e"), doc.createComment("k"));
+    assert.strictEqual(
+      serializeResult(doc, {
+        omitXmlDeclaration: "yes",
+        cdataSectionElements: "d",
+      }),
+      "<o><d><![CDATA[abc]]><x/><![CDATA[e]]><!--k--></d></o>",
+    );
+  });
+
+  it("escapes a carriage return in text and attributes", () => {
+    const doc = new window.DOMParser().parseFromString(
+      "<o/>",
+      "application/xml",
+    );
+    doc.documentElement.setAttribute("a", "\t\r");
+    doc.documentElement.textContent = "x\ry";
+    assert.strictEqual(
+      serializeResult(doc, { omitXmlDeclaration: "yes" }),
+      '<o a="&#9;&#13;">x&#13;y</o>',
+    );
+  });
+});

@@ -56,6 +56,17 @@ export const SUITE_DIRECTORIES = Object.freeze([
 const ERROR_DIAGNOSTIC = /error|no result for|no namespace bound/i;
 
 /**
+ * Cases whose `.err` reads like an error although libxslt only counts a
+ * warning and still transforms (xslt.c, xsltParseStylesheetDecimalFormat:
+ * `style->warnings++`). Their expected result is empty, not a rejection.
+ */
+const WARNING_ONLY_CASES = new Set([
+  "general/bug-202",
+  "general/bug-203",
+  "general/bug-204",
+]);
+
+/**
  * Derive the report category of a case.
  *
  * `REC/test-7.1.4-1` belongs to chapter 7 of the XSLT 1.0 Recommendation,
@@ -84,16 +95,19 @@ export function categoryOf(directory, name) {
  * @param {Set<string>} files - File names present in the directory
  * @param {string} outName - File name of the expected output
  * @param {string} errName - File name of the expected diagnostics
+ * @param {string} [id] - Case id, for cases libxslt only warns about
  * @returns {{expected: string|null, expectsError: boolean}} Expectation
  */
-function expectation(dir, files, outName, errName) {
+function expectation(dir, files, outName, errName, id) {
   if (files.has(outName)) {
     return { expected: join(dir, outName), expectsError: false };
   }
   const diagnostics = files.has(errName)
     ? readFileSync(join(dir, errName), "utf8")
     : "";
-  return { expected: null, expectsError: ERROR_DIAGNOSTIC.test(diagnostics) };
+  const expectsError =
+    !WARNING_ONLY_CASES.has(id) && ERROR_DIAGNOSTIC.test(diagnostics);
+  return { expected: null, expectsError };
 }
 
 /**
@@ -120,7 +134,13 @@ export function discoverDirectory(testsDir, directory) {
       dir,
       stylesheet: join(dir, file),
       source: join(dir, `${name}.xml`),
-      ...expectation(dir, files, `${name}.out`, `${name}.err`),
+      ...expectation(
+        dir,
+        files,
+        `${name}.out`,
+        `${name}.err`,
+        `${directory}/${name}`,
+      ),
     });
   }
 

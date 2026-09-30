@@ -57,11 +57,19 @@ import {
 import { calculatePriority } from "./templatePriority.js";
 import { PatternMatcher } from "./patterns.js";
 import { sortNodes } from "./sort.js";
+import { compileSpaceNameTests } from "./spaceNameTests.js";
+import { applyAttributeSets, registerAttributeSet } from "./attributeSets.js";
+import {
+  expandName,
+  requireExpandedName,
+  requireExpandedNames,
+} from "./declarationNames.js";
 import {
   checkGlobalDuplicate,
   checkLocalBindings,
   checkNumberPatterns,
   checkPattern,
+  checkTopLevelText,
   xsltLocalName,
 } from "./stylesheetChecks.js";
 import {
@@ -71,6 +79,7 @@ import {
 import { parseXml, resolveDomParser } from "./domParsing.js";
 import { cdataSectionNames } from "./outputNames.js";
 import { resolveOutputSettings, serializeResult } from "./serializer.js";
+import { fillXmlDocument, parseHtmlDocument } from "./resultDocument.js";
 
 const XSLT_NS = XSLT_NAMESPACE;
 
@@ -305,13 +314,15 @@ export class XsltEngine {
     this.globalVariables = {};
     this.globalParameters = {};
     // A null method means "not declared": the serializer then picks html or
-    // xml from the result tree (XSLT 1.0 section 16).
+    // xml from the result tree (XSLT 1.0 section 16). An undefined indent is
+    // "no" too, except for the line breaks libxslt writes between comments
+    // and the document element (see serializer/settings.js).
     this.outputSettings = {
       method: null,
       version: "1.0",
       encoding: "UTF-8",
       standalone: null,
-      indent: "no",
+      indent: undefined,
       omitXmlDeclaration: "no",
       doctypePublic: null,
       doctypeSystem: null,
@@ -659,6 +670,7 @@ export class XsltEngine {
    * @returns {void}
    */
   processTopLevelElements(root, stylesheetUri) {
+    checkTopLevelText(root);
     this.collectNamespaces(root);
 
     const imports = [];
@@ -762,6 +774,7 @@ export class XsltEngine {
     }
     checkLocalBindings(node, (message) => this.warnOnce(message));
     const name = node.getAttribute("name");
+    const nameKey = name === null ? null : this.namedTemplateKey(node, name);
     const mode = node.getAttribute("mode") || null;
     const priorityAttr = node.getAttribute("priority");
     const alternatives = match
@@ -773,6 +786,7 @@ export class XsltEngine {
       this.templates.push({
         match: alternative,
         name,
+        nameKey,
         mode,
         namespaces,
         priority: priorityAttr
@@ -782,6 +796,31 @@ export class XsltEngine {
         node,
       });
     }
+  }
+
+  /**
+   * Expand the name of a named template, rejecting a second template of the
+   * same expanded name and import precedence (XSLT 1.0 section 6), as
+   * libxslt does.
+   *
+   * @param {Element} node - The xsl:template element
+   * @param {string} name - Its name attribute
+   * @returns {string} The expanded name key
+   * @throws {Error} When the name is invalid or already used
+   */
+  namedTemplateKey(node, name) {
+    const key = requireExpandedName(name, node, "xsl:template name");
+    const duplicate = this.templates.some(
+      (template) =>
+        template.nameKey === key &&
+        template.importPrecedence === this.currentImportPrecedence,
+    );
+    if (duplicate) {
+      throw new Error(
+        `xsl:template: duplicate template name "${name}" at the same import precedence (XSLT 1.0 section 6)`,
+      );
+    }
+    return key;
   }
 
   /**
@@ -988,10 +1027,39 @@ export class XsltEngine {
     this.keyRegistry.clear();
   }
 
+  /**
+   * Register an xsl:decimal-format declaration under the expanded name of
+   * its `name` (XSLT 1.0 section 12.3). Like libxslt, an invalid name or an
+   * undeclared prefix is reported and the declaration ignored, and a second
+   * declaration of the same name and import precedence is reported and
+   * ignored; one of a higher import precedence replaces an imported one.
+   *
+   * @param {Element} node - The xsl:decimal-format element
+   * @returns {void}
+   */
   processDecimalFormat(node) {
-    const name = node.getAttribute("name") || "";
+    const name = node.getAttribute("name");
+    let key = "";
+    if (name !== null) {
+      const expanded = expandName(name, node);
+      if (expanded.error) {
+        this.warnOnce(
+          `xsl:decimal-format: ${expanded.error}; the declaration is ignored`,
+        );
+        return;
+      }
+      key = expanded.key;
+      const existing = this.decimalFormats[key];
+      if (existing?.importPrecedence === this.currentImportPrecedence) {
+        this.warnOnce(
+          `xsl:decimal-format: "${name}" is already declared; the first declaration is used`,
+        );
+        return;
+      }
+    }
 
-    this.decimalFormats[name] = {
+    this.decimalFormats[key] = {
+      importPrecedence: this.currentImportPrecedence,
       decimalSeparator: node.getAttribute("decimal-separator") || ".",
       groupingSeparator: node.getAttribute("grouping-separator") || ",",
       percent: node.getAttribute("percent") || "%",
@@ -1009,31 +1077,53 @@ export class XsltEngine {
     this.namespaceAliases.add(node);
   }
 
+  /**
+   * Register an xsl:attribute-set declaration; declarations of the same
+   * expanded name are merged (see attributeSets.js).
+   *
+   * @param {Element} node - The xsl:attribute-set element
+   * @returns {void}
+   */
   processAttributeSet(node) {
     checkLocalBindings(node, (message) => this.warnOnce(message));
-    const name = node.getAttribute("name");
-    const useAttributeSets = node.getAttribute("use-attribute-sets");
-
-    this.attributeSets[name] = {
+    registerAttributeSet(
+      this.attributeSets,
       node,
-      useAttributeSets: useAttributeSets
-        ? useAttributeSets.split(/\s+/).filter(Boolean)
-        : [],
-    };
+      this.currentImportPrecedence,
+    );
   }
 
+  /**
+   * Register the name tests of an xsl:strip-space element, expanded with
+   * its namespace declarations (see spaceNameTests.js).
+   *
+   * @param {Element} node - The xsl:strip-space element
+   * @returns {void}
+   */
   processStripSpace(node) {
-    const elements = node.getAttribute("elements");
-    if (elements) {
-      this.stripSpace.push(...elements.split(/\s+/).filter(Boolean));
-    }
+    this.stripSpace.push(...this.spaceNameTests(node));
   }
 
+  /**
+   * Register the name tests of an xsl:preserve-space element.
+   *
+   * @param {Element} node - The xsl:preserve-space element
+   * @returns {void}
+   */
   processPreserveSpace(node) {
-    const elements = node.getAttribute("elements");
-    if (elements) {
-      this.preserveSpace.push(...elements.split(/\s+/).filter(Boolean));
-    }
+    this.preserveSpace.push(...this.spaceNameTests(node));
+  }
+
+  /**
+   * Expand the `elements` name tests of xsl:strip-space/preserve-space.
+   *
+   * @param {Element} node - The declaring element
+   * @returns {object[]} The expanded name tests
+   */
+  spaceNameTests(node) {
+    return compileSpaceNameTests(node.getAttribute("elements"), node, (m) =>
+      this.warnOnce(m),
+    );
   }
 
   /**
@@ -1053,7 +1143,9 @@ export class XsltEngine {
    * Transform a source node into a fragment of `ownerDocument` as Chrome's
    * `transformToFragment` does: into an HTML document, the output of the
    * html method (declared or detected) is serialized and parsed as HTML, so
-   * it holds HTMLElements; any other output keeps the XML DOM nodes.
+   * it holds HTMLElements, and other output keeps its nodes except that
+   * elements in no namespace become XHTML elements (as in Chrome and
+   * Firefox); into an XML document the result nodes are kept.
    *
    * @param {Node} sourceNode - Source document or element
    * @param {Document} ownerDocument - Output document
@@ -1069,7 +1161,7 @@ export class XsltEngine {
         doc,
       );
     }
-    return importResultFragment(fragment, doc);
+    return importResultFragment(fragment, doc, { htmlElements: true });
   }
 
   /**
@@ -1215,14 +1307,11 @@ export class XsltEngine {
   }
 
   /**
-   * Transform to a complete document
-   */
-  /**
-   * Transform to a complete document.
-   *
-   * With `xsl:output method="text"` the result is not a tree, so it is
-   * returned the way Chrome's XSLTProcessor does: as an XHTML page holding
-   * the text in a `pre` element (see wrapTextResult).
+   * Transform to a complete document, shaped as Chrome's XSLTProcessor
+   * returns it (see resultDocument.js): with `method="text"` an XHTML page
+   * holding the text in a `pre` element (see wrapTextResult), with the html
+   * method (declared or detected) an HTML document parsed from the html
+   * output, otherwise an XML document of the result nodes.
    *
    * @param {Node} sourceNode - Source document or element to transform
    * @returns {Document} The result document
@@ -1235,13 +1324,13 @@ export class XsltEngine {
     if (this.outputSettings.method === "text") {
       return wrapTextResult(doc, fragment.textContent);
     }
-
-    // Move fragment contents to document
-    while (fragment.firstChild) {
-      doc.appendChild(fragment.firstChild);
+    const settings = resolveOutputSettings(this.outputSettings, fragment);
+    if (settings.method === "html") {
+      const markup = serializeResult(fragment, this.outputSettings);
+      const htmlDoc = parseHtmlDocument(markup, doc);
+      if (htmlDoc) return htmlDoc;
     }
-
-    return doc;
+    return fillXmlDocument(doc, fragment, settings);
   }
 
   /**
@@ -1739,10 +1828,7 @@ export class XsltEngine {
    */
   copyLiteralAttribute(attr, context, outputElement) {
     const value = this.processAttributeValueTemplate(attr.value, context);
-    const alias = this.namespaceAliases.resolve(
-      attr.namespaceURI,
-      attr.localName || attr.name,
-    );
+    const alias = this.namespaceAliases.resolveLiteral(attr);
 
     if (alias) {
       outputElement.setAttributeNS(alias.namespaceUri, alias.qname, value);
@@ -1754,8 +1840,7 @@ export class XsltEngine {
   }
 
   processLiteralResultElement(node, context, output) {
-    const localName = node.localName || node.nodeName;
-    const alias = this.namespaceAliases.resolve(node.namespaceURI, localName);
+    const alias = this.namespaceAliases.resolveLiteral(node);
     const namespaceUri = alias ? alias.namespaceUri : node.namespaceURI;
     const qname = alias ? alias.qname : node.nodeName;
 
@@ -1776,7 +1861,7 @@ export class XsltEngine {
       XSLT_NS,
     );
     if (useAttributeSets) {
-      this.applyAttributeSets(useAttributeSets, context, outputElement);
+      this.applyAttributeSets(useAttributeSets, context, outputElement, node);
     }
 
     for (const attr of node.attributes) {
@@ -1928,14 +2013,15 @@ export class XsltEngine {
    * Find the named template with the highest import precedence; among equal
    * precedences the last one in stylesheet order wins.
    *
-   * @param {string} name - The template name
+   * @param {string} key - Expanded name of the template (see
+   *   declarationNames.js)
    * @returns {object|null} The template, or null when none has that name
    */
-  findNamedTemplate(name) {
+  findNamedTemplate(key) {
     let best = null;
     for (const template of this.templates) {
       if (
-        template.name === name &&
+        template.nameKey === key &&
         (!best ||
           (template.importPrecedence || 0) >= (best.importPrecedence || 0))
       ) {
@@ -1947,7 +2033,9 @@ export class XsltEngine {
 
   xslCallTemplate(node, context, output) {
     const name = node.getAttribute("name");
-    const template = this.findNamedTemplate(name);
+    const template = this.findNamedTemplate(
+      requireExpandedName(name ?? "", node, "xsl:call-template name"),
+    );
     if (!template) {
       throw new Error(`Template not found: ${name}`);
     }
@@ -2031,7 +2119,7 @@ export class XsltEngine {
 
     const useAttributeSets = node.getAttribute("use-attribute-sets");
     if (useAttributeSets) {
-      this.applyAttributeSets(useAttributeSets, context, element);
+      this.applyAttributeSets(useAttributeSets, context, element, node);
     }
 
     this.processChildren(node, context, element);
@@ -2138,7 +2226,7 @@ export class XsltEngine {
         output.appendChild(copy);
 
         if (useAttributeSets) {
-          this.applyAttributeSets(useAttributeSets, context, copy);
+          this.applyAttributeSets(useAttributeSets, context, copy, node);
         }
 
         this.processChildren(node, context, copy);
@@ -2357,25 +2445,23 @@ export class XsltEngine {
     }
   }
 
-  applyAttributeSets(names, context, element) {
-    const setNames = names.split(/\s+/).filter(Boolean);
-
-    for (const name of setNames) {
-      const attrSet = this.attributeSets[name];
-      if (attrSet) {
-        // Apply inherited sets first
-        if (attrSet.useAttributeSets.length > 0) {
-          this.applyAttributeSets(
-            attrSet.useAttributeSets.join(" "),
-            context,
-            element,
-          );
-        }
-
-        // Apply the xsl:attribute children, with the prefixes in scope there
-        this.processChildren(attrSet.node, context, element);
-      }
-    }
+  /**
+   * Apply the attribute sets named by a `use-attribute-sets` attribute (see
+   * attributeSets.js). The xsl:attribute children of each declaration are
+   * instantiated with the prefixes in scope there.
+   *
+   * @param {string} names - Whitespace separated QNames
+   * @param {XsltContext} context - Context of the instruction
+   * @param {Element} element - The result element receiving the attributes
+   * @param {Element} instruction - The element carrying the attribute, whose
+   *   namespace declarations expand the names
+   * @returns {void}
+   */
+  applyAttributeSets(names, context, element, instruction) {
+    const keys = requireExpandedNames(names, instruction, "use-attribute-sets");
+    applyAttributeSets(this.attributeSets, keys, (declaration) =>
+      this.processChildren(declaration, context, element),
+    );
   }
 
   /**

@@ -5,9 +5,10 @@
  *   name against the namespaces in scope on the instruction, and an
  *   unprefixed `xsl:element` name takes the default namespace (XSLT 1.0
  *   sections 7.1.2 and 7.1.3); a `namespace` attribute wins over both.
- * - An attribute in a namespace needs a prefix, so one is generated (`ns1`,
- *   `ns2`, ...) when the name has none or its prefix is already bound to
- *   another namespace on the element.
+ * - An attribute in a namespace needs a prefix, so one is generated (`ns_1`,
+ *   `ns_2`, ..., the names libxslt uses) when the name has none, its prefix
+ *   is `xmlns` or already bound to another namespace on the element. The XML
+ *   namespace always gets the `xml` prefix.
  * - Literal result elements copy the namespace nodes in scope in the
  *   stylesheet (section 7.1.1) as `xmlns` attributes; declarations the parent
  *   result element already carries are not repeated.
@@ -19,6 +20,7 @@
 
 import {
   XMLNS_NAMESPACE,
+  XML_NAMESPACE,
   resolvePrefix,
   resultNamespaceNodes,
 } from "./stylesheetNamespaces.js";
@@ -116,12 +118,14 @@ function prefixAvailable(element, prefix, uri) {
  * @returns {string} A prefix bound to nothing else on the element
  */
 function attributePrefix(element, prefix, uri) {
-  if (prefix && prefix !== "xmlns" && prefixAvailable(element, prefix, uri)) {
+  if (uri === XML_NAMESPACE) return "xml";
+  const reserved = prefix === "xmlns" || prefix === "xml";
+  if (prefix && !reserved && prefixAvailable(element, prefix, uri)) {
     return prefix;
   }
   let index = 1;
-  while (!prefixAvailable(element, `ns${index}`, uri)) index++;
-  return `ns${index}`;
+  while (!prefixAvailable(element, `ns_${index}`, uri)) index++;
+  return `ns_${index}`;
 }
 
 /**
@@ -133,7 +137,7 @@ function attributePrefix(element, prefix, uri) {
  * @returns {void}
  *
  * @example
- * setResultAttribute(el, { namespaceUri: "urn:x", qname: "a" }, "1"); // ns1:a="1"
+ * setResultAttribute(el, { namespaceUri: "urn:x", qname: "a" }, "1"); // ns_1:a="1"
  */
 export function setResultAttribute(element, name, value) {
   const { prefix, localName } = splitQName(name.qname);
@@ -142,7 +146,8 @@ export function setResultAttribute(element, name, value) {
     element.setAttribute(localName, value);
     return;
   }
-  if (name.qname === "xmlns" || prefix === "xmlns") return;
+  // Namespace declarations are not attributes
+  if (name.qname === "xmlns" || name.namespaceUri === XMLNS_NAMESPACE) return;
 
   const existing = element.getAttributeNodeNS(name.namespaceUri, localName);
   if (existing) {

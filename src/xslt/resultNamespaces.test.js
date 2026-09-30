@@ -114,7 +114,7 @@ describe("xsl:attribute names", () => {
     );
     assert.strictEqual(
       run(xsl),
-      '<o xmlns:ns1="urn:x" xmlns:ns2="urn:y" ns1:a="1" ns2:b="2"/>',
+      '<o xmlns:ns_1="urn:x" xmlns:ns_2="urn:y" ns_1:a="1" ns_2:b="2"/>',
     );
   });
 
@@ -174,15 +174,22 @@ describe("namespace nodes of literal result elements", () => {
       <xsl:template match="/"><axsl:stylesheet/></xsl:template></xsl:stylesheet>`;
     assert.strictEqual(
       run(xsl),
-      '<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"/>',
+      '<axsl:stylesheet xmlns:axsl="http://www.w3.org/1999/XSL/Transform"/>',
     );
   });
 
-  it("does not copy a declaration clashing with the aliased element name", () => {
+  it("does not copy a namespace node clashing with the aliased element prefix", () => {
+    const xsl = `<xsl:stylesheet version="1.0" ${XSL} xmlns:p="urn:p"><xsl:output method="xml" omit-xml-declaration="yes"/>
+      <xsl:namespace-alias stylesheet-prefix="#default" result-prefix="p"/>
+      <xsl:template match="/"><x xmlns:p="urn:other"/></xsl:template></xsl:stylesheet>`;
+    assert.strictEqual(run(xsl), '<p:x xmlns:p="urn:p"/>');
+  });
+
+  it("keeps the literal prefix of an aliased element name, as libxslt does", () => {
     const xsl = `<xsl:stylesheet version="1.0" ${XSL} xmlns:a="urn:a" xmlns:p="urn:1"><xsl:output method="xml" omit-xml-declaration="yes"/>
       <xsl:namespace-alias stylesheet-prefix="a" result-prefix="p" xmlns:p="urn:2"/>
       <xsl:template match="/"><a:x/></xsl:template></xsl:stylesheet>`;
-    assert.strictEqual(run(xsl), '<p:x xmlns:p="urn:2"/>');
+    assert.strictEqual(run(xsl), '<a:x xmlns:a="urn:2" xmlns:p="urn:1"/>');
   });
 });
 
@@ -233,24 +240,36 @@ describe("namespace helpers", () => {
     setResultAttribute(element, { namespaceUri: null, qname: "xmlns" }, "x");
     setResultAttribute(
       element,
-      { namespaceUri: "urn:x", qname: "xmlns:a" },
+      { namespaceUri: "http://www.w3.org/2000/xmlns/", qname: "xmlns:a" },
       "x",
     );
     setResultAttribute(element, { namespaceUri: "urn:a", qname: "p:a" }, "1");
     element.setAttributeNS(
       "http://www.w3.org/2000/xmlns/",
-      "xmlns:ns2",
+      "xmlns:ns_2",
       "urn:z",
     );
-    setResultAttribute(element, { namespaceUri: "urn:b", qname: "ns1:b" }, "2");
+    setResultAttribute(
+      element,
+      { namespaceUri: "urn:b", qname: "ns_1:b" },
+      "2",
+    );
+    setResultAttribute(element, { namespaceUri: "urn:c", qname: "xml:c" }, "3");
+    setResultAttribute(
+      element,
+      { namespaceUri: "http://www.w3.org/XML/1998/namespace", qname: "id" },
+      "4",
+    );
     const names = Array.from(
       element.attributes,
       (a) => `${a.name}=${a.namespaceURI}`,
     );
     assert.deepStrictEqual(names, [
-      "ns1:a=urn:a",
-      "xmlns:ns2=http://www.w3.org/2000/xmlns/",
-      "ns3:b=urn:b",
+      "ns_1:a=urn:a",
+      "xmlns:ns_2=http://www.w3.org/2000/xmlns/",
+      "ns_3:b=urn:b",
+      "ns_4:c=urn:c",
+      "xml:id=http://www.w3.org/XML/1998/namespace",
     ]);
   });
 

@@ -166,6 +166,9 @@ export function resolveOutputSettings(outputSettings, node) {
     encoding: raw.encoding || "UTF-8",
     standalone: raw.standalone || null,
     indent: isYes(raw.indent),
+    // libxslt writes a line break after a top-level comment followed by
+    // another node unless indent="no" is declared (xsltSaveResultTo)
+    topLevelLineBreaks: raw.indent == null || isYes(raw.indent),
     omitXmlDeclaration: isYes(raw.omitXmlDeclaration),
     doctypePublic: raw.doctypePublic || null,
     doctypeSystem: raw.doctypeSystem || null,

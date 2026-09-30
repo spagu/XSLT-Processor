@@ -11,6 +11,11 @@ import { escapeXmlAttribute, escapeXmlText } from "./escape.js";
 import { characterReference } from "./encoding.js";
 import { BaseWriter } from "./baseWriter.js";
 import { expandedNameKey } from "./settings.js";
+import {
+  isXhtml1Doctype,
+  xhtmlHeadMeta,
+  xhtmlRootNamespace,
+} from "./xhtmlDocument.js";
 
 export class XmlWriter extends BaseWriter {
   /**
@@ -22,11 +27,26 @@ export class XmlWriter extends BaseWriter {
   }
 
   /**
-   * Whether namespace declarations have to be written.
-   * @returns {boolean} Always true for XML output
+   * Whether the output is an XHTML 1.0 document (see xhtmlDocument.js).
+   * @returns {boolean} True when an XHTML 1.0 doctype is declared
    */
-  get emitsNamespaces() {
-    return true;
+  get isXhtmlDocument() {
+    return isXhtml1Doctype(this.settings);
+  }
+
+  /**
+   * Namespace declarations of an element, plus the XHTML namespace libxml2
+   * adds to an `html` element in no namespace of an XHTML 1.0 document.
+   *
+   * @param {Array<{prefix: string, uri: string}>} declarations - Declarations
+   * @param {Element} element - The element they are written on
+   * @returns {string} Attribute markup, starting with a space when non-empty
+   */
+  namespaceMarkup(declarations, element) {
+    const markup = super.namespaceMarkup(declarations);
+    return this.isXhtmlDocument
+      ? markup + xhtmlRootNamespace(element, declarations)
+      : markup;
   }
 
   /**
@@ -43,6 +63,16 @@ export class XmlWriter extends BaseWriter {
    */
   get cdataNodeMode() {
     return TEXT_MODE.CDATA;
+  }
+
+  /**
+   * Whether a line break follows a top-level comment that another node
+   * follows, as libxslt (xsltSaveResultTo) writes unless `indent="no"` is
+   * declared.
+   * @returns {boolean} True for xml output without `indent="no"`
+   */
+  get topLevelLineBreaks() {
+    return this.settings.topLevelLineBreaks === true;
   }
 
   /**
@@ -101,13 +131,16 @@ export class XmlWriter extends BaseWriter {
   }
 
   /**
-   * Markup the serializer itself adds as the first child of an element.
+   * Markup the serializer itself adds as the first child of an element: the
+   * Content-Type meta of an XHTML 1.0 document head, as libxml2 writes it.
    *
-   * @param {Element} _element - Element being written
-   * @returns {string} Always empty for XML output
+   * @param {Element} element - Element being written
+   * @returns {string} The meta element, or an empty string
    */
-  leadingChildMarkup(_element) {
-    return "";
+  leadingChildMarkup(element) {
+    return this.isXhtmlDocument
+      ? xhtmlHeadMeta(element, this.settings.encoding)
+      : "";
   }
 
   /**
@@ -141,14 +174,15 @@ export class XmlWriter extends BaseWriter {
   /**
    * Whether an element is written with the XHTML empty-element conventions:
    * elements in the XHTML namespace, and namespace-less elements when the
-   * output method is `xhtml`.
+   * output method is `xhtml` or the document type is XHTML 1.0.
    *
    * @param {Element} element - Element to test
    * @returns {boolean} True for XHTML elements
    */
   followsXhtmlConventions(element) {
     const namespace = element.namespaceURI || null;
-    return namespace === XHTML_NAMESPACE || (this.xhtml && namespace === null);
+    if (namespace === XHTML_NAMESPACE) return true;
+    return namespace === null && (this.xhtml || this.isXhtmlDocument);
   }
 
   /**

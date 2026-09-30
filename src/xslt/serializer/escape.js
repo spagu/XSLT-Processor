@@ -5,7 +5,7 @@
  * (XSLT 1.0 section 16).
  */
 
-const XML_TEXT_ESCAPES = { "&": "&amp;", "<": "&lt;" };
+const XML_TEXT_ESCAPES = { "&": "&amp;", "<": "&lt;", "\r": "&#13;" };
 
 const HTML_TEXT_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
 
@@ -37,13 +37,18 @@ function escapeWith(value, pattern, escapes) {
  * Escape character data for the xml output method.
  *
  * `>` is only escaped where it would close a CDATA section, matching the
- * "minimal escaping" rule of XSLT 1.0 section 16.1.
+ * "minimal escaping" rule of XSLT 1.0 section 16.1. A carriage return is
+ * written as `&#13;`, as libxml2 does, since an XML parser would turn a
+ * literal one into a line feed.
  *
  * @param {string} value - Text content
  * @returns {string} Escaped text
+ *
+ * @example
+ * escapeXmlText("a<b\r"); // "a&lt;b&#13;"
  */
 export function escapeXmlText(value) {
-  return escapeWith(value, /[&<]/g, XML_TEXT_ESCAPES).replaceAll(
+  return escapeWith(value, /[&<\r]/g, XML_TEXT_ESCAPES).replaceAll(
     "]]>",
     "]]&gt;",
   );

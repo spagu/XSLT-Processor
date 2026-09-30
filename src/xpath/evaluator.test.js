@@ -1113,6 +1113,13 @@ describe("XPath Evaluator", () => {
       });
       assert.strictEqual(result.length, 1);
     });
+
+    it("rejects an undeclared prefix instead of matching no-namespace names (libxslt bug-208)", () => {
+      assert.throws(
+        () => select("/root/zz:item", doc),
+        /Undefined namespace prefix: zz/,
+      );
+    });
   });
 
   describe("Filter expressions", () => {

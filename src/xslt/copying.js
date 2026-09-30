@@ -14,7 +14,7 @@
 "use strict";
 
 import { childAxis } from "../xpath/axes.js";
-import { NAMESPACE_NODE } from "../xpath/namespaceNodes.js";
+import { NAMESPACE_NODE, inScopeBindings } from "../xpath/namespaceNodes.js";
 import { copyNamespaceDeclarations } from "./resultNamespaces.js";
 import { XMLNS_NAMESPACE } from "./stylesheetNamespaces.js";
 
@@ -144,6 +144,32 @@ function appendChildCopies(node, target, doc, stringValue) {
 }
 
 /**
+ * Declare on the copy of an element every namespace in scope on the source
+ * element that is not in scope on the result parent already: `xsl:copy-of`
+ * copies the namespace nodes of an element (XSLT 1.0 section 11.3), those
+ * declared on its ancestors included, as libxslt does for the top element of
+ * a copied tree (its descendants inherit them in the result).
+ *
+ * @param {Element} source - The copied source element
+ * @param {Element} copy - Its copy, not yet attached
+ * @param {Node} output - The result node receiving the copy
+ * @returns {void}
+ */
+function copyInScopeNamespaces(source, copy, output) {
+  const inOutput = (prefix, uri) =>
+    output.nodeType === 1 && output.lookupNamespaceURI(prefix || null) === uri;
+  for (const [prefix, uri] of inScopeBindings(source)) {
+    if (!inOutput(prefix, uri)) {
+      copyNamespaceNode(
+        { localName: prefix, nodeValue: uri },
+        copy,
+        () => true,
+      );
+    }
+  }
+}
+
+/**
  * Copy the result of an `xsl:copy-of` select expression to the result tree.
  *
  * Node-sets are copied node by node (roots as their children, attributes onto
@@ -179,6 +205,7 @@ export function copyOf(value, output, host) {
     appendChildCopies(value, output, host.doc, host.stringValue);
   } else {
     const copy = cloneNode(value, host.doc, host.stringValue);
+    if (value.nodeType === 1) copyInScopeNamespaces(value, copy, output);
     if (copy) output.appendChild(copy);
   }
 }

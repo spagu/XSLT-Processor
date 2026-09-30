@@ -142,7 +142,7 @@ export class BaseWriter {
         break;
       case NODE_TYPE.DOCUMENT:
       case NODE_TYPE.DOCUMENT_FRAGMENT:
-        this.writeChildNodes(node, scope, depth, textMode);
+        this.writeTopLevelNodes(node, scope, depth, textMode);
         break;
       default:
         break;
@@ -150,7 +150,34 @@ export class BaseWriter {
   }
 
   /**
+   * Write the children of the result root (document or fragment), with a
+   * line break after a comment that another node follows when the dialect
+   * asks for it (`topLevelLineBreaks`).
+   *
+   * @param {Node} node - The result root
+   * @param {Map<string, string>} scope - Namespace scope in effect
+   * @param {number} depth - Current indentation depth
+   * @param {string} textMode - {@link TEXT_MODE} for character data children
+   * @returns {void}
+   */
+  writeTopLevelNodes(node, scope, depth, textMode) {
+    for (const child of node.childNodes) {
+      this.writeNode(child, scope, depth, textMode);
+      const breaks =
+        this.topLevelLineBreaks &&
+        child.nodeType === NODE_TYPE.COMMENT &&
+        child.nextSibling;
+      if (breaks) this.parts.push("\n");
+    }
+  }
+
+  /**
    * Write every child of a node without adding whitespace.
+   *
+   * In CDATA mode (`cdata-section-elements`), adjacent character data nodes
+   * are one text node of the XPath data model, so they are written as one
+   * CDATA section, as libxslt does, not one section per DOM node; text
+   * written with `disable-output-escaping` ends the run.
    *
    * @param {Node} node - Parent node
    * @param {Map<string, string>} scope - Namespace scope in effect
@@ -159,9 +186,22 @@ export class BaseWriter {
    * @returns {void}
    */
   writeChildNodes(node, scope, depth, textMode) {
+    let run = "";
     for (const child of node.childNodes) {
+      const type = child.nodeType;
+      const joins =
+        textMode === TEXT_MODE.CDATA &&
+        (type === NODE_TYPE.TEXT || type === NODE_TYPE.CDATA_SECTION) &&
+        !isRawText(child);
+      if (joins) {
+        run += child.nodeValue;
+        continue;
+      }
+      if (run) this.parts.push(this.cdataMarkup(run));
+      run = "";
       this.writeNode(child, scope, depth, textMode);
     }
+    if (run) this.parts.push(this.cdataMarkup(run));
   }
 
   /**
@@ -173,13 +213,11 @@ export class BaseWriter {
    * @returns {void}
    */
   writeElement(element, scope, depth) {
-    const namespaces = this.emitsNamespaces
-      ? collectNamespaceDeclarations(element, scope)
-      : { declarations: [], scope };
+    const namespaces = collectNamespaceDeclarations(element, scope);
     const name = element.nodeName;
 
     this.parts.push(
-      `<${name}${this.namespaceMarkup(namespaces.declarations)}` +
+      `<${name}${this.namespaceMarkup(namespaces.declarations, element)}` +
         this.attributesMarkup(element),
     );
 
@@ -244,9 +282,10 @@ export class BaseWriter {
    * Build the namespace declaration markup of an element.
    *
    * @param {Array<{prefix: string, uri: string}>} declarations - Declarations
+   * @param {Element} [_element] - The element they are written on
    * @returns {string} Attribute markup, starting with a space when non-empty
    */
-  namespaceMarkup(declarations) {
+  namespaceMarkup(declarations, _element) {
     return declarations
       .map(({ prefix, uri }) => {
         const name = prefix ? `xmlns:${prefix}` : "xmlns";

@@ -173,3 +173,25 @@ describe("XHTML empty elements (issue #11 attachment)", () => {
     assert.match(out, /<x:data xmlns:x="urn:x"\/>/);
   });
 });
+
+describe("xsl:strip-space with an undeclared prefix", () => {
+  it("warns once and keeps transforming", () => {
+    const originalWarn = console.warn;
+    const warnings = [];
+    console.warn = (message) => warnings.push(String(message));
+    try {
+      const result = run(
+        "<r> <a>1</a> </r>",
+        `<xsl:strip-space elements="zz:* r"/>
+         <xsl:template match="/"><xsl:value-of select="count(r/node())"/></xsl:template>`,
+      );
+      assert.strictEqual(result, "1");
+    } finally {
+      console.warn = originalWarn;
+    }
+    assert.ok(
+      warnings.some((w) => w.includes("zz")),
+      warnings.join("\n"),
+    );
+  });
+});
