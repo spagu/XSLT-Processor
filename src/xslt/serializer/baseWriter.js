@@ -25,6 +25,7 @@ import {
 import { getIndentableChildren } from "./indent.js";
 import { isRawText } from "./rawText.js";
 import { findRootElement } from "./settings.js";
+import { ChunkBuffer } from "./chunks.js";
 
 /**
  * Make comment text well-formed: XSLT 1.0 section 7.4 recovery inserts a
@@ -40,6 +41,9 @@ export function safeCommentText(text) {
   return text.replace(/-(?=-|$)/g, "- ");
 }
 
+/** What a writing step yields when no chunk is full yet. */
+const NO_CHUNKS = Object.freeze([]);
+
 export class BaseWriter {
   /**
    * @param {object} settings - Normalized output settings
@@ -48,7 +52,7 @@ export class BaseWriter {
   constructor(settings, options = {}) {
     this.settings = settings;
     this.xhtml = options.xhtml === true;
-    this.parts = [];
+    this.buffer = new ChunkBuffer();
     this.encoding = getOutputEncoding(settings.encoding);
     this.reference = (codePoint) => this.characterReference(codePoint);
   }
@@ -89,10 +93,49 @@ export class BaseWriter {
    * @returns {string} Serialized output
    */
   serialize(node) {
-    this.parts = [];
+    let output = "";
+    for (const chunk of this.chunks(node, Infinity)) output += chunk;
+    return output;
+  }
+
+  /**
+   * Serialize a result tree node incrementally: a chunk is yielded as soon
+   * as `chunkSize` code units are written, so the first bytes are available
+   * before the whole tree has been written and the output is never held as
+   * one string.
+   *
+   * @param {Node} node - Document, fragment or element to serialize
+   * @param {number} [chunkSize] - Chunk size in UTF-16 code units (see
+   *   chunks.js); Infinity yields the whole output as one chunk
+   * @yields {string} Non-empty chunks of at most `chunkSize` code units (one
+   *   more when a surrogate pair straddles the boundary)
+   * @returns {Generator<string, void, void>} The chunks, in order
+   */
+  *chunks(node, chunkSize) {
+    this.buffer = new ChunkBuffer(chunkSize);
     this.writeProlog(node);
-    this.writeNode(node, createNamespaceScope(), 0, TEXT_MODE.ESCAPE);
-    return this.parts.join("");
+    yield* this.writeNode(node, createNamespaceScope(), 0, TEXT_MODE.ESCAPE);
+    yield* this.buffer.take(true);
+  }
+
+  /**
+   * Append markup to the output.
+   *
+   * @param {string} text - Markup
+   * @returns {void}
+   */
+  write(text) {
+    this.buffer.write(text);
+  }
+
+  /**
+   * Yield the full chunks buffered so far. Called between nodes; a no-op
+   * (no generator created) while the buffer is not full.
+   *
+   * @returns {Iterable<string>} Full chunks, possibly none
+   */
+  flush() {
+    return this.buffer.full ? this.buffer.take() : NO_CHUNKS;
   }
 
   /**
@@ -105,48 +148,49 @@ export class BaseWriter {
     if (this.emitsXmlDeclaration) {
       const { version, encoding, standalone } = this.settings;
       const standalonePart = standalone ? ` standalone="${standalone}"` : "";
-      this.parts.push(
+      this.write(
         `<?xml version="${version}" encoding="${encoding}"${standalonePart}?>\n`,
       );
     }
 
     const doctype = this.doctypeMarkup(findRootElement(node));
     if (doctype) {
-      this.parts.push(`${doctype}\n`);
+      this.write(`${doctype}\n`);
     }
   }
 
   /**
-   * Write any result tree node.
+   * Write any result tree node. Leaves (character data, comments, processing
+   * instructions) are written at once; elements and result roots return the
+   * generator writing them, so no generator is created per leaf.
    *
    * @param {Node} node - Node to write
    * @param {Map<string, string>} scope - Namespace scope in effect
    * @param {number} depth - Current indentation depth
    * @param {string} textMode - {@link TEXT_MODE} for character data children
-   * @returns {void}
+   * @returns {Iterable<string>} Full chunks to yield (see {@link BaseWriter#chunks})
    */
   writeNode(node, scope, depth, textMode) {
     switch (node.nodeType) {
       case NODE_TYPE.ELEMENT:
-        this.writeElement(node, scope, depth);
-        break;
+        return this.writeElement(node, scope, depth);
       case NODE_TYPE.TEXT:
       case NODE_TYPE.CDATA_SECTION:
         this.writeText(node, textMode);
         break;
       case NODE_TYPE.COMMENT:
-        this.parts.push(`<!--${safeCommentText(node.nodeValue)}-->`);
+        this.write(`<!--${safeCommentText(node.nodeValue)}-->`);
         break;
       case NODE_TYPE.PROCESSING_INSTRUCTION:
         this.writeProcessingInstruction(node);
         break;
       case NODE_TYPE.DOCUMENT:
       case NODE_TYPE.DOCUMENT_FRAGMENT:
-        this.writeTopLevelNodes(node, scope, depth, textMode);
-        break;
+        return this.writeTopLevelNodes(node, scope, depth, textMode);
       default:
         break;
     }
+    return NO_CHUNKS;
   }
 
   /**
@@ -160,14 +204,15 @@ export class BaseWriter {
    * @param {string} textMode - {@link TEXT_MODE} for character data children
    * @returns {void}
    */
-  writeTopLevelNodes(node, scope, depth, textMode) {
+  *writeTopLevelNodes(node, scope, depth, textMode) {
     for (const child of node.childNodes) {
-      this.writeNode(child, scope, depth, textMode);
+      yield* this.writeNode(child, scope, depth, textMode);
       const breaks =
         this.topLevelLineBreaks &&
         child.nodeType === NODE_TYPE.COMMENT &&
         child.nextSibling;
-      if (breaks) this.parts.push("\n");
+      if (breaks) this.write("\n");
+      yield* this.flush();
     }
   }
 
@@ -185,7 +230,7 @@ export class BaseWriter {
    * @param {string} textMode - {@link TEXT_MODE} for character data children
    * @returns {void}
    */
-  writeChildNodes(node, scope, depth, textMode) {
+  *writeChildNodes(node, scope, depth, textMode) {
     let run = "";
     for (const child of node.childNodes) {
       const type = child.nodeType;
@@ -197,11 +242,12 @@ export class BaseWriter {
         run += child.nodeValue;
         continue;
       }
-      if (run) this.parts.push(this.cdataMarkup(run));
+      if (run) this.write(this.cdataMarkup(run));
       run = "";
-      this.writeNode(child, scope, depth, textMode);
+      yield* this.writeNode(child, scope, depth, textMode);
+      yield* this.flush();
     }
-    if (run) this.parts.push(this.cdataMarkup(run));
+    if (run) this.write(this.cdataMarkup(run));
   }
 
   /**
@@ -212,24 +258,24 @@ export class BaseWriter {
    * @param {number} depth - Current indentation depth
    * @returns {void}
    */
-  writeElement(element, scope, depth) {
+  *writeElement(element, scope, depth) {
     const namespaces = collectNamespaceDeclarations(element, scope);
     const name = element.nodeName;
 
-    this.parts.push(
+    this.write(
       `<${name}${this.namespaceMarkup(namespaces.declarations, element)}` +
         this.attributesMarkup(element),
     );
 
     const leading = this.leadingChildMarkup(element);
     if (!element.firstChild && !leading) {
-      this.parts.push(this.emptyElementMarkup(element, name));
+      this.write(this.emptyElementMarkup(element, name));
       return;
     }
 
-    this.parts.push(">");
-    this.writeElementChildren(element, namespaces.scope, depth, leading);
-    this.parts.push(`</${name}>`);
+    this.write(">");
+    yield* this.writeElementChildren(element, namespaces.scope, depth, leading);
+    this.write(`</${name}>`);
   }
 
   /**
@@ -242,23 +288,24 @@ export class BaseWriter {
    *   children, indented like a child (see leadingChildMarkup)
    * @returns {void}
    */
-  writeElementChildren(element, scope, depth, leading = "") {
+  *writeElementChildren(element, scope, depth, leading = "") {
     const textMode = this.childTextMode(element);
     const indentable = this.indentableChildren(element, textMode);
 
     if (!indentable) {
-      this.parts.push(leading);
-      this.writeChildNodes(element, scope, depth, textMode);
+      this.write(leading);
+      yield* this.writeChildNodes(element, scope, depth, textMode);
       return;
     }
 
     const childIndent = `\n${INDENT_UNIT.repeat(depth + 1)}`;
-    if (leading) this.parts.push(childIndent, leading);
+    if (leading) this.write(childIndent + leading);
     for (const child of indentable) {
-      this.parts.push(childIndent);
-      this.writeNode(child, scope, depth + 1, textMode);
+      this.write(childIndent);
+      yield* this.writeNode(child, scope, depth + 1, textMode);
+      yield* this.flush();
     }
-    this.parts.push(`\n${INDENT_UNIT.repeat(depth)}`);
+    this.write(`\n${INDENT_UNIT.repeat(depth)}`);
   }
 
   /**
@@ -333,17 +380,17 @@ export class BaseWriter {
     const value = node.nodeValue || "";
 
     if (isRawText(node)) {
-      this.parts.push(value);
+      this.write(value);
       return;
     }
 
     const mode = this.resolveTextMode(node, textMode);
     if (mode === TEXT_MODE.CDATA) {
-      this.parts.push(this.cdataMarkup(value));
+      this.write(this.cdataMarkup(value));
     } else if (mode === TEXT_MODE.RAW) {
-      this.parts.push(value);
+      this.write(value);
     } else {
-      this.parts.push(this.escapeText(value));
+      this.write(this.escapeText(value));
     }
   }
 
@@ -372,6 +419,6 @@ export class BaseWriter {
   writeProcessingInstruction(node) {
     const data = node.nodeValue || "";
     const separator = data ? " " : "";
-    this.parts.push(`<?${node.target}${separator}${data}${this.piTerminator}`);
+    this.write(`<?${node.target}${separator}${data}${this.piTerminator}`);
   }
 }

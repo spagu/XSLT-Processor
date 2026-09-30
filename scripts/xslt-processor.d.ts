@@ -43,6 +43,71 @@ export interface DomParserLike {
 }
 
 /**
+ * What an asynchronous loader may resolve to: a Document, markup, bytes
+ * (decoded from the byte order mark or XML declaration, else UTF-8), a fetch
+ * Response, or null when the resource is unavailable.
+ */
+export type AsyncLoaderResult =
+  Document | string | Uint8Array | ArrayBuffer | Response | null;
+
+/**
+ * Asynchronous loader of stylesheet modules and document() documents.
+ * @param uri - The resolved URI
+ * @param baseUri - The URI it was resolved against, if known
+ * @param init - Holds the AbortSignal of the call
+ */
+export type AsyncLoader = (
+  uri: string,
+  baseUri: string | undefined,
+  init: { signal?: AbortSignal },
+) => AsyncLoaderResult | Promise<AsyncLoaderResult>;
+
+/**
+ * Input of the asynchronous API: a node, markup, bytes, or a stream of
+ * markup/bytes. Streams are read to their end before parsing (XSLT 1.0 needs
+ * the whole source tree).
+ */
+export type AsyncSource =
+  | Node
+  | string
+  | Uint8Array
+  | ArrayBuffer
+  | ReadableStream<string | Uint8Array | ArrayBuffer>
+  | AsyncIterable<string | Uint8Array | ArrayBuffer>;
+
+/** Options of transformToStream. */
+export interface StreamOptions {
+  /** Cancels: the stream is errored with the abort reason. */
+  signal?: AbortSignal;
+  /** Chunk size in UTF-16 code units (default 16384); Infinity for one chunk. */
+  chunkSize?: number;
+}
+
+/** Options of importStylesheetAsync. */
+export interface ImportAsyncOptions {
+  /** Loader of xsl:import/xsl:include modules; the global fetch by default. */
+  loader?: AsyncLoader;
+  /** Loader of literal document() documents; `loader` by default. */
+  documentLoader?: AsyncLoader;
+  /** Cancels loading. */
+  signal?: AbortSignal;
+}
+
+/** Options of transformAsync. */
+export interface TransformAsyncOptions {
+  /** Cancels loading and reading. */
+  signal?: AbortSignal;
+  /** A stylesheet to import first with importStylesheetAsync. */
+  stylesheet?: AsyncSource;
+  /** The URI of that stylesheet. */
+  stylesheetUri?: string;
+  /** Loader of its xsl:import/xsl:include modules (fetch by default). */
+  fetchStylesheet?: AsyncLoader;
+  /** Loader of the literal document() documents of the stylesheet. */
+  fetchDocument?: AsyncLoader;
+}
+
+/**
  * XSLTProcessor - Applies XSLT stylesheet transformations to XML documents.
  */
 export class XSLTProcessor {
@@ -114,6 +179,43 @@ export class XSLTProcessor {
    * @returns The serialized result, or null on a transformation error
    */
   transformToString(source: Node): string | null;
+
+  /**
+   * Imports a stylesheet after loading its xsl:import/xsl:include tree and
+   * its literal document() documents asynchronously (non-W3C). Rejects on a
+   * load failure or an import cycle; the previous stylesheet is then kept.
+   * @param style - The stylesheet, as a node or as markup/stream to parse
+   * @param stylesheetUri - Base URI of relative hrefs and document() URIs
+   * @param options - Loaders and AbortSignal
+   */
+  importStylesheetAsync(
+    style: AsyncSource,
+    stylesheetUri?: string,
+    options?: ImportAsyncOptions,
+  ): Promise<void>;
+
+  /**
+   * Transforms asynchronously and resolves with the serialized result
+   * (non-W3C). Unlike transformToString, failures reject.
+   * @param source - Node, markup, bytes or stream of the source document
+   * @param options - AbortSignal, optional stylesheet and loaders
+   */
+  transformAsync(
+    source: AsyncSource,
+    options?: TransformAsyncOptions,
+  ): Promise<string>;
+
+  /**
+   * Transforms and streams the serialized result in chunks (non-W3C). The
+   * result tree is built in memory on the first read; the output string is
+   * produced chunk by chunk on demand. Failures error the stream.
+   * @param source - Node, markup, bytes or stream of the source document
+   * @param options - AbortSignal and chunk size
+   */
+  transformToStream(
+    source: AsyncSource,
+    options?: StreamOptions,
+  ): ReadableStream<string>;
 
   /**
    * Sets a parameter in the XSLT stylesheet.
@@ -442,6 +544,40 @@ export function serializeResult(
   node: Node | null,
   outputSettings?: OutputSettings,
 ): string;
+
+/** Default chunk size of the streaming serializer (16384 code units). */
+export const DEFAULT_CHUNK_SIZE: number;
+
+/**
+ * Serialize a transformation result in chunks of at most `chunkSize` UTF-16
+ * code units (one more when a surrogate pair straddles the boundary); joined,
+ * they equal serializeResult().
+ * @throws RangeError When chunkSize is not a positive integer or Infinity
+ */
+export function serializeChunks(
+  node: Node | null,
+  outputSettings?: OutputSettings,
+  options?: { chunkSize?: number },
+): Iterator<string> & Iterable<string>;
+
+/**
+ * Transform with an engine and serialize the result in chunks: the result
+ * tree is built by this call, serialization runs as the chunks are read.
+ */
+export function transformToChunks(
+  engine: XsltEngine,
+  sourceNode: Node,
+  options?: { chunkSize?: number },
+): Iterator<string> & Iterable<string>;
+
+/**
+ * Transform with an engine and stream the serialized result.
+ */
+export function transformToStream(
+  engine: XsltEngine,
+  sourceNode: Node,
+  options?: StreamOptions,
+): ReadableStream<string>;
 
 /**
  * Mark a text node as produced with disable-output-escaping="yes".

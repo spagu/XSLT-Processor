@@ -197,3 +197,39 @@ by loaders. It defaults to the global `DOMParser` or the stylesheet document's
 window, so it only needs to be set for DOM implementations such as
 `@xmldom/xmldom` in Node.js. `setStylesheetLoader()` and `setDocumentLoader()`
 return the engine, so calls can be chained.
+
+## Asynchronous and streaming API
+
+Non-W3C additions for loading stylesheets over the network and producing
+large results incrementally. The synchronous W3C methods are unchanged.
+
+| Method | Description |
+|--------|-------------|
+| `importStylesheetAsync(style, stylesheetUri?, { loader?, documentLoader?, signal? })` | Loads the `xsl:import`/`xsl:include` tree (in parallel, each URI once) and the literal `document('...')` URIs with `fetch` or a custom loader, then compiles synchronously. `style` may be a Node, a string, bytes, a `ReadableStream` or an async iterable |
+| `transformAsync(source, { signal?, stylesheet?, stylesheetUri?, fetchStylesheet?, fetchDocument? })` | Returns a `Promise<string>` with the serialized result; failures reject. Sources may be nodes, strings, bytes, `ReadableStream`s or async iterables, decoded by byte order mark, then the XML declaration's encoding, then UTF-8 |
+| `transformToStream(source, { signal?, chunkSize? })` | Returns a `ReadableStream<string>` serialized on demand in chunks of about 16 KiB, with backpressure and cancellation |
+
+```js
+// Browser: fetch the stylesheet and everything it imports, then transform
+const processor = new XSLTProcessor();
+const url = new URL('/xsl/main.xsl', location.href).href;
+await processor.importStylesheetAsync((await fetch(url)).body, url);
+const html = await processor.transformAsync((await fetch('/data.xml')).body);
+
+// Node.js: pipe a large result without building one big string
+import { Readable } from 'node:stream';
+Readable.fromWeb(processor.transformToStream(xmlDoc, { signal })).pipe(process.stdout);
+```
+
+Limits: XSLT 1.0 needs random access to the whole source and result trees, so
+inputs are read fully before parsing and the result tree is built in memory.
+Streaming bounds the output text and delivers the first bytes before
+serialization ends. The transformation itself is synchronous and cannot be
+aborted midway; the signal is honoured while loading and reading, and between
+output chunks. Only literal `document('...')` URIs are preloaded; computed ones
+use `setDocumentLoader`. Constant-memory input streaming would need XSLT 3.0
+streamability.
+
+The building blocks are exported as well: `serializeChunks(node, settings?, { chunkSize? })`,
+`DEFAULT_CHUNK_SIZE`, and the engine-level `transformToChunks(engine, node, options)`
+and `transformToStream(engine, node, options)`.

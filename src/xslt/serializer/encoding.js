@@ -233,18 +233,20 @@ export function splitUnencodable(text, encoding) {
 }
 
 /**
- * Encode UTF-16 code units with a byte order mark.
+ * Encode UTF-16 code units, after a byte order mark when requested.
  *
  * @param {string} text - Text to encode
  * @param {boolean} bigEndian - Byte order
+ * @param {boolean} bom - Whether to start with a byte order mark
  * @returns {Uint8Array} The bytes
  */
-function encodeUtf16(text, bigEndian) {
-  const bytes = new Uint8Array(2 + text.length * 2);
+function encodeUtf16(text, bigEndian, bom) {
+  const offset = bom ? 2 : 0;
+  const bytes = new Uint8Array(offset + text.length * 2);
   const view = new DataView(bytes.buffer);
-  view.setUint16(0, 0xfeff, !bigEndian);
+  if (bom) view.setUint16(0, 0xfeff, !bigEndian);
   for (let i = 0; i < text.length; i++) {
-    view.setUint16(2 + i * 2, text.charCodeAt(i), !bigEndian);
+    view.setUint16(offset + i * 2, text.charCodeAt(i), !bigEndian);
   }
   return bytes;
 }
@@ -275,6 +277,37 @@ function encodeSingleByte(text, table) {
 }
 
 /**
+ * Create an encoder turning serialized output, chunk after chunk, into the
+ * bytes of its declared encoding: the concatenated bytes equal
+ * {@link encodeOutput} of the concatenated text, since only the first chunk
+ * gets the UTF-16 byte order mark (chunks never split a surrogate pair, see
+ * chunks.js).
+ *
+ * @param {string} [label] - The `xsl:output` encoding, UTF-8 when absent
+ * @returns {(text: string) => Uint8Array} The stateful encoder
+ *
+ * @example
+ * const encode = createOutputEncoder("UTF-16");
+ * encode("a"); // Uint8Array [0xff, 0xfe, 0x61, 0x00]
+ * encode("b"); // Uint8Array [0x62, 0x00]
+ */
+export function createOutputEncoder(label) {
+  const encoding = getOutputEncoding(label);
+  if (encoding.bytes) return (text) => encodeSingleByte(text, encoding.bytes);
+  if (encoding.name.startsWith("utf-16")) {
+    const bigEndian = encoding.name === "utf-16be";
+    let bom = true;
+    return (text) => {
+      const bytes = encodeUtf16(text, bigEndian, bom);
+      bom = false;
+      return bytes;
+    };
+  }
+  const encoder = new globalThis.TextEncoder();
+  return (text) => encoder.encode(text);
+}
+
+/**
  * Turn serialized output into the bytes of its declared encoding.
  *
  * UTF-8 is written without a byte order mark, UTF-16 with one. Encodings
@@ -290,9 +323,5 @@ function encodeSingleByte(text, table) {
  * encodeOutput("é", "ISO-8859-1"); // Uint8Array [0xe9]
  */
 export function encodeOutput(text, label) {
-  const encoding = getOutputEncoding(label);
-  if (encoding.bytes) return encodeSingleByte(text, encoding.bytes);
-  if (encoding.name === "utf-16le") return encodeUtf16(text, false);
-  if (encoding.name === "utf-16be") return encodeUtf16(text, true);
-  return new globalThis.TextEncoder().encode(text);
+  return createOutputEncoder(label)(text);
 }

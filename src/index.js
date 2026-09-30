@@ -55,10 +55,15 @@ export {
 // Output serializer (xsl:output, XSLT 1.0 section 16)
 export {
   serializeResult,
+  serializeChunks,
+  DEFAULT_CHUNK_SIZE,
   markRawText,
   isRawText,
   resolveOutputSettings,
 } from "./xslt/serializer.js";
+
+// Streaming output on the engine side (advanced users)
+export { transformToChunks, transformToStream } from "./async/stream.js";
 
 /**
  * Version information

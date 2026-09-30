@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Asynchronous and streaming API** (task 0010): `XSLTProcessor#transformToStream(source, { signal, chunkSize })` returns a `ReadableStream<string>` serialized on demand; `transformAsync(source, { signal, stylesheet, stylesheetUri, fetchStylesheet, fetchDocument })` returns a `Promise<string>`; `importStylesheetAsync(style, uri, { loader, documentLoader, signal })` loads the `xsl:import`/`xsl:include` tree and literal `document()` URIs with `fetch` or a custom loader. Sources may be nodes, strings, bytes, `ReadableStream`s or async iterables. New exports `serializeChunks()`, `DEFAULT_CHUNK_SIZE`, `transformToChunks()` and `transformToStream()`, with TypeScript types. The CLI writes its output in chunks with backpressure (byte-identical, about 27% less peak memory on a 100 MB result).
 - **Project website** (task 0015) with the documentation, the changelog and an XSLT playground, built with spagu/ssg and deployed to GitHub Pages (`make site`, `.github/workflows/site.yml`); it replaces the Jekyll workflow. Pull requests build and check the site without deploying it.
 - **Standalone `xslt` executables** (task 0008) for linux-x64/arm64, darwin-x64/arm64 and windows-x64, attached to each GitHub release with `checksums.sha256`. They are built as Node.js Single Executable Applications with jsdom bundled (`scripts/binaries/`) and smoke-tested on each operating system in CI; `scripts/install.sh` installs them with checksum verification.
 - **Browser tests** (task 0009): `npm run test:browser` runs the built bundles in Chromium, Firefox and WebKit with Playwright, in CI on pull requests; an informational differential test compares the output with the browser's native `XSLTProcessor`.
@@ -51,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
+- The input decoding core moved from `bin/lib/decode.js` to `src/io/decode.js`, shared by the CLI and the asynchronous API; the serializer writes into chunks, and the string result joins them (one implementation).
 - **Engine split** (task 0022): `src/xslt/engine.js` (2,537 lines) is now a thin `XsltEngine` facade of 243 lines; its methods live in 17 modules under `src/xslt/engine/` by concern (stylesheet loading, top-level declarations, template rules and invocation, instruction dispatch, control flow, variables and parameters, text and number instructions, node construction and copying, transformation entry points, function support) and are installed on the prototype. No API or behaviour change and no measurable slowdown; `splitUnionPattern` and `findMatchingTemplate` were simplified to stay under SonarCloud's cognitive complexity limit.
 
 ### Documentation

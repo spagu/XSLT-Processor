@@ -15,6 +15,12 @@
 
 import { XsltEngine } from "./xslt/engine.js";
 import { findParseError } from "./xslt/domParsing.js";
+import { preloadedDocumentLoader } from "./async/preload.js";
+import {
+  importStylesheetAsync,
+  transformAsync,
+  transformToStream,
+} from "./async/processor.js";
 
 /**
  * The native XSLTProcessor constructor that installGlobal() replaced, kept so
@@ -61,6 +67,11 @@ export class XSLTProcessor {
     this._parameters = new Map();
     this._stylesheetLoader = null;
     this._documentLoader = null;
+    // Set by importStylesheet/importStylesheetAsync: the URI and modules of
+    // the stylesheet, and the document() documents preloaded asynchronously
+    this._stylesheetUri = undefined;
+    this._modules = [];
+    this._preloadedDocuments = null;
   }
 
   /**
@@ -162,7 +173,7 @@ export class XSLTProcessor {
 
     // Keep an already created engine in sync
     if (this._engine) {
-      this._engine.setDocumentLoader(this._documentLoader);
+      this._engine.setDocumentLoader(this._engineDocumentLoader());
     }
 
     return this;
@@ -207,12 +218,65 @@ export class XSLTProcessor {
       throw new Error("XSLT stylesheet contains parse errors");
     }
 
+    this._compile(style, stylesheetUri);
+  }
+
+  /**
+   * Imports a stylesheet whose `xsl:import`/`xsl:include` modules and
+   * literal `document('...')` documents are loaded asynchronously first
+   * (non-W3C). The modules are loaded in parallel, each URI once; a cycle
+   * rejects with "Circular stylesheet reference detected". A document that
+   * fails to load is reported only if the transformation evaluates that
+   * `document()` call. Computed `document()` URIs still go through the
+   * synchronous {@link XSLTProcessor#setDocumentLoader} loader, and modules
+   * that were not preloaded through {@link XSLTProcessor#setStylesheetLoader}.
+   *
+   * @param {Node|string|Uint8Array|ArrayBuffer|ReadableStream|AsyncIterable} style -
+   *   The stylesheet: a node, or markup / a stream of markup to parse
+   * @param {string} [stylesheetUri] - Base URI of relative hrefs and
+   *   `document()` URIs
+   * @param {object} [options] - Loading options
+   * @param {Function} [options.loader] - `(uri, baseUri, { signal }) =>
+   *   Promise<Document|string|Uint8Array|ArrayBuffer|Response|null>`; the
+   *   global `fetch` by default
+   * @param {Function} [options.documentLoader] - Loader of `document()`
+   *   documents, `options.loader` by default
+   * @param {AbortSignal} [options.signal] - Cancels loading
+   * @returns {Promise<void>} Resolves once the stylesheet is imported; on
+   *   failure the processor keeps its previous stylesheet
+   *
+   * @example
+   * await processor.importStylesheetAsync(xslDoc, "https://example.com/xsl/main.xsl");
+   */
+  importStylesheetAsync(style, stylesheetUri, options = {}) {
+    return importStylesheetAsync(this, style, stylesheetUri, options);
+  }
+
+  /**
+   * Compile a stylesheet into a new engine; the processor is only updated
+   * when compiling succeeds.
+   *
+   * @param {Node} style - The stylesheet
+   * @param {string} [stylesheetUri] - Its URI
+   * @param {object} [preloaded] - What importStylesheetAsync loaded
+   * @param {Function|null} [preloaded.stylesheetLoader] - Module loader
+   * @param {Node[]} [preloaded.modules] - Every stylesheet module
+   * @param {Map<string, object>|null} [preloaded.documents] - document() documents
+   * @returns {void}
+   * @private
+   */
+  _compile(style, stylesheetUri, preloaded = {}) {
+    const {
+      stylesheetLoader = this._stylesheetLoader,
+      modules = [style],
+      documents = null,
+    } = preloaded;
     const engine = new XsltEngine({
       legacyNameTests: this._options.legacyNameTests,
       enableDynamicEvaluate: this._options.enableDynamicEvaluate,
       clock: this._options.clock,
-      stylesheetLoader: this._stylesheetLoader,
-      documentLoader: this._documentLoader,
+      stylesheetLoader,
+      documentLoader: this._engineDocumentLoader(documents),
     });
 
     // Apply any previously set parameters
@@ -223,8 +287,80 @@ export class XSLTProcessor {
     // An invalid stylesheet (e.g. an invalid pattern) throws here and leaves
     // the processor as it was
     engine.importStylesheet(style, stylesheetUri);
+    // Modules not preloaded keep going through the configured loader
+    engine.setStylesheetLoader(this._stylesheetLoader);
     this._engine = engine;
     this._stylesheet = style;
+    this._stylesheetUri = stylesheetUri;
+    this._modules = modules;
+    this._preloadedDocuments = documents;
+  }
+
+  /**
+   * The document() loader given to the engine: preloaded documents first,
+   * then the configured synchronous loader.
+   *
+   * @param {Map<string, object>|null} [documents] - Preloaded documents
+   * @returns {Function|null} The loader
+   * @private
+   */
+  _engineDocumentLoader(documents = this._preloadedDocuments) {
+    return documents
+      ? preloadedDocumentLoader(documents, this._documentLoader)
+      : this._documentLoader;
+  }
+
+  /**
+   * Add asynchronously preloaded document() documents.
+   *
+   * @param {Map<string, object>} documents - Preloaded outcomes by URI
+   * @returns {void}
+   * @private
+   */
+  _usePreloadedDocuments(documents) {
+    this._preloadedDocuments = new Map([
+      ...(this._preloadedDocuments ?? []),
+      ...documents,
+    ]);
+    this._engine.setDocumentLoader(this._engineDocumentLoader());
+  }
+
+  /**
+   * Throw the native error of a transformation without stylesheet.
+   *
+   * @param {string} method - The method called
+   * @returns {void}
+   * @throws {Error} When no stylesheet has been imported
+   * @private
+   */
+  _requireStylesheet(method) {
+    if (!this._engine || !this._stylesheet) {
+      throw new Error(
+        `Failed to execute '${method}' on 'XSLTProcessor': No stylesheet has been imported.`,
+      );
+    }
+  }
+
+  /**
+   * Throw the native error of a source that is not a document, element or
+   * fragment.
+   *
+   * @param {string} method - The method called
+   * @param {Node} source - The source node
+   * @returns {void}
+   * @throws {TypeError} For other node types
+   * @private
+   */
+  _checkSource(method, source) {
+    if (
+      source.nodeType !== 1 &&
+      source.nodeType !== 9 &&
+      source.nodeType !== 11
+    ) {
+      throw new TypeError(
+        `Failed to execute '${method}' on 'XSLTProcessor': The source is not a valid node type.`,
+      );
+    }
   }
 
   /**
@@ -259,22 +395,9 @@ export class XSLTProcessor {
       );
     }
 
-    if (!this._engine || !this._stylesheet) {
-      throw new Error(
-        "Failed to execute 'transformToFragment' on 'XSLTProcessor': No stylesheet has been imported.",
-      );
-    }
+    this._requireStylesheet("transformToFragment");
 
-    // Validate source node
-    if (
-      source.nodeType !== 1 &&
-      source.nodeType !== 9 &&
-      source.nodeType !== 11
-    ) {
-      throw new TypeError(
-        "Failed to execute 'transformToFragment' on 'XSLTProcessor': The source is not a valid node type.",
-      );
-    }
+    this._checkSource("transformToFragment", source);
 
     // Validate output document
     if (output.nodeType !== 9) {
@@ -310,22 +433,9 @@ export class XSLTProcessor {
       );
     }
 
-    if (!this._engine || !this._stylesheet) {
-      throw new Error(
-        "Failed to execute 'transformToDocument' on 'XSLTProcessor': No stylesheet has been imported.",
-      );
-    }
+    this._requireStylesheet("transformToDocument");
 
-    // Validate source node
-    if (
-      source.nodeType !== 1 &&
-      source.nodeType !== 9 &&
-      source.nodeType !== 11
-    ) {
-      throw new TypeError(
-        "Failed to execute 'transformToDocument' on 'XSLTProcessor': The source is not a valid node type.",
-      );
-    }
+    this._checkSource("transformToDocument", source);
 
     try {
       return this._engine.transformToDocument(source);
@@ -359,22 +469,9 @@ export class XSLTProcessor {
       );
     }
 
-    if (!this._engine || !this._stylesheet) {
-      throw new Error(
-        "Failed to execute 'transformToString' on 'XSLTProcessor': No stylesheet has been imported.",
-      );
-    }
+    this._requireStylesheet("transformToString");
 
-    // Validate source node
-    if (
-      source.nodeType !== 1 &&
-      source.nodeType !== 9 &&
-      source.nodeType !== 11
-    ) {
-      throw new TypeError(
-        "Failed to execute 'transformToString' on 'XSLTProcessor': The source is not a valid node type.",
-      );
-    }
+    this._checkSource("transformToString", source);
 
     try {
       return this._engine.transformToString(source);
@@ -383,6 +480,57 @@ export class XSLTProcessor {
       console.error("XSLT transformation error:", error);
       return null;
     }
+  }
+
+  /**
+   * Transforms asynchronously and resolves with the serialized result
+   * (non-W3C). The source may be a node, markup, bytes, a `ReadableStream`
+   * or an async iterable of strings or bytes; streams are read to their end
+   * before parsing, because XSLT 1.0 needs the whole source tree. Unlike
+   * {@link XSLTProcessor#transformToString}, failures reject the promise.
+   *
+   * @param {Node|string|Uint8Array|ArrayBuffer|ReadableStream|AsyncIterable} source - Input
+   * @param {object} [options] - Options
+   * @param {AbortSignal} [options.signal] - Cancels loading and reading
+   * @param {Node|string|ReadableStream|AsyncIterable} [options.stylesheet] -
+   *   A stylesheet to import first with importStylesheetAsync
+   * @param {string} [options.stylesheetUri] - The URI of that stylesheet
+   * @param {Function} [options.fetchStylesheet] - Asynchronous loader of its
+   *   xsl:import/xsl:include modules (`fetch` by default)
+   * @param {Function} [options.fetchDocument] - Asynchronous loader of the
+   *   literal document() documents (`fetchStylesheet` by default when a
+   *   stylesheet is given)
+   * @returns {Promise<string>} The serialized result
+   *
+   * @example
+   * const html = await processor.transformAsync((await fetch("data.xml")).body);
+   */
+  transformAsync(source, options = {}) {
+    return transformAsync(this, source, options);
+  }
+
+  /**
+   * Transforms and returns the serialized result as a `ReadableStream` of
+   * strings (non-W3C). The result tree is built in memory on the first read;
+   * serialization then produces chunks of about `chunkSize` code units on
+   * demand, so the output is never one string and the first bytes are
+   * available before serialization ends. Failures error the stream.
+   *
+   * @param {Node|string|Uint8Array|ArrayBuffer|ReadableStream|AsyncIterable} source - Input
+   * @param {{signal?: AbortSignal, chunkSize?: number}} [options] - `signal`
+   *   cancels (errors the stream with its reason); `chunkSize` defaults to
+   *   16384
+   * @returns {ReadableStream<string>} The serialized result
+   * @throws {Error} When no stylesheet has been imported
+   * @throws {TypeError} For a source node of the wrong type
+   * @throws {RangeError} For an invalid chunk size
+   *
+   * @example
+   * // Node.js
+   * Readable.fromWeb(processor.transformToStream(xmlDoc)).pipe(process.stdout);
+   */
+  transformToStream(source, options = {}) {
+    return transformToStream(this, source, options);
   }
 
   /**
@@ -523,6 +671,9 @@ export class XSLTProcessor {
   reset() {
     this._engine = null;
     this._stylesheet = null;
+    this._stylesheetUri = undefined;
+    this._modules = [];
+    this._preloadedDocuments = null;
     this._parameters.clear();
   }
 }
