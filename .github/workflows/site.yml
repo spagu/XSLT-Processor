@@ -113,3 +113,38 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: ${{ env.WRANGLER_VERSION }}
           command: pages deploy --branch=main
+
+  # The site used to live at https://spagu.github.io/XSLT-Processor/. GitHub
+  # Pages keeps serving site/redirect/index.html there (also as 404.html, so
+  # every old path is caught), which sends visitors to the same path on
+  # xslt-processor.tradik.com. Needs Settings > Pages > Source = GitHub Actions.
+  redirect-github-pages:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare redirect pages
+        run: |
+          mkdir -p "${RUNNER_TEMP}/redirect"
+          cp site/redirect/index.html "${RUNNER_TEMP}/redirect/index.html"
+          cp site/redirect/index.html "${RUNNER_TEMP}/redirect/404.html"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/redirect
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

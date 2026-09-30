@@ -146,6 +146,11 @@ and `CLOUDFLARE_ACCOUNT_ID`. `make site-deploy` deploys by hand after
 `npx wrangler login`. The domain is attached to the project in the Cloudflare
 dashboard (Workers & Pages > xslt-processor > Custom domains).
 
+The old address, `https://spagu.github.io/XSLT-Processor/`, keeps working: the
+same workflow publishes `site/redirect/index.html` to GitHub Pages as
+`index.html` and `404.html`, which sends every old URL to the same path on
+the new domain (Settings > Pages > Source stays "GitHub Actions").
+
 The Google Tag Manager container id is a placeholder (`variables.gtm_id` in
 `site/ssg.yaml`).
 
