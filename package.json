@@ -38,7 +38,7 @@
   },
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=96 \"src/**/*.test.js\"",
+    "test": "node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=96 --test-coverage-exclude=\"**/*.test.js\" \"src/**/*.test.js\"",
     "test:watch": "node --test --watch src/**/*.test.js",
     "test:conformance": "node scripts/conformance.mjs",
     "test:dom": "node scripts/test-dom.mjs",
