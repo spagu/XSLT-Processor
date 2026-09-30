@@ -10,6 +10,7 @@
 [![npm version](https://img.shields.io/npm/v/@tradik/xslt-processor.svg)](https://www.npmjs.com/package/@tradik/xslt-processor)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.19.0-brightgreen.svg)](https://nodejs.org/)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=spagu_XSLT-Processor&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=spagu_XSLT-Processor)
 [![Line Coverage](https://img.shields.io/badge/line%20coverage-100%25-brightgreen.svg)](docs/CONFORMANCE.md#test-coverage)
 [![TypeScript](https://img.shields.io/badge/types-included-3178c6.svg?logo=typescript&logoColor=white)](docs/API.md#typescript)
 

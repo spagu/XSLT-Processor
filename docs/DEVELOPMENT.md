@@ -7,7 +7,7 @@ release to npm. Contribution guidelines are in
 
 ## Prerequisites
 
-- Node.js 22+ (native test runner; CI runs 22, 24 and 26)
+- Node.js 22.8+ (native test runner with coverage thresholds; CI runs 22, 24 and 26). `npm test` fails below 100% line and function coverage or 96% branch coverage.
 - Docker (optional, for containerized testing)
 
 ## Setup
