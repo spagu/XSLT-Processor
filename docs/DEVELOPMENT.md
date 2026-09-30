@@ -132,6 +132,13 @@ make site-serve                # preview on http://localhost:8888 with rebuilds
 make site-test                 # unit tests of the content generator and checks
 ```
 
+`make site` builds `site/public` for the published address
+(`https://spagu.github.io/XSLT-Processor/`), so every link starts with
+`/XSLT-Processor/` and the pages are unstyled when that folder is served from
+a server root. For a local preview use `make site-serve`, which builds
+`site/public-local` for `http://localhost:8888/` from `site/ssg.local.yaml`; if
+port 8888 is taken, ssg serves on the next free port and prints it.
+
 The Google Tag Manager container id is a placeholder (`variables.gtm_id` in
 `site/ssg.yaml`). The GitHub Pages source must be set to "GitHub Actions".
 

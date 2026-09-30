@@ -100,9 +100,12 @@ site-content: build
 site: site-content
 	cd site && $(SSG) --config ssg.yaml
 	node site/scripts/check-site.mjs site/public /XSLT-Processor
+	@echo "site/public is built for https://spagu.github.io/XSLT-Processor/ (links start with /XSLT-Processor/),"
+	@echo "so it is not styled when served from a server root. Preview locally with: make site-serve"
 
 # Local preview at the server root, rebuilt on change
 site-serve: site-content
+	@echo "Preview: http://localhost:8888/ (ssg moves to the next free port if 8888 is taken)"
 	cd site && $(SSG) --config ssg.local.yaml --http --watch
 
 # Unit tests of the content scripts and the playground core
