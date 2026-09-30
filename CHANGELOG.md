@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **EXSLT** (task 0002): the common, math, sets, strings, dates-and-times and dynamic functions libexslt provides, with libexslt's behaviour (new `src/xslt/exslt/`). `dyn:evaluate` is opt-in through `engine.enableDynamicEvaluate` because it evaluates XPath built from data.
 - **Conformance suite**: `npm run test:conformance` runs libxslt 1.1.45's test corpus (MIT, downloaded and checksum-verified) against the library, reports pass rates per spec section and fails CI only on regressions against `tests/conformance/baseline.json`. Initial result: 249 of 300 counted cases pass (83%).
 
+### Internal
+
+- **Engine split** (task 0022): `src/xslt/engine.js` (2,537 lines) is now a thin `XsltEngine` facade of 243 lines; its methods live in 17 modules under `src/xslt/engine/` by concern (stylesheet loading, top-level declarations, template rules and invocation, instruction dispatch, control flow, variables and parameters, text and number instructions, node construction and copying, transformation entry points, function support) and are installed on the prototype. No API or behaviour change and no measurable slowdown; `splitUnionPattern` and `findMatchingTemplate` were simplified to stay under SonarCloud's cognitive complexity limit.
+
 ### Documentation
 
 - README.md shortened from about 1,080 to 220 lines; the details moved to `docs/` (API, loaders, examples, CLI, conformance and known deviations, security limits, development, browser support, style guide) with an index in `docs/README.md`.

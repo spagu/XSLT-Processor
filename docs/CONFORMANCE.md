@@ -277,7 +277,7 @@ function coverage, 98% branch coverage for 1.2.0):
 |------|-----------|
 | XSLTProcessor API and serialization | `src/XSLTProcessor*.test.js`, `src/index.test.js` |
 | XPath tokenizer, evaluator, axes, conformance | `src/xpath/*.test.js` |
-| XSLT engine, patterns, templates, keys, numbering, sorting, scoping | `src/xslt/*.test.js` |
+| XSLT engine, patterns, templates, keys, numbering, sorting, scoping | `src/xslt/*.test.js`, `src/xslt/engine/*.test.js` |
 | `xsl:output` serializers | `src/xslt/serializer.test.js`, `src/xslt/outputRecovery.test.js` |
 | Command line tool | `src/cli.test.js` |
 | Reported issues | `src/regressions.test.js` |
