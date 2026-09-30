@@ -5,6 +5,9 @@
  * Usage: node scripts/conformance.mjs [--update-baseline] [--filter <text>]
  *                                     [--timeout <ms>]
  *
+ * The DOM is the one of the command line tool: jsdom, or @xmldom/xmldom with
+ * `XSLT_DOM=xmldom` (see bin/lib/dom.js).
+ *
  * Every case is transformed with XSLTProcessor#transformToString, compared
  * with libxslt's expected output (see conformance/normalize.mjs for what is
  * normalised) and classified as pass, fail or error. The results are written
@@ -47,14 +50,19 @@ async function readKnownFailures() {
 }
 
 /**
- * Read the cases excluded from the pass rate and the reason of each.
+ * Read the cases excluded from the pass rate and the reason of each: the
+ * common ones, and those of the DOM implementation named by `XSLT_DOM`
+ * (`casesByDom`, limits of that DOM's XML parser).
  *
  * @returns {Promise<Map<string, string>>} Case id to reason
  */
 async function readExclusions() {
   if (!existsSync(exclusionsPath)) return new Map();
-  const { cases } = JSON.parse(await readFile(exclusionsPath, "utf8"));
-  return new Map(Object.entries(cases ?? {}));
+  const { cases, casesByDom } = JSON.parse(
+    await readFile(exclusionsPath, "utf8"),
+  );
+  const domCases = casesByDom?.[process.env.XSLT_DOM] ?? {};
+  return new Map(Object.entries({ ...cases, ...domCases }));
 }
 
 /**

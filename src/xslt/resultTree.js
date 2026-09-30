@@ -134,9 +134,14 @@ const XHTML_STRICT_DOCTYPE = [
  * // "\n\n\nhello\n\n"
  */
 export function wrapTextResult(doc, text) {
+  // appendChild, not append: xmldom has no ParentNode.append
   const create = (name, ...children) => {
     const element = doc.createElementNS(XHTML_NAMESPACE, name);
-    element.append(...children);
+    for (const child of children) {
+      element.appendChild(
+        typeof child === "string" ? doc.createTextNode(child) : child,
+      );
+    }
     return element;
   };
   const pre = create("pre");
@@ -144,11 +149,33 @@ export function wrapTextResult(doc, text) {
   const head = create("head", create("title"));
   const body = create("body", "\n", pre, "\n");
   // One node at a time: a doctype cannot pass through a fragment
-  doc.appendChild(
-    doc.implementation.createDocumentType("html", ...XHTML_STRICT_DOCTYPE),
-  );
+  appendDoctype(doc, "html", ...XHTML_STRICT_DOCTYPE);
   doc.appendChild(create("html", "\n", head, "\n", body, "\n"));
   return doc;
+}
+
+/**
+ * Append a document type node to a document.
+ *
+ * @param {Document} doc - A document without a doctype
+ * @param {string} name - The root element name
+ * @param {string} publicId - Public identifier ("" for none)
+ * @param {string} systemId - System identifier ("" for none)
+ * @returns {DocumentType} The appended node
+ *
+ * @example
+ * appendDoctype(doc, "html", "", "about:legacy-compat");
+ */
+export function appendDoctype(doc, name, publicId, systemId) {
+  const doctype = doc.implementation.createDocumentType(
+    name,
+    publicId,
+    systemId,
+  );
+  doc.appendChild(doctype);
+  // xmldom leaves Document.doctype null when a doctype node is appended
+  doc.doctype ??= doctype;
+  return doctype;
 }
 
 /**

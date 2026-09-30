@@ -20,6 +20,12 @@
  * Forward walks remember the previous sibling, so recognising a run costs no
  * extra DOM access.
  *
+ * A document has no text children, in the DOM as in XPath (section 5.1),
+ * and the XML declaration is not a processing instruction. xmldom keeps
+ * both anyway: the whitespace between top-level nodes as Text nodes and the
+ * declaration as a processing instruction named `xml`. The axes skip these
+ * artifacts among the children of a document.
+ *
  * @module xpath/axes
  */
 
@@ -119,6 +125,80 @@ function collect(walk, node) {
 }
 
 /**
+ * Whether a child of a document is an artifact of the parser rather than a
+ * node of the data model (see the module comment): text, or the XML
+ * declaration as a processing instruction (the `xml` target is reserved).
+ *
+ * @param {Node} node - A child of a document
+ * @returns {boolean} True for nodes the axes skip
+ */
+function isDocumentArtifact(node) {
+  const type = node.nodeType;
+  return type === 3 || type === 4 || (type === 7 && node.target === "xml");
+}
+
+/**
+ * Whether a node is a child of a document, where artifacts may be.
+ *
+ * @param {Node} node - Any node
+ * @returns {boolean} True when the parent is a Document
+ */
+function isDocumentChild(node) {
+  return node.parentNode?.nodeType === 9;
+}
+
+/**
+ * Whether a node is a parser artifact among the children of a document
+ * (see the module comment), for walks that do not go through the axes.
+ *
+ * @param {Node} node - Any node
+ * @returns {boolean} True for the artifacts the axes skip
+ *
+ * @example
+ * // xmldom: <?xml version="1.0"?><r/>
+ * isParserArtifact(doc.firstChild); // true
+ */
+export function isParserArtifact(node) {
+  return isDocumentArtifact(node) && isDocumentChild(node);
+}
+
+/**
+ * Skip test of a sibling among the children of a document.
+ *
+ * @param {Node|null} previous - The previous sibling (unused)
+ * @param {Node} node - The sibling
+ * @returns {boolean} True for an artifact
+ */
+function skipsArtifact(previous, node) {
+  return isDocumentArtifact(node);
+}
+
+/**
+ * How forward sibling walks skip siblings of a node: document artifacts
+ * among the children of a document, text run continuations elsewhere.
+ *
+ * @param {Node} node - A node whose siblings are walked
+ * @returns {(previous: Node|null, node: Node) => boolean} The skip test
+ */
+function forwardSkipOf(node) {
+  return isDocumentChild(node) ? skipsArtifact : continuesRun;
+}
+
+/**
+ * Walk the children of a document in document order, without artifacts.
+ *
+ * @param {Document} doc - A document
+ * @param {AxisVisitor} visit - Visitor
+ * @returns {boolean} True when the visitor stopped the walk
+ */
+function walkDocumentChildren(doc, visit) {
+  for (let child = doc.firstChild; child; child = child.nextSibling) {
+    if (!isDocumentArtifact(child) && visit(child)) return true;
+  }
+  return false;
+}
+
+/**
  * Walk the children of a node in document order.
  *
  * @param {Node} node - Context node
@@ -126,6 +206,7 @@ function collect(walk, node) {
  * @returns {boolean} True when the visitor stopped the walk
  */
 export function walkChildren(node, visit) {
+  if (node.nodeType === 9) return walkDocumentChildren(node, visit);
   let previous = null;
   for (let child = node.firstChild; child; child = child.nextSibling) {
     if (!continuesRun(previous, child) && visit(child)) return true;
@@ -172,6 +253,11 @@ export function attributeAxis(node) {
  */
 export function walkDescendants(node, includeSelf, visit) {
   if (includeSelf && visit(node)) return true;
+  if (node.nodeType === 9) {
+    return walkDocumentChildren(node, (child) =>
+      walkDescendants(child, true, visit),
+    );
+  }
 
   let current = node.firstChild;
   let previous = null;
@@ -273,9 +359,10 @@ export function ancestorAxis(node, includeSelf) {
  */
 export function walkFollowingSiblings(node, visit) {
   if (node.nodeType === 2) return false;
+  const skip = forwardSkipOf(node);
   let previous = node;
   for (let current = node.nextSibling; current; current = current.nextSibling) {
-    if (!continuesRun(previous, current) && visit(current)) return true;
+    if (!skip(previous, current) && visit(current)) return true;
     previous = current;
   }
   return false;
@@ -301,12 +388,13 @@ export function followingSiblingAxis(node) {
  */
 export function walkPrecedingSiblings(node, visit) {
   if (node.nodeType === 2) return false;
+  const skip = isDocumentChild(node) ? isDocumentArtifact : isTextContinuation;
   for (
     let current = node.previousSibling;
     current;
     current = current.previousSibling
   ) {
-    if (!isTextContinuation(current) && visit(current)) return true;
+    if (!skip(current) && visit(current)) return true;
   }
   return false;
 }
@@ -339,16 +427,14 @@ export function walkFollowing(node, visit) {
     return true;
   }
   for (let current = startOf(node); current; current = current.parentNode) {
+    const skip = forwardSkipOf(current);
     let previous = current;
     for (
       let sibling = current.nextSibling;
       sibling;
       sibling = sibling.nextSibling
     ) {
-      if (
-        !continuesRun(previous, sibling) &&
-        walkDescendants(sibling, true, visit)
-      ) {
+      if (!skip(previous, sibling) && walkDescendants(sibling, true, visit)) {
         return true;
       }
       previous = sibling;
@@ -377,11 +463,13 @@ export function followingAxis(node) {
  */
 export function walkPreceding(node, visit) {
   for (let current = startOf(node); current; current = current.parentNode) {
+    const artifacts = isDocumentChild(current);
     for (
       let sibling = current.previousSibling;
       sibling;
       sibling = sibling.previousSibling
     ) {
+      if (artifacts && isDocumentArtifact(sibling)) continue;
       if (walkReverseDescendants(sibling, visit)) return true;
       if (!isTextContinuation(sibling) && visit(sibling)) return true;
     }

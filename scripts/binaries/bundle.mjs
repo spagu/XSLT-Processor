@@ -1,16 +1,17 @@
 /**
  * Standalone binaries - CLI bundle
  *
- * Bundles bin/xslt.js, the library and jsdom into one CommonJS file that a
- * Node.js Single Executable Application (SEA) runs. A SEA main script can
- * only `require()` built-in modules and has no files next to it, so every
- * module and data file is inlined and a few module-load-time lookups are
- * rewritten (each rewrite fails the build loudly when its target changes):
+ * Bundles bin/xslt.js, the library, jsdom and @xmldom/xmldom into one
+ * CommonJS file that a Node.js Single Executable Application (SEA) runs. A
+ * SEA main script can only `require()` built-in modules and has no files
+ * next to it, so every module and data file is inlined and a few
+ * module-load-time lookups are rewritten (each rewrite fails the build
+ * loudly when its target changes):
  *
  * - bin/lib/options.js reads the version through a createRequire()-made
  *   `require("../../package.json")`: replaced by the version string.
- * - bin/lib/transform.js loads jsdom with `import(specifier)`, which esbuild
- *   cannot follow: turned into `import("jsdom")` so jsdom is bundled.
+ * - bin/lib/dom.js loads jsdom and @xmldom/xmldom with literal `import()`
+ *   specifiers, which esbuild follows: both are bundled (XSLT_DOM picks one).
  * - jsdom reads browser/default-stylesheet.css relative to `__dirname`:
  *   the file content is inlined.
  * - jsdom calls `require.resolve("./xhr-sync-worker.js")` when it loads
@@ -79,9 +80,6 @@ export function cliPatches(version) {
       ['import { createRequire } from "node:module";', ""],
       ["const require = createRequire(import.meta.url);", ""],
       ['require("../../package.json").version', JSON.stringify(version)],
-    ],
-    "bin/lib/transform.js": [
-      ["(specifier) => import(specifier)", '(specifier) => import("jsdom")'],
     ],
   };
 }
@@ -153,7 +151,7 @@ function singleExecutablePlugin(version) {
 }
 
 /**
- * Bundle the CLI, the library and jsdom into a single CommonJS file.
+ * Bundle the CLI, the library, jsdom and xmldom into a single CommonJS file.
  *
  * @param {string} outfile - Absolute path of the bundle to write
  * @returns {Promise<{bytes: number, version: string}>} Bundle size and the

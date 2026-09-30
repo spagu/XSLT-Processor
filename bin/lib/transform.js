@@ -17,60 +17,28 @@ import {
   createStylesheetLoader,
   toBaseUri,
 } from "./loaders.js";
-
-/** Message shown when the optional jsdom peer dependency is missing. */
-export const JSDOM_MISSING_MESSAGE =
-  "The xslt command needs jsdom, an optional peer dependency that is not installed. " +
-  "Install it next to this package: npm install -g jsdom (global install) " +
-  "or npm install jsdom (project install).";
+import { installDomGlobals, loadDomEnvironment } from "./dom.js";
 
 /**
- * Load jsdom, turning a missing package into an actionable error.
- *
- * jsdom is an optional peer dependency: the library itself has no runtime
- * dependencies and only the command line tool needs a DOM implementation.
- *
- * @param {(specifier: string) => Promise<object>} [importer] - Module loader (for tests)
- * @returns {Promise<object>} The jsdom module
- * @throws {Error} When jsdom is not installed
- */
-export async function loadJsdom(importer = (specifier) => import(specifier)) {
-  try {
-    return await importer("jsdom");
-  } catch (error) {
-    if (error?.code === "ERR_MODULE_NOT_FOUND") {
-      throw new Error(JSDOM_MISSING_MESSAGE, { cause: error });
-    }
-    throw error;
-  }
-}
-
-/**
- * Create a JSDOM based DOM environment and expose it globally.
+ * Create the DOM environment of the command line tool and expose it
+ * globally (see dom.js): jsdom, else @xmldom/xmldom; `XSLT_DOM=xmldom` or
+ * `XSLT_DOM=jsdom` picks one.
  *
  * The XSLT engine builds its result documents through the global `document`,
  * so the globals have to be installed before transforming.
  *
- * @returns {Promise<object>} The created JSDOM instance
- * @throws {Error} When jsdom is not installed
+ * @param {string} [name] - DOM implementation, default `$XSLT_DOM`
+ * @returns {Promise<import("./dom.js").DomEnvironment>} The environment
+ * @throws {Error} When no DOM implementation is installed
  */
-export async function createDomEnvironment() {
-  const { JSDOM } = await loadJsdom();
-  const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
-    contentType: "text/html",
-  });
-
-  globalThis.document = dom.window.document;
-  globalThis.DOMParser = dom.window.DOMParser;
-  globalThis.XMLSerializer = dom.window.XMLSerializer;
-
-  return dom;
+export async function createDomEnvironment(name = process.env.XSLT_DOM) {
+  return installDomGlobals(await loadDomEnvironment(name));
 }
 
 /**
  * Parse an XML string, reporting parser errors as exceptions.
  *
- * @param {JSDOM} dom - DOM environment
+ * @param {import("./dom.js").DomEnvironment} dom - DOM environment
  * @param {string} content - XML source text
  * @param {string} label - Human readable document label used in errors
  * @returns {Document} Parsed document
@@ -123,7 +91,7 @@ export function applyOutputOverrides(processor, values) {
 
 /**
  * @typedef {Object} TransformationInputs
- * @property {JSDOM} dom - DOM environment
+ * @property {import("./dom.js").DomEnvironment} dom - DOM environment
  * @property {string} xmlContent - XML source text
  * @property {string} xsltContent - XSLT stylesheet text
  * @property {Record<string, string>} params - Stylesheet parameters

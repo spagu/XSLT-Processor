@@ -118,3 +118,14 @@ stdout is an interactive terminal is a final newline added if missing.
 | `-v, --version` | Show version number |
 
 A complete example is in [Complete Example](EXAMPLES.md).
+
+## DOM implementation
+
+`XSLT_DOM` selects the DOM implementation: `jsdom` (the default when
+installed) or `xmldom` (@xmldom/xmldom 0.9 or newer: XML only, about 6 times
+faster start-up and about 2.5 times faster transformations, but entities
+declared in the internal DTD subset are not expanded). Without jsdom installed
+the CLI uses @xmldom/xmldom, so install one of them next to the package
+(`npm install -g jsdom` or `npm install -g @xmldom/xmldom`). The standalone
+executables contain both.
+

@@ -36,5 +36,10 @@
     "general/bug-6-": "deviation: empty XHTML elements are written as <hr /> and <a></a> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype",
     "general/bug-142": "deviation: empty XHTML elements are written as <li></li> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype",
     "general/bug-168": "deviation: empty XHTML elements are written as <A></A> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype"
+  },
+  "casesByDom": {
+    "xmldom": {
+      "general/bug-140": "harness: the xmldom XML parser does not expand entities declared in the internal DTD subset"
+    }
   }
 }

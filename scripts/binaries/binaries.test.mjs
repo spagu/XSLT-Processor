@@ -32,7 +32,7 @@ describe("bundle patches", () => {
     );
   });
 
-  it("inlines the version and the jsdom import of the CLI", () => {
+  it("inlines the version of the CLI", () => {
     const patches = cliPatches("9.8.7");
     const options = readFileSync(
       new URL("../../bin/lib/options.js", import.meta.url),
@@ -45,15 +45,7 @@ describe("bundle patches", () => {
     );
     assert.match(patched, /VERSION = "9\.8\.7"/);
     assert.doesNotMatch(patched, /import\.meta/);
-
-    const transform = readFileSync(
-      new URL("../../bin/lib/transform.js", import.meta.url),
-      "utf8",
-    );
-    assert.match(
-      patchSource(transform, "transform.js", patches["bin/lib/transform.js"]),
-      /import\("jsdom"\)/,
-    );
+    assert.deepEqual(Object.keys(patches), ["bin/lib/options.js"]);
   });
 
   it("inlines __dirname reads and neutralizes require.resolve", () => {

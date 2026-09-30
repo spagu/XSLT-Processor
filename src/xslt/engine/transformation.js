@@ -16,6 +16,10 @@ import {
 import { resolveOutputSettings, serializeResult } from "../serializer.js";
 import { fillXmlDocument, parseHtmlDocument } from "../resultDocument.js";
 import { XsltContext } from "./context.js";
+import {
+  DocumentOrderIndex,
+  hasNativePositionComparison,
+} from "../../xpath/documentOrder.js";
 
 /**
  * Turn a JavaScript stack overflow into a clear transformation error; any
@@ -130,6 +134,11 @@ export const transformationMethods = {
     this.keyRegistry.clear();
     this.patternMatcher.reset();
     this.xpathEvaluator.resetNamespaceNodes();
+    // Document order from positions numbered once, unless the DOM compares
+    // positions natively (see documentOrder.js)
+    this.xpathEvaluator.resetDocumentOrder(
+      hasNativePositionComparison(source) ? null : new DocumentOrderIndex(),
+    );
     this.numberMemos = new WeakMap();
 
     const fragment = resultDocument.createDocumentFragment();

@@ -3,7 +3,7 @@
  *
  * Counting is kept independent from the engine: callers pass a `matcher`
  * callback that answers "does this node match this XSLT pattern", which keeps
- * this module free of any XPath dependency and easy to test in isolation.
+ * this module free of the XPath evaluator and easy to test in isolation.
  *
  * Numbering every node of a long list would be quadratic if each call counted
  * from scratch, so a call may be given a memo (one per instruction and
@@ -14,8 +14,22 @@
 
 "use strict";
 
+import { isParserArtifact } from "../xpath/axes.js";
+
 /** Node types that participate in `xsl:number` counting. */
 const COUNTABLE_NODE_TYPES = new Set([1, 3, 4, 7, 8]);
+
+/**
+ * Whether a node takes part in counting: an element, text, processing
+ * instruction or comment of the data model (not a parser artifact, see
+ * axes.js).
+ *
+ * @param {Node} node - Any node
+ * @returns {boolean} True for countable nodes
+ */
+function isCountable(node) {
+  return COUNTABLE_NODE_TYPES.has(node.nodeType) && !isParserArtifact(node);
+}
 
 /**
  * The XPath node kind of a DOM node: CDATA sections are text nodes.
@@ -104,7 +118,7 @@ function siblingPosition(node, isCounted, positions) {
       position += known;
       break;
     }
-    if (COUNTABLE_NODE_TYPES.has(sibling.nodeType) && isCounted(sibling)) {
+    if (isCountable(sibling) && isCounted(sibling)) {
       position++;
     }
     sibling = sibling.previousSibling;
@@ -195,7 +209,7 @@ function countAny(node, isCounted, isFrom, totals) {
       total += known;
       break;
     }
-    if (COUNTABLE_NODE_TYPES.has(current.nodeType)) {
+    if (isCountable(current)) {
       if (isFrom(current)) break;
       if (isCounted(current)) total++;
     }

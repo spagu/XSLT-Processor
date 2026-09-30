@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Document order** is computed once per transformation (`DocumentOrderIndex`) instead of calling `compareDocumentPosition` for every comparison, except where that method is native (browsers). With xmldom a union-heavy transformation dropped from about 150 s to 0.7 s.
 - **Deep template recursion** (task 0005): recursive `xsl:call-template` and `xsl:apply-templates` stopped at about 1,000 to 1,400 levels with `Template recursion too deep`. Templates now run from an explicit work stack, so the JavaScript stack no longer grows with template depth: libxslt's limit of 3,000 nested templates fits in Node.js and every browser, and more with a higher limit.
 - **`transformToDocument()` returned `null`** when the result had whitespace text around its root element (common with built-in templates), found by the browser tests; document-level whitespace is dropped and a DocumentType node is created from `doctype-public`/`doctype-system`.
 - A carriage return in XML text is written as `&#13;`; adjacent text nodes in `cdata-section-elements` form one CDATA section; `xsl:copy-of` declares the namespaces in scope; `xml:id` via `xsl:attribute`; `element-available()` with the default namespace; `format-number()` patterns `.`, `#.` and `.#`; `html:div` and other operator names as QName local parts; `xsl:number` on namespace nodes.
@@ -36,12 +37,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Updated the development dependency `brace-expansion` to 5.0.12 (GHSA-q2hr-2g5m-vwhr, GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p).
 - Build, conformance and browser-test scripts confine paths from command line arguments and HTTP requests to the repository (or the temporary directory) after canonicalizing them, and run `tar`/`codesign` from fixed system directories instead of looking them up in `PATH` (SonarCloud S8707, S2083, S4036).
 - CI, release and Docker builds install dependencies with `npm ci --ignore-scripts`, so lifecycle scripts of dependencies never run during builds (SonarCloud S6505).
 - The GitHub Pages workflow grants `pages: write` and `id-token: write` only to the deploy job instead of the whole workflow (SonarCloud S8233).
 
 ### Added
 
+- **DOM implementations other than jsdom** (task 0007): @xmldom/xmldom 0.9+ is supported in Node.js (optional peer dependency). The XML declaration and top-level whitespace xmldom keeps are ignored by every axis and by `xsl:number`, results are built without `append`/`remove`/`createRange`, and xmldom's `appendChild(DocumentFragment)` and `Document.doctype` bugs are worked around. linkedom (no namespace support) and xmldom 0.8 are not supported.
+- **CLI DOM choice**: the CLI uses jsdom, or @xmldom/xmldom when jsdom is not installed; `XSLT_DOM=jsdom|xmldom` picks one. With xmldom, start-up takes 72 ms instead of 457 ms and an issue-#9-sized transformation 1.9 s instead of 4.9 s. The standalone executables bundle both.
+- `npm run test:dom` runs the test suites, the CLI tests and the conformance suite with jsdom and with xmldom (298/298; one case needs internal-DTD entities that xmldom does not expand); CI job `dom-matrix`.
 - `maxTemplateDepth` option for `XSLTProcessor` and `XsltEngine`, default 3000 (`XSLT_MAX_TEMPLATE_DEPTH`, libxslt's `xsltMaxDepth`); deeper nesting throws `Template recursion too deep`, as libxslt reports a potential infinite recursion.
 - **Asynchronous and streaming API** (task 0010): `XSLTProcessor#transformToStream(source, { signal, chunkSize })` returns a `ReadableStream<string>` serialized on demand; `transformAsync(source, { signal, stylesheet, stylesheetUri, fetchStylesheet, fetchDocument })` returns a `Promise<string>`; `importStylesheetAsync(style, uri, { loader, documentLoader, signal })` loads the `xsl:import`/`xsl:include` tree and literal `document()` URIs with `fetch` or a custom loader. Sources may be nodes, strings, bytes, `ReadableStream`s or async iterables. New exports `serializeChunks()`, `DEFAULT_CHUNK_SIZE`, `transformToChunks()` and `transformToStream()`, with TypeScript types. The CLI writes its output in chunks with backpressure (byte-identical, about 27% less peak memory on a 100 MB result).
 - **Project website** (task 0015) with the documentation, the changelog and an XSLT playground, built with spagu/ssg and deployed to GitHub Pages (`make site`, `.github/workflows/site.yml`); it replaces the Jekyll workflow. Pull requests build and check the site without deploying it.

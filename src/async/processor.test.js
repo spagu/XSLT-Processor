@@ -7,16 +7,17 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
 import { Readable } from "node:stream";
-import { JSDOM } from "jsdom";
+import {
+  domEnvironment,
+  parseXmlDocument as parseXML,
+} from "../domEnvironment.test.js";
 import { XSLTProcessor } from "../XSLTProcessor.js";
 import { XmlWriter } from "../xslt/serializer.js";
 import { chunkStream, transformToStream } from "./stream.js";
 
 const { AbortController, AbortSignal, Blob, Response, setTimeout } = globalThis;
 
-const { window } = new JSDOM("");
-const parseXML = (markup) =>
-  new window.DOMParser().parseFromString(markup, "application/xml");
+const { window } = domEnvironment;
 const XSL = 'xmlns:xsl="http://www.w3.org/1999/XSL/Transform"';
 const stylesheet = (body, extra = "") =>
   `<xsl:stylesheet version="1.0" ${XSL}>${extra}${body}</xsl:stylesheet>`;

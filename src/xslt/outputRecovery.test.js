@@ -68,19 +68,21 @@ describe("default output method", () => {
       null,
     );
     const fragment = doc.createDocumentFragment();
-    fragment.append(
+    for (const node of [
       doc.createComment("c"),
       doc.createCDATASection(" "),
       doc.createTextNode(" \n"),
       doc.createElement("html"),
       doc.createTextNode("after"),
-    );
+    ]) {
+      fragment.appendChild(node);
+    }
     assert.strictEqual(detectOutputMethod(fragment), "html");
     assert.strictEqual(
       detectOutputMethod(fragment.lastChild.previousSibling),
       "html",
     );
-    fragment.prepend(doc.createTextNode(" "));
+    fragment.insertBefore(doc.createTextNode(" "), fragment.firstChild);
     assert.strictEqual(detectOutputMethod(fragment), "xml");
   });
 });

@@ -167,7 +167,7 @@ function pruneWhitespace(root, filter) {
     }
   }
 
-  for (const node of doomed) node.remove();
+  for (const node of doomed) node.parentNode.removeChild(node);
 }
 
 /**

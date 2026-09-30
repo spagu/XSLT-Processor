@@ -201,7 +201,8 @@ export function copyOf(value, output, host) {
     copyAttribute(value, output, host.canAddAttribute);
   } else if (value.nodeType === NAMESPACE_NODE) {
     copyNamespaceNode(value, output, host.canAddAttribute);
-  } else if (value.nodeType === 9) {
+  } else if (value.nodeType === 9 || value.nodeType === 11) {
+    // Children one by one: xmldom mishandles appending a DocumentFragment
     appendChildCopies(value, output, host.doc, host.stringValue);
   } else {
     const copy = cloneNode(value, host.doc, host.stringValue);

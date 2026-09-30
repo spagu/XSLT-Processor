@@ -235,3 +235,20 @@ The building blocks are exported as well: `serializeChunks(node, settings?, { ch
 and `transformToStream(engine, node, options)`.
 
 `maxTemplateDepth` (default 3000, exported as `XSLT_MAX_TEMPLATE_DEPTH`) limits the nesting of template instantiations, like libxslt's `xsltMaxDepth`: `new XSLTProcessor({ maxTemplateDepth: 10000 })`.
+
+## DOM implementations in Node.js
+
+| Feature | jsdom | @xmldom/xmldom 0.9+ |
+|---|---|---|
+| `importStylesheet`, `transformToString`, async and streaming API | yes | yes |
+| `transformToDocument`, xml and text output | yes | yes |
+| `transformToDocument`, html output | HTML document with `HTMLElement`s | xmldom HTML document (no `body`/`head` accessors) |
+| `transformToFragment` into an XML document | yes | yes |
+| `transformToFragment` into an HTML document (real `HTMLElement`s, like Chrome) | yes | no HTML documents |
+| Entities from the internal DTD subset | expanded | not expanded |
+
+With xmldom, set `globalThis.DOMParser = DOMParser` (or pass `domParser` to
+`XsltEngine`) so string results of loaders can be parsed, and create owner
+documents with `new DOMImplementation().createDocument(null, null)`.
+linkedom (no XML namespace support) and xmldom 0.8 are not supported.
+

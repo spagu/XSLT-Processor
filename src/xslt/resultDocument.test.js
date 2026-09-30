@@ -7,6 +7,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
 import { compile, dom, parseXML, stylesheet } from "./harness.test.js";
+import { jsdomOnly } from "../domEnvironment.test.js";
 import { fillXmlDocument, parseHtmlDocument } from "./resultDocument.js";
 
 /**
@@ -84,43 +85,62 @@ describe("transformToDocument with xml output", () => {
 });
 
 describe("transformToDocument with html output", () => {
-  it("returns an HTML document parsed from the html output, like Chrome", () => {
+  it("returns an HTML document parsed from the html output", () => {
     const doc = toDocument(
-      '<xsl:template match="/"><html><head><title>t</title></head><body><p>x</p></body></html></xsl:template>',
+      '<xsl:template match="/"><html><body><p>x<br/>y</p></body></html></xsl:template>',
       "<d/>",
       null,
     );
     assert.strictEqual(doc.contentType, "text/html");
-    assert.ok(doc.body.firstChild instanceof dom.window.HTMLParagraphElement);
-    assert.strictEqual(doc.title, "t");
-    assert.strictEqual(
-      doc.head.firstChild.getAttribute("http-equiv"),
-      "Content-Type",
-    );
+    assert.strictEqual(doc.documentElement.localName, "html");
+    assert.strictEqual(doc.getElementsByTagName("p")[0].textContent, "xy");
   });
 
-  it("parses without a DOMParser through an HTML document of the implementation", () => {
-    const saved = globalThis.DOMParser;
-    delete globalThis.DOMParser;
-    try {
-      const doc = parseHtmlDocument(
-        "<html><body><p>x</p></body></html>",
-        parseXML("<x/>"),
+  it(
+    "returns HTMLElements and the HTML accessors, like Chrome",
+    jsdomOnly("HTML documents"),
+    () => {
+      const doc = toDocument(
+        '<xsl:template match="/"><html><head><title>t</title></head><body><p>x</p></body></html></xsl:template>',
+        "<d/>",
+        null,
       );
-      assert.strictEqual(doc.doctype, null);
-      assert.strictEqual(doc.body.firstChild.localName, "p");
-      const noHtml = parseHtmlDocument("<p/>", {
-        implementation: {},
-      });
-      assert.strictEqual(noHtml, null);
-      const viaWindow = parseHtmlDocument("<p>w</p>", {
-        defaultView: dom.window,
-      });
-      assert.strictEqual(viaWindow.body.textContent, "w");
-    } finally {
-      globalThis.DOMParser = saved;
-    }
-  });
+      assert.strictEqual(doc.contentType, "text/html");
+      assert.ok(doc.body.firstChild instanceof dom.window.HTMLParagraphElement);
+      assert.strictEqual(doc.title, "t");
+      assert.strictEqual(
+        doc.head.firstChild.getAttribute("http-equiv"),
+        "Content-Type",
+      );
+    },
+  );
+
+  it(
+    "parses without a DOMParser through an HTML document of the implementation",
+    jsdomOnly("innerHTML"),
+    () => {
+      const saved = globalThis.DOMParser;
+      delete globalThis.DOMParser;
+      try {
+        const doc = parseHtmlDocument(
+          "<html><body><p>x</p></body></html>",
+          parseXML("<x/>"),
+        );
+        assert.strictEqual(doc.doctype, null);
+        assert.strictEqual(doc.body.firstChild.localName, "p");
+        const noHtml = parseHtmlDocument("<p/>", {
+          implementation: {},
+        });
+        assert.strictEqual(noHtml, null);
+        const viaWindow = parseHtmlDocument("<p>w</p>", {
+          defaultView: dom.window,
+        });
+        assert.strictEqual(viaWindow.body.textContent, "w");
+      } finally {
+        globalThis.DOMParser = saved;
+      }
+    },
+  );
 
   it("keeps the XML result when the DOM cannot create HTML documents", () => {
     const engine = compile(

@@ -16,6 +16,8 @@
 "use strict";
 
 import { findRootElement } from "./serializer/settings.js";
+import { appendDoctype } from "./resultTree.js";
+import { findParseError } from "./domParsing.js";
 
 /** Text made only of XML whitespace (#x20 #x9 #xD #xA). */
 const WHITESPACE_ONLY = /^[ \t\r\n]*$/;
@@ -51,13 +53,7 @@ export function fillXmlDocument(doc, fragment, settings) {
   const { doctypePublic, doctypeSystem } = settings;
   const root = findRootElement(fragment);
   if (root && (doctypePublic || doctypeSystem)) {
-    doc.appendChild(
-      doc.implementation.createDocumentType(
-        root.nodeName,
-        doctypePublic ?? "",
-        doctypeSystem ?? "",
-      ),
-    );
+    appendDoctype(doc, root.nodeName, doctypePublic ?? "", doctypeSystem ?? "");
   }
   for (const child of Array.from(fragment.childNodes)) {
     if (!isWhitespaceText(child)) doc.appendChild(child);
@@ -72,6 +68,10 @@ export function fillXmlDocument(doc, fragment, settings) {
  * an HTML document of the source's DOM implementation is filled through
  * `innerHTML` (without a doctype node).
  *
+ * xmldom parses `text/html` too, into a document without the HTML
+ * accessors (`body`, `head`, `title`); DOMs that can do neither, and markup
+ * the HTML parser rejects, leave the XML result in place.
+ *
  * @param {string} markup - The serialized html output
  * @param {Document} referenceDoc - A document of the DOM implementation to use
  * @returns {Document|null} The HTML document, or null when the DOM cannot
@@ -83,12 +83,16 @@ export function fillXmlDocument(doc, fragment, settings) {
 export function parseHtmlDocument(markup, referenceDoc) {
   const Parser =
     globalThis.DOMParser ?? referenceDoc.defaultView?.DOMParser ?? null;
-  if (Parser) return new Parser().parseFromString(markup, "text/html");
+  if (Parser) {
+    const doc = new Parser().parseFromString(markup, "text/html");
+    return findParseError(doc) ? null : doc;
+  }
 
   const implementation = referenceDoc.implementation;
   if (typeof implementation?.createHTMLDocument !== "function") return null;
   const doc = implementation.createHTMLDocument("");
-  doc.doctype?.remove();
+  if (!("innerHTML" in doc.documentElement)) return null;
+  if (doc.doctype) doc.removeChild(doc.doctype);
   doc.documentElement.innerHTML = markup;
   return doc;
 }

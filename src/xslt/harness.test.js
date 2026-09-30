@@ -1,31 +1,26 @@
 /**
  * Shared end-to-end harness for the themed XSLT regression suites
- * (scoping, copying, result namespaces, ...). It owns one jsdom window and
+ * (scoping, copying, result namespaces, ...). It uses the DOM under test
+ * (see domEnvironment.test.js: jsdom, or xmldom with `DOM=xmldom`) and
  * compiles and runs stylesheets with a fresh {@link XsltEngine} per call.
  */
 
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { JSDOM } from "jsdom";
 import { XsltEngine } from "./engine.js";
+import { domEnvironment, parseXmlDocument } from "../domEnvironment.test.js";
 
 /** Opening tag of an XSLT 1.0 stylesheet. */
 export const XSL_OPEN =
   '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">';
 
-export const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>");
+/** The DOM environment under test (a JSDOM instance for jsdom). */
+export const dom = domEnvironment;
 globalThis.document ??= dom.window.document;
 globalThis.DOMParser ??= dom.window.DOMParser;
 
-/**
- * Parse an XML string with the jsdom parser.
- *
- * @param {string} xml - Markup to parse
- * @returns {Document} The parsed document
- */
-export function parseXML(xml) {
-  return new dom.window.DOMParser().parseFromString(xml, "application/xml");
-}
+/** Parse an XML string with the DOM under test. */
+export const parseXML = parseXmlDocument;
 
 /**
  * Wrap top-level declarations in a stylesheet with the given output method.

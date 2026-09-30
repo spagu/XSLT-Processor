@@ -135,3 +135,11 @@ make site-test                 # unit tests of the content generator and checks
 The Google Tag Manager container id is a placeholder (`variables.gtm_id` in
 `site/ssg.yaml`). The GitHub Pages source must be set to "GitHub Actions".
 
+## DOM matrix
+
+`npm run test:dom` (or `make test-dom`) runs the test suites, the CLI tests and
+the conformance suite with jsdom and with @xmldom/xmldom.
+`DOM=xmldom node --test <files>` runs any suite built on
+`src/domEnvironment.test.js` with xmldom; mark jsdom-only tests with
+`jsdomOnly("feature")`.
+

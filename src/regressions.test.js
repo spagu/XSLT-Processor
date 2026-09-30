@@ -5,12 +5,8 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { JSDOM } from "jsdom";
 import { XSLTProcessor } from "./index.js";
-
-const { window } = new JSDOM("");
-const parseXML = (s) =>
-  new window.DOMParser().parseFromString(s, "application/xml");
+import { parseXmlDocument as parseXML } from "./domEnvironment.test.js";
 
 /**
  * Run a stylesheet body against an XML string and return the text output.

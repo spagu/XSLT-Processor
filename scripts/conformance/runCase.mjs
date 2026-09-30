@@ -64,9 +64,10 @@ export function isIndented(settings, output) {
 let domPromise = null;
 
 /**
- * Create the shared jsdom environment once per worker.
+ * Create the shared DOM environment once per worker: the one of the CLI,
+ * jsdom unless `XSLT_DOM` names another (see bin/lib/dom.js).
  *
- * @returns {Promise<object>} The JSDOM instance
+ * @returns {Promise<object>} The DOM environment
  */
 function getDom() {
   domPromise ??= createDomEnvironment();
@@ -76,7 +77,7 @@ function getDom() {
 /**
  * Read and parse an XML file of the corpus.
  *
- * @param {object} dom - JSDOM instance
+ * @param {object} dom - DOM environment
  * @param {string} path - Absolute file path
  * @param {string} label - Role of the file, used in errors
  * @returns {Document} Parsed document
@@ -93,9 +94,10 @@ function loadDocument(dom, path, label) {
  * @returns {Element|null} The element, or null
  */
 function findById(doc, id) {
-  const walker = doc.createTreeWalker(doc, 1);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (node.getAttribute("id") === id) return node;
+  // getElementsByTagName: xmldom has no TreeWalker
+  const elements = doc.getElementsByTagName("*");
+  for (let i = 0; i < elements.length; i++) {
+    if (elements[i].getAttribute("id") === id) return elements[i];
   }
   return null;
 }
@@ -103,7 +105,7 @@ function findById(doc, id) {
 /**
  * Resolve the stylesheet of a standalone case (XSLT 1.0 section 2.7).
  *
- * @param {object} dom - JSDOM instance
+ * @param {object} dom - DOM environment
  * @param {Document} sourceDoc - Source document holding the PI
  * @param {string} sourcePath - Absolute source path
  * @returns {{node: Node, uri: string}} Stylesheet node and its base URI

@@ -28,7 +28,12 @@ import {
   matchNamespaceNameTest,
   namespaceAxis,
 } from "./namespaceNodes.js";
-import { compareNodeOrder } from "./documentOrder.js";
+import {
+  DocumentOrderIndex,
+  compareDomPositions,
+  compareNodeOrder,
+  hasPositionComparison,
+} from "./documentOrder.js";
 import { createNodeSetFunctions } from "./nodeSetFunctions.js";
 import {
   codePointLength,
@@ -200,6 +205,7 @@ export class XPathEvaluator {
   constructor(options = {}) {
     this.legacyNameTests = options.legacyNameTests === true;
     this.resetNamespaceNodes();
+    this.resetDocumentOrder();
     this.functions = Object.assign(
       Object.create(null),
       this.initCoreFunctions(),
@@ -991,50 +997,37 @@ export class XPathEvaluator {
    * Sort nodes in document order; attributes and namespace nodes sort after
    * their element and before its children (see documentOrder.js).
    *
+   * With a {@link DocumentOrderIndex} (set by the XSLT engine for each
+   * transformation, or created on first use when the DOM has no
+   * `compareDocumentPosition`, as xmldom 0.8), nodes are sorted by their
+   * precomputed positions; otherwise through `compareDocumentPosition`.
+   *
    * @param {Node[]} nodes - The nodes, sorted in place
    * @returns {Node[]} The same array
    */
   sortByDocumentOrder(nodes) {
     if (nodes.length <= 1) return nodes;
+    if (!this.documentOrder && !hasPositionComparison(nodes[0])) {
+      this.documentOrder = new DocumentOrderIndex();
+    }
+    if (this.documentOrder) return this.documentOrder.sort(nodes);
 
-    const compareDom = (a, b) => {
-      const position = a.compareDocumentPosition
-        ? a.compareDocumentPosition(b)
-        : this.compareDocumentPositionFallback(a, b);
-
-      if (position & 4) return -1; // a before b
-      if (position & 2) return 1; // a after b
-      return 0;
-    };
     return nodes.sort((a, b) =>
-      a === b ? 0 : compareNodeOrder(a, b, compareDom),
+      a === b ? 0 : compareNodeOrder(a, b, compareDomPositions),
     );
   }
 
-  compareDocumentPositionFallback(a, b) {
-    // Simple fallback for environments without compareDocumentPosition
-    const getPath = (node) => {
-      const path = [];
-      let current = node;
-      while (current) {
-        if (current.parentNode) {
-          const siblings = Array.from(current.parentNode.childNodes);
-          path.unshift(siblings.indexOf(current));
-        }
-        current = current.parentNode;
-      }
-      return path;
-    };
-
-    const pathA = getPath(a);
-    const pathB = getPath(b);
-
-    for (let i = 0; i < Math.min(pathA.length, pathB.length); i++) {
-      if (pathA[i] < pathB[i]) return 4; // a before b
-      if (pathA[i] > pathB[i]) return 2; // a after b
-    }
-
-    return pathA.length < pathB.length ? 4 : 2;
+  /**
+   * Use a new {@link DocumentOrderIndex} from now on, e.g. for a new
+   * transformation (the trees may have changed since the previous one), or
+   * none (null): `compareDocumentPosition` then orders the nodes whenever
+   * the DOM has it.
+   *
+   * @param {DocumentOrderIndex|null} [index] - The index to use
+   * @returns {void}
+   */
+  resetDocumentOrder(index = null) {
+    this.documentOrder = index;
   }
 
   /**

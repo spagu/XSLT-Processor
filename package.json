@@ -41,6 +41,7 @@
     "test": "node --test --experimental-test-coverage \"src/**/*.test.js\"",
     "test:watch": "node --test --watch src/**/*.test.js",
     "test:conformance": "node scripts/conformance.mjs",
+    "test:dom": "node scripts/test-dom.mjs",
     "test:conformance:unit": "node --test \"scripts/conformance/*.test.mjs\"",
     "conformance:fetch": "node scripts/fetch-conformance.mjs",
     "lint": "eslint src/ bin/ scripts/ tests/browser/ site/",
@@ -79,15 +80,21 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
+    "@xmldom/xmldom": "^0.9.12",
     "esbuild": "^0.28.2",
     "eslint": "^10.11.0",
     "jsdom": "^30.1.1",
+    "linkedom": "^0.18.13",
     "prettier": "^3.9.9"
   },
   "peerDependencies": {
+    "@xmldom/xmldom": ">=0.9.0",
     "jsdom": ">=25.0.0"
   },
   "peerDependenciesMeta": {
+    "@xmldom/xmldom": {
+      "optional": true
+    },
     "jsdom": {
       "optional": true
     }

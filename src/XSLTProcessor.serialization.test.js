@@ -7,24 +7,17 @@
 
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import { JSDOM } from "jsdom";
+import { domEnvironment } from "./domEnvironment.test.js";
+import { installDomGlobals } from "../bin/lib/dom.js";
 import { XSLTProcessor } from "./XSLTProcessor.js";
 import { XsltEngine } from "./xslt/engine.js";
 
 /**
- * Install a JSDOM based DOM implementation into the global scope.
- * @returns {JSDOM} The created JSDOM instance
+ * Install the DOM under test (see domEnvironment.test.js) globally.
+ * @returns {object} The DOM environment
  */
 function setupDOM() {
-  const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
-    contentType: "text/html",
-  });
-
-  global.document = dom.window.document;
-  global.DOMParser = dom.window.DOMParser;
-  global.XMLSerializer = dom.window.XMLSerializer;
-
-  return dom;
+  return installDomGlobals(domEnvironment);
 }
 
 /**
