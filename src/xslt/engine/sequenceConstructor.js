@@ -8,12 +8,10 @@
 
 import { isTextContinuation } from "../../xpath/axes.js";
 import { isXmlWhitespace } from "../whitespace.js";
-import {
-  inScopeNamespaces,
-  isExtensionElement,
-} from "../stylesheetNamespaces.js";
+import { isExtensionElement } from "../stylesheetNamespaces.js";
 import { xsltLocalName } from "../stylesheetChecks.js";
 import { fallbackChildren } from "../forwardsCompatible.js";
+import { SequenceFrame } from "./workStack.js";
 
 /**
  * Engine method instantiating each XSLT element that may occur in a sequence
@@ -48,9 +46,7 @@ const INSTRUCTION_METHODS = Object.freeze({
 export const sequenceConstructorMethods = {
   /**
    * Instantiate the children of a stylesheet element (a sequence
-   * constructor). A variable declared among them is visible to its following
-   * siblings and their descendants only, so a body declaring variables gets
-   * its own copy of the local bindings.
+   * constructor) now, for instructions that use the result at once.
    *
    * @param {Element|object} node - The parent stylesheet element
    * @param {XsltContext} context - The current context
@@ -58,23 +54,22 @@ export const sequenceConstructorMethods = {
    * @returns {void}
    */
   processChildren(node, context, output) {
-    const scope = this.declaresVariables(node) ? context.clone() : context;
-    const saved = scope.namespaces;
+    this.runFrame(new SequenceFrame(this, node, context, output));
+  },
 
-    // Children are dispatched inline, without a per-node helper, to keep the
-    // JavaScript stack shallow: each template recursion level costs frames.
-    for (let child = node.firstChild; child; child = child.nextSibling) {
-      const type = child.nodeType;
-      if (type === 1) {
-        // Prefixes resolve against the namespaces in scope on the element
-        scope.namespaces = inScopeNamespaces(child);
-        const method = this.instructionMethod(child);
-        if (method) this[method](child, scope, output);
-      } else if (type === 3 || type === 4) {
-        this.processText(child, scope, output);
-      }
-    }
-    scope.namespaces = saved;
+  /**
+   * Instantiate the children of a stylesheet element once the current
+   * instruction returns (see workStack.js), keeping the JavaScript stack flat
+   * in deep recursion. For content that comes last in an instruction.
+   *
+   * @param {Element|object} node - The parent stylesheet element
+   * @param {XsltContext} context - The current context
+   * @param {Node} output - The result node receiving the output
+   * @param {(() => void)|null} [then] - Called once the children are done
+   * @returns {void}
+   */
+  scheduleChildren(node, context, output, then = null) {
+    this.continueWith(new SequenceFrame(this, node, context, output, then));
   },
 
   /**

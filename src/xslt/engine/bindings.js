@@ -167,6 +167,9 @@ export const bindingMethods = {
 
   /**
    * Instantiate xsl:variable: bind the variable for the following siblings.
+   * Content is instantiated from the work stack (see workStack.js), so
+   * recursion inside a variable keeps the JavaScript stack flat, and the
+   * fragment is bound once it is complete.
    *
    * @param {Element} node - The xsl:variable element
    * @param {XsltContext} context - The current context
@@ -174,12 +177,19 @@ export const bindingMethods = {
    * @returns {void}
    */
   xslVariable(node, context, _output) {
-    context.setVariable(
-      node.getAttribute("name"),
-      this.evaluateVariable(
-        { node, select: node.getAttribute("select") },
-        context,
-      ),
+    const name = node.getAttribute("name");
+    const select = node.getAttribute("select");
+    if (select || !hasTemplateContent(node)) {
+      context.setVariable(
+        name,
+        this.evaluateVariable({ node, select }, context),
+      );
+      return;
+    }
+
+    const fragment = context.outputDocument.createDocumentFragment();
+    this.scheduleChildren(node, context, fragment, () =>
+      context.setVariable(name, fragment),
     );
   },
 };

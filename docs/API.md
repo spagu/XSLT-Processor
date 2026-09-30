@@ -233,3 +233,5 @@ streamability.
 The building blocks are exported as well: `serializeChunks(node, settings?, { chunkSize? })`,
 `DEFAULT_CHUNK_SIZE`, and the engine-level `transformToChunks(engine, node, options)`
 and `transformToStream(engine, node, options)`.
+
+`maxTemplateDepth` (default 3000, exported as `XSLT_MAX_TEMPLATE_DEPTH`) limits the nesting of template instantiations, like libxslt's `xsltMaxDepth`: `new XSLTProcessor({ maxTemplateDepth: 10000 })`.

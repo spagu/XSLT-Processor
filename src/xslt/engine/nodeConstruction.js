@@ -84,7 +84,7 @@ export const nodeConstructionMethods = {
       }
     }
 
-    this.processChildren(node, context, outputElement);
+    this.scheduleChildren(node, context, outputElement);
   },
 
   /**
@@ -120,7 +120,7 @@ export const nodeConstructionMethods = {
       this.applyAttributeSets(useAttributeSets, context, element, node);
     }
 
-    this.processChildren(node, context, element);
+    this.scheduleChildren(node, context, element);
   },
 
   /**

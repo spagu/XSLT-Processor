@@ -9,6 +9,7 @@ threat model and how to report a vulnerability are in
 | `XPathEvaluator` option | Default | Description |
 |-------------------------|---------|-------------|
 | `maxRecursionDepth` | 100 | Prevents stack overflow from deeply nested expressions |
+| `maxTemplateDepth` | 3000 (`XSLT_MAX_TEMPLATE_DEPTH`) | Deepest nesting of template instantiations; stops runaway recursion like libxslt's `xsltMaxDepth` |
 | `maxResultSize` | 10,000 | Prevents memory exhaustion from large result sets |
 | `maxStringLength` | 1,000,000 | Limits string processing to prevent memory issues |
 

@@ -36,7 +36,7 @@ export const copyInstructionMethods = {
           this.applyAttributeSets(useAttributeSets, context, copy, node);
         }
 
-        this.processChildren(node, context, copy);
+        this.scheduleChildren(node, context, copy);
         break;
       }
 
@@ -78,7 +78,7 @@ export const copyInstructionMethods = {
 
       case 9: // Document
       case 11: // Document Fragment
-        this.processChildren(node, context, output);
+        this.scheduleChildren(node, context, output);
         break;
     }
   },

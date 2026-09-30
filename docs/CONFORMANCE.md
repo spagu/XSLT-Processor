@@ -243,10 +243,13 @@ Not supported, as in libexslt: `date:format-date`, `date:parse-date`,
 Differences from the XSLT 1.0 / XPath 1.0 specifications and from libxslt
 (the engine behind Chrome's native `XSLTProcessor`):
 
-- **Recursion depth**: roughly 1,000 to 1,500 nested template invocations fit
-  in Node's default stack (libxslt allows about 3,000). Deeper recursion stops
-  with `Template recursion too deep`; raise the limit with
-  `node --stack-size=...` or rewrite the recursion.
+- **Recursion depth**: like libxslt, a transformation may nest up to 3,000
+  template instantiations, built-in template rules included; deeper recursion
+  stops with `Template recursion too deep`. Raise the limit with
+  `new XSLTProcessor({ maxTemplateDepth: 10000 })`. libxslt also counts the
+  content of `xsl:if`, `xsl:choose` and `xsl:for-each`, so this engine allows
+  somewhat deeper recursion. Serializing a result tree nested deeper than about
+  900 elements to a string is still limited by the call stack.
 - **`xsl:number`**: `lang` and `letter-value` are ignored. Decimal format
   tokens in any Unicode digit family work; negative values are numbered 0 with
   a warning, as in libxslt.

@@ -51,6 +51,9 @@ export class XSLTProcessor {
    *   only for trusted input.
    * @param {() => Date} [options.clock] - Clock for EXSLT current-time
    *   functions (reproducible output).
+   * @param {number} [options.maxTemplateDepth] - Deepest nesting of template
+   *   instantiations; deeper recursion throws "Template recursion too deep"
+   *   (default 3000, libxslt's limit).
    *
    * @example
    * // Temporary migration aid for stylesheets written against 1.1.x
@@ -61,6 +64,7 @@ export class XSLTProcessor {
       legacyNameTests: options?.legacyNameTests === true,
       enableDynamicEvaluate: options?.enableDynamicEvaluate === true,
       clock: options?.clock ?? null,
+      maxTemplateDepth: options?.maxTemplateDepth,
     };
     this._engine = null;
     this._stylesheet = null;
@@ -275,6 +279,7 @@ export class XSLTProcessor {
       legacyNameTests: this._options.legacyNameTests,
       enableDynamicEvaluate: this._options.enableDynamicEvaluate,
       clock: this._options.clock,
+      maxTemplateDepth: this._options.maxTemplateDepth,
       stylesheetLoader,
       documentLoader: this._engineDocumentLoader(documents),
     });

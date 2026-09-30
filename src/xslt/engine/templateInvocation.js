@@ -8,37 +8,60 @@
 import { childAxis } from "../../xpath/axes.js";
 import { requireExpandedName } from "../declarationNames.js";
 import { selectNodes } from "./controlFlow.js";
+import { LoopFrame, SequenceFrame } from "./workStack.js";
 
 export const templateInvocationMethods = {
   /**
-   * Apply templates to a node list.
+   * Apply templates to a node list. The nodes are processed one at a time
+   * from the work stack (see workStack.js).
    *
    * @param {Node|Node[]} nodes - The nodes to process, in order
    * @param {string|null} mode - The mode
    * @param {XsltContext} context - Context of the invoking instruction
    * @param {Node} output - The result node receiving the output
    * @param {Object<string, *>|null} [params] - Values of xsl:with-param by name
+   * @param {boolean} [builtin] - Whether a built-in template rule applies
+   *   them, which counts as a template instantiation (as in libxslt)
    * @returns {void}
    */
-  applyTemplates(nodes, mode, context, output, params = null) {
+  applyTemplates(nodes, mode, context, output, params = null, builtin = false) {
     const nodeList = Array.isArray(nodes) ? nodes : [nodes];
+    if (nodeList.length === 0) return;
 
-    for (let i = 0; i < nodeList.length; i++) {
-      const node = nodeList[i];
-      const template = this.findMatchingTemplate(node, mode, context);
+    const frame = new LoopFrame(nodeList.length, (index) =>
+      this.applyTemplateRule(nodeList, index, mode, context, output, params),
+    );
+    frame.template = builtin;
+    this.continueWith(frame);
+  },
 
-      if (template) {
-        const newContext = this.invocationContext(context, template, {
-          currentNode: node,
-          currentNodeList: nodeList,
-          position: i + 1,
-          currentMode: mode,
-        });
+  /**
+   * Apply the best template rule to one node of a list, else the built-in
+   * rule.
+   *
+   * @param {Node[]} nodeList - The current node list
+   * @param {number} index - Index of the node in the list
+   * @param {string|null} mode - The mode
+   * @param {XsltContext} context - Context of the invoking instruction
+   * @param {Node} output - The result node receiving the output
+   * @param {Object<string, *>|null} params - Values of xsl:with-param by name
+   * @returns {void}
+   */
+  applyTemplateRule(nodeList, index, mode, context, output, params) {
+    const node = nodeList[index];
+    const template = this.findMatchingTemplate(node, mode, context);
 
-        this.processTemplate(template.node, newContext, output, params);
-      } else {
-        this.applyBuiltinTemplate(node, mode, context, output, params);
-      }
+    if (template) {
+      const newContext = this.invocationContext(context, template, {
+        currentNode: node,
+        currentNodeList: nodeList,
+        position: index + 1,
+        currentMode: mode,
+      });
+
+      this.processTemplate(template.node, newContext, output, params);
+    } else {
+      this.applyBuiltinTemplate(node, mode, context, output, params);
     }
   },
 
@@ -77,7 +100,14 @@ export const templateInvocationMethods = {
       case 1: // Element
       case 9: // Document
       case 11: // Document Fragment
-        this.applyTemplates(childAxis(node), mode, context, output, params);
+        this.applyTemplates(
+          childAxis(node),
+          mode,
+          context,
+          output,
+          params,
+          true,
+        );
         break;
 
       case 2: // Attribute
@@ -98,7 +128,8 @@ export const templateInvocationMethods = {
   /**
    * Instantiate a template. Each `xsl:param` takes the value of the
    * `xsl:with-param` of the same name, else its default, evaluated after the
-   * preceding parameters were bound (XSLT 1.0 section 11.6).
+   * preceding parameters were bound (XSLT 1.0 section 11.6). The body runs
+   * from the work stack once the invoking instruction returns.
    *
    * @param {Element|object} templateNode - The xsl:template element
    * @param {XsltContext} context - A fresh invocation context
@@ -124,7 +155,9 @@ export const templateInvocationMethods = {
             );
     }
 
-    this.processChildren(templateNode, context, output);
+    const frame = new SequenceFrame(this, templateNode, context, output);
+    frame.template = true;
+    this.continueWith(frame);
   },
 
   /**

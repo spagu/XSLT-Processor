@@ -6,6 +6,7 @@
  */
 
 import { sortNodes } from "../sort.js";
+import { LoopFrame } from "./workStack.js";
 
 /**
  * Evaluate the `select` expression of xsl:for-each or xsl:apply-templates
@@ -37,7 +38,7 @@ export const controlFlowMethods = {
     const result = this.evaluateXPath(test, context);
 
     if (this.xpathEvaluator.toBoolean(result)) {
-      this.processChildren(node, context, output);
+      this.scheduleChildren(node, context, output);
     }
   },
 
@@ -59,11 +60,11 @@ export const controlFlowMethods = {
         const result = this.evaluateXPath(test, context);
 
         if (this.xpathEvaluator.toBoolean(result)) {
-          this.processChildren(child, context, output);
+          this.scheduleChildren(child, context, output);
           return;
         }
       } else if (this.isXsltElement(child, "otherwise")) {
-        this.processChildren(child, context, output);
+        this.scheduleChildren(child, context, output);
         return;
       }
     }
@@ -86,15 +87,19 @@ export const controlFlowMethods = {
       context,
     );
 
-    for (let i = 0; i < nodes.length; i++) {
-      const newContext = context.clone({
-        currentNode: nodes[i],
-        currentNodeList: nodes,
-        position: i + 1,
-      });
+    if (nodes.length === 0) return;
 
-      this.processChildren(node, newContext, output);
-    }
+    // One node at a time from the work stack (see workStack.js)
+    this.continueWith(
+      new LoopFrame(nodes.length, (i) => {
+        const newContext = context.clone({
+          currentNode: nodes[i],
+          currentNodeList: nodes,
+          position: i + 1,
+        });
+        this.scheduleChildren(node, newContext, output);
+      }),
+    );
   },
 
   /**

@@ -50,6 +50,7 @@ export {
   XsltContext,
   XSLT_MAX_RESULT_SIZE,
   XSLT_MAX_EXPRESSION_DEPTH,
+  XSLT_MAX_TEMPLATE_DEPTH,
 } from "./xslt/index.js";
 
 // Output serializer (xsl:output, XSLT 1.0 section 16)

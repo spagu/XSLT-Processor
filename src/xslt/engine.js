@@ -15,6 +15,8 @@
  * - templateRules.js: template registry and matching
  * - templateInvocation.js: apply-templates, apply-imports, call-template
  * - sequenceConstructor.js: instruction dispatch, fallback, extensions
+ * - workStack.js: the explicit stack instantiating templates and their
+ *   content without deep JavaScript recursion, and the template depth limit
  * - controlFlow.js: if, choose, for-each, sorting
  * - bindings.js: variables and parameters
  * - textInstructions.js, numbering.js: value-of, text, comment, PI,
@@ -51,8 +53,13 @@ import { nodeConstructionMethods } from "./engine/nodeConstruction.js";
 import { copyInstructionMethods } from "./engine/copyInstructions.js";
 import { transformationMethods } from "./engine/transformation.js";
 import { functionSupportMethods } from "./engine/functionSupport.js";
+import {
+  XSLT_MAX_TEMPLATE_DEPTH,
+  workStackMethods,
+} from "./engine/workStack.js";
 
 export { XsltContext } from "./engine/context.js";
+export { XSLT_MAX_TEMPLATE_DEPTH };
 
 /**
  * Largest node-set a single XPath step may produce inside a transformation.
@@ -83,6 +90,8 @@ export class XsltEngine {
    * @param {object} [options] - Engine options
    * @param {number} [options.maxResultSize] - Largest node-set of one XPath step
    * @param {number} [options.maxRecursionDepth] - Deepest XPath expression nesting
+   * @param {number} [options.maxTemplateDepth] - Deepest nesting of template
+   *   instantiations (default XSLT_MAX_TEMPLATE_DEPTH, 3000 as in libxslt)
    * @param {boolean} [options.legacyNameTests] - Deprecated: unprefixed name
    *   tests also match nodes in a namespace, as before 1.2.0
    * @param {Function} [options.stylesheetLoader] - Loader for xsl:import/include
@@ -101,6 +110,11 @@ export class XsltEngine {
       maxRecursionDepth: options.maxRecursionDepth ?? XSLT_MAX_EXPRESSION_DEPTH,
       legacyNameTests: options.legacyNameTests,
     });
+    // Template instantiation (see engine/workStack.js)
+    this.maxTemplateDepth = options.maxTemplateDepth ?? XSLT_MAX_TEMPLATE_DEPTH;
+    this.frames = null;
+    this.templateDepth = 0;
+
     this.templates = [];
     this.keys = {};
     this.globalVariables = {};
@@ -232,6 +246,7 @@ installMethods(
   templateRuleMethods,
   templateInvocationMethods,
   sequenceConstructorMethods,
+  workStackMethods,
   controlFlowMethods,
   bindingMethods,
   textInstructionMethods,

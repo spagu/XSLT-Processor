@@ -122,6 +122,11 @@ export class XSLTProcessor {
     enableDynamicEvaluate?: boolean;
     /** Clock for EXSLT current-time functions (reproducible output). */
     clock?: () => Date;
+    /**
+     * Deepest nesting of template instantiations; deeper recursion throws
+     * "Template recursion too deep" (default 3000, as in libxslt).
+     */
+    maxTemplateDepth?: number;
   });
 
   /**
@@ -444,6 +449,12 @@ export const XSLT_MAX_RESULT_SIZE: number;
 export const XSLT_MAX_EXPRESSION_DEPTH: number;
 
 /**
+ * Default limit of nested template instantiations in a transformation
+ * (3000, libxslt's `xsltMaxDepth`).
+ */
+export const XSLT_MAX_TEMPLATE_DEPTH: number;
+
+/**
  * XSLT processing engine.
  */
 export class XsltEngine {
@@ -460,6 +471,11 @@ export class XsltEngine {
     maxResultSize?: number;
     /** Deepest XPath expression nesting (default XSLT_MAX_EXPRESSION_DEPTH). */
     maxRecursionDepth?: number;
+    /**
+     * Deepest nesting of template instantiations; deeper recursion throws
+     * "Template recursion too deep" (default XSLT_MAX_TEMPLATE_DEPTH).
+     */
+    maxTemplateDepth?: number;
     /**
      * @deprecated Let unprefixed name tests (`item`, `@a`) also match nodes
      * in a namespace, as before 1.2.0. XPath 1.0 and Chrome match only nodes
