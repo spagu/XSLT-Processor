@@ -58,25 +58,17 @@ docker compose run --rm build
 
 The package is published to npm automatically by the `Release` workflow when a
 `v*` tag is pushed (or a GitHub release is published). Publishing uses npm
-**Trusted Publishing** (OIDC): no `NPM_TOKEN` secret and no OTP are involved,
-and every release carries provenance attestations. If an `NPM_TOKEN` secret
-exists it takes precedence over OIDC, so remove it once Trusted Publishing is
-configured.
+**Trusted Publishing** (OIDC): no token secret and no OTP are involved, and
+every release carries provenance attestations. Tokens are not an option:
+npm stops accepting 2FA-bypass granular tokens for publishing around January
+2027 ([GitHub changelog](https://github.blog/changelog/2026-07-08-npm-install-time-security-and-gat-bypass2fa-deprecation/)),
+and a token that enforces 2FA fails in CI with `EOTP`.
 
 **One-time prerequisite** (npmjs.com -> package `@tradik/xslt-processor` ->
 Settings -> Trusted Publisher): provider *GitHub Actions*, owner `spagu`,
 repository `XSLT-Processor`, workflow `release.yml`, environment left empty.
-Alternatively add an `NPM_TOKEN` repository secret; the `publish` job passes it
-as `NODE_AUTH_TOKEN`. The token has to be one that bypasses two-factor
-authentication, otherwise the job fails with `EOTP` ("This operation requires a
-one-time password") because no one can type a code in CI:
-
-- a **Granular Access Token** with *Read and write* permission for this package, or
-- a classic token of type **Automation**.
-
-A classic **Publish** token still enforces 2FA and will not work. Without
-either, the `publish` job fails with `E404` and the package must be published
-manually with
+Until that is configured the `publish` job fails with `E404`, and the package
+has to be published manually from the tag with
 `npm publish --provenance --access public --otp=CODE`.
 
 **Release process:**

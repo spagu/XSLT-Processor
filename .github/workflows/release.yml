@@ -118,11 +118,10 @@ jobs:
       - name: Build distribution
         run: npm run build
 
-      # NPM_TOKEN (granular access token with publish rights, 2FA bypass) is
-      # used when present; otherwise npm falls back to Trusted Publishing (OIDC).
+      # Trusted Publishing only (npm 11.5.1+, bundled with Node.js 26): npm
+      # stops accepting 2FA-bypass tokens for publishing around January 2027
+      # (https://github.blog/changelog/2026-07-08-npm-install-time-security-and-gat-bypass2fa-deprecation/).
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
 
   # Standalone `xslt` executables (Node.js Single Executable Applications,

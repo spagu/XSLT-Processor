@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Engine split** (task 0022): `src/xslt/engine.js` (2,537 lines) is now a thin `XsltEngine` facade of 243 lines; its methods live in 17 modules under `src/xslt/engine/` by concern (stylesheet loading, top-level declarations, template rules and invocation, instruction dispatch, control flow, variables and parameters, text and number instructions, node construction and copying, transformation entry points, function support) and are installed on the prototype. No API or behaviour change and no measurable slowdown; `splitUnionPattern` and `findMatchingTemplate` were simplified to stay under SonarCloud's cognitive complexity limit.
 
 - **Repository hygiene** (task 0018): `LICENSE` and `LICENSE.md` named different copyright holders; `LICENSE.md` is now the only licence file ("spagu (tradik) and the XSLT-Processor contributors"). `npm test` fails when line or function coverage of the library (test files excluded) drops below 100% or branch coverage below 96% (Node.js 22.8+), so the coverage badge is enforced; README.md shows the SonarCloud quality gate. Private vulnerability reporting is enabled on GitHub.
+- npm publishing uses Trusted Publishing (OIDC) only; the `publish` job no longer reads an `NPM_TOKEN` secret, as npm is retiring publishing with 2FA-bypass tokens.
 - The benchmark headline no longer throws on an empty result list (`reduce()` without an initial value, SonarCloud S6959).
 
 ### Documentation
