@@ -135,7 +135,8 @@ The site is hosted on Cloudflare Pages, project `xslt-processor`
 pull request and deploys it on every push to `main`; it needs the repository
 secrets `CLOUDFLARE_API_TOKEN` (permission Account > Cloudflare Pages > Edit)
 and `CLOUDFLARE_ACCOUNT_ID`. `make site-deploy` deploys by hand after
-`npx wrangler login`. The domain is attached to the project in the Cloudflare
+`npx wrangler login`. The first deployment creates the Pages project in the account of
+`CLOUDFLARE_ACCOUNT_ID` if it does not exist yet. The domain is attached to the project in the Cloudflare
 dashboard (Workers & Pages > xslt-processor > Custom domains).
 
 The old address, `https://spagu.github.io/XSLT-Processor/`, keeps working: the
