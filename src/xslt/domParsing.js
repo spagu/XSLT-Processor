@@ -14,9 +14,12 @@
 
 "use strict";
 
-/** Namespace Gecko puts its `parsererror` element in. */
+/**
+ * Namespace Gecko puts its `parsererror` element in. A namespace name is an
+ * identifier compared as a string, never fetched, so http is correct here.
+ */
 const GECKO_PARSER_ERROR_NS =
-  "http://www.mozilla.org/newlayout/xml/parsererror.xml";
+  "http://www.mozilla.org/newlayout/xml/parsererror.xml"; // NOSONAR
 
 /**
  * @typedef {{parseFromString: (text: string, type: string) => Document}} DomParserLike
@@ -24,7 +27,8 @@ const GECKO_PARSER_ERROR_NS =
 
 /**
  * The first `parsererror` element of a document parsed by a DOMParser, if
- * any. Browsers and jsdom report malformed XML this way instead of throwing.
+ * any. Browsers and jsdom report malformed XML this way instead of throwing
+ * (xmldom throws, see {@link parseXml}).
  *
  * @param {Node|null|undefined} doc - A parsed document (or element)
  * @returns {Element|null} The error element, or null when parsing succeeded
@@ -76,7 +80,15 @@ export function parseXml(xml, parser) {
       "XML parsing not available in this environment: pass a domParser option or install a global DOMParser",
     );
   }
-  const doc = parser.parseFromString(xml, "application/xml");
+  let doc;
+  try {
+    doc = parser.parseFromString(xml, "application/xml");
+  } catch (thrown) {
+    // xmldom's own DOMParser throws a ParseError instead
+    throw new Error(`XML parse error: ${thrown.message}`, {
+      cause: thrown,
+    });
+  }
   const error = findParseError(doc);
   if (error) throw new Error(`XML parse error: ${error.textContent}`);
   return doc;

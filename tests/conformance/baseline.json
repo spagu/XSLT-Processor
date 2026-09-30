@@ -1,0 +1,7 @@
+{
+  "corpus": "libxslt 1.1.45",
+  "total": 331,
+  "passed": 296,
+  "skipped": 35,
+  "knownFailures": []
+}

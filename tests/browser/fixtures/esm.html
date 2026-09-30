@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="description" content="Loads the ESM bundle of @tradik/xslt-processor for the Playwright browser tests." />
+    <title>ESM bundle test page</title>
+    <!-- The native constructor is captured before any library code runs. -->
+    <script>
+      window.NativeXSLTProcessor =
+        typeof window.XSLTProcessor === "function" ? window.XSLTProcessor : null;
+    </script>
+    <script type="module">
+      import * as lib from "/dist/xslt-processor.js";
+      import * as harness from "./harness.mjs";
+
+      window.lib = lib;
+      window.harness = harness;
+      window.ready = true;
+    </script>
+  </head>
+  <body>
+    <main id="out"></main>
+  </body>
+</html>

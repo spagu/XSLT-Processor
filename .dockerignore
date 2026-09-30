@@ -3,6 +3,7 @@ node_modules/
 
 # Build output (built in container)
 dist/
+dist-bin/
 
 # Git
 .git/
@@ -44,3 +45,14 @@ tmp/
 temp/
 *.tmp
 .claude/
+
+# XSLT conformance corpus (downloaded on demand)
+tests/conformance/corpus/
+
+# Playwright browser tests (results and reports)
+test-results/
+playwright-report/
+# Project website (not part of the package image)
+site/
+
+.wrangler/

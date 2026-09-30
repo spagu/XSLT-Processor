@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="320" height="180"><style>
+.bg{fill:#e8f0fe}.paper{fill:#fff;stroke:#dadce0;stroke-width:2}.ink{fill:#9aa0a6}.line{stroke:#9aa0a6;stroke-width:4;stroke-linecap:round;fill:none}
+.b{fill:#4285f4}.r{fill:#ea4335}.y{fill:#fbbc04}.g{fill:#34a853}
+.bs{stroke:#4285f4}.rs{stroke:#ea4335}.ys{stroke:#fbbc04}.gs{stroke:#34a853}
+.st{stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.t{font:700 18px ui-monospace,Menlo,Consolas,monospace;fill:#202124}
+@media (prefers-color-scheme:dark){.bg{fill:#292a2d}.paper{fill:#35363a;stroke:#5f6368}.ink{fill:#80868b}.line{stroke:#80868b}
+.b{fill:#8ab4f8}.r{fill:#f28b82}.y{fill:#fdd663}.g{fill:#81c995}.bs{stroke:#8ab4f8}.rs{stroke:#f28b82}.ys{stroke:#fdd663}.gs{stroke:#81c995}.t{fill:#e8eaed}}
+</style><rect class="bg" width="320" height="180"/><path class="paper" d="M160 34l62 30v62l-62 30-62-30V64z"/><path class="line" d="M98 64l62 30 62-30M160 94v62"/><path class="rs st" d="M250 60l24 24M274 60l-24 24M46 96l24 24M70 96l-24 24"/></svg>

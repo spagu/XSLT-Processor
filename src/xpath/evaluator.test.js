@@ -403,10 +403,13 @@ describe("XPath Evaluator", () => {
       assert.strictEqual(preceding.length, 2);
     });
 
-    it("should use namespace axis (empty result)", () => {
+    it("should use namespace axis (the implicit xml binding)", () => {
       const root = selectFirst("/root", doc);
       const namespaces = select("namespace::*", root);
-      assert.strictEqual(namespaces.length, 0);
+      assert.deepStrictEqual(
+        namespaces.map((node) => node.localName),
+        ["xml"],
+      );
     });
   });
 
@@ -1110,6 +1113,13 @@ describe("XPath Evaluator", () => {
       });
       assert.strictEqual(result.length, 1);
     });
+
+    it("rejects an undeclared prefix instead of matching no-namespace names (libxslt bug-208)", () => {
+      assert.throws(
+        () => select("/root/zz:item", doc),
+        /Undefined namespace prefix: zz/,
+      );
+    });
   });
 
   describe("Filter expressions", () => {
@@ -1292,45 +1302,35 @@ describe("XPath Evaluator", () => {
     });
   });
 
-  describe("Document position fallback", () => {
-    it("should sort nodes using fallback when compareDocumentPosition not available", () => {
+  describe("Document order without compareDocumentPosition", () => {
+    /**
+     * A tree of plain objects linked like DOM nodes, without
+     * compareDocumentPosition (as xmldom 0.8).
+     *
+     * @returns {{root: object, parent: object, first: object, second: object}}
+     */
+    function mockTree() {
+      const root = { nodeType: 9, parentNode: null };
+      const parent = { nodeType: 1, parentNode: root, attributes: [] };
+      const first = { nodeType: 3, parentNode: parent };
+      const second = { nodeType: 8, parentNode: parent };
+      Object.assign(root, { firstChild: parent });
+      Object.assign(parent, { firstChild: first, nextSibling: null });
+      Object.assign(first, { nextSibling: second });
+      return { root, parent, first, second };
+    }
+
+    it("sorts through a document order index created on first use", () => {
       const evaluator = new XPathEvaluator();
-
-      // Create mock nodes without compareDocumentPosition
-      const mockParent = { childNodes: [], parentNode: null };
-      const mockNode1 = { parentNode: mockParent };
-      const mockNode2 = { parentNode: mockParent };
-      mockParent.childNodes = [mockNode1, mockNode2];
-
-      // Test the fallback directly
-      const result = evaluator.compareDocumentPositionFallback(
-        mockNode1,
-        mockNode2,
+      const { root, parent, first, second } = mockTree();
+      assert.strictEqual(evaluator.documentOrder, null);
+      assert.deepStrictEqual(
+        evaluator.sortByDocumentOrder([second, first, parent, root]),
+        [root, parent, first, second],
       );
-      assert.strictEqual(result, 4); // mockNode1 before mockNode2
-
-      const result2 = evaluator.compareDocumentPositionFallback(
-        mockNode2,
-        mockNode1,
-      );
-      assert.strictEqual(result2, 2); // mockNode2 after mockNode1
-    });
-
-    it("should handle nodes at different depths", () => {
-      const evaluator = new XPathEvaluator();
-
-      const grandparent = { childNodes: [], parentNode: null };
-      const parent = { childNodes: [], parentNode: grandparent };
-      const child = { parentNode: parent };
-      grandparent.childNodes = [parent];
-      parent.childNodes = [child];
-
-      // Child is deeper than grandparent
-      const result = evaluator.compareDocumentPositionFallback(
-        grandparent,
-        child,
-      );
-      assert.ok(result === 4 || result === 2); // Position relationship exists
+      assert.ok(evaluator.documentOrder);
+      evaluator.resetDocumentOrder();
+      assert.strictEqual(evaluator.documentOrder, null);
     });
   });
 

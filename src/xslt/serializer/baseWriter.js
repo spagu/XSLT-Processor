@@ -4,14 +4,14 @@
  * Walks a result tree and turns it into markup. Everything that differs
  * between the xml, xhtml and html output methods of XSLT 1.0 section 16 is
  * delegated to the dialect hooks implemented by the concrete writers.
+ *
+ * The walk is iterative: the elements whose children are being written are
+ * frames on an explicit stack (see frames.js), so a result tree nested
+ * deeper than the JavaScript call stack allows (tens of thousands of
+ * levels, as deep template recursion builds) is written like any other.
  */
 
-import {
-  INDENT_UNIT,
-  NODE_TYPE,
-  TEXT_MODE,
-  XMLNS_NAMESPACE,
-} from "./constants.js";
+import { NODE_TYPE, TEXT_MODE, XMLNS_NAMESPACE } from "./constants.js";
 import { wrapCdata } from "./escape.js";
 import {
   getOutputEncoding,
@@ -25,6 +25,8 @@ import {
 import { getIndentableChildren } from "./indent.js";
 import { isRawText } from "./rawText.js";
 import { findRootElement } from "./settings.js";
+import { ChunkBuffer } from "./chunks.js";
+import { ContentFrame, IndentFrame, TopLevelFrame } from "./frames.js";
 
 /**
  * Make comment text well-formed: XSLT 1.0 section 7.4 recovery inserts a
@@ -48,7 +50,7 @@ export class BaseWriter {
   constructor(settings, options = {}) {
     this.settings = settings;
     this.xhtml = options.xhtml === true;
-    this.parts = [];
+    this.buffer = new ChunkBuffer();
     this.encoding = getOutputEncoding(settings.encoding);
     this.reference = (codePoint) => this.characterReference(codePoint);
   }
@@ -89,10 +91,65 @@ export class BaseWriter {
    * @returns {string} Serialized output
    */
   serialize(node) {
-    this.parts = [];
+    let output = "";
+    for (const chunk of this.chunks(node, Infinity)) output += chunk;
+    return output;
+  }
+
+  /**
+   * Serialize a result tree node incrementally: a chunk is yielded as soon
+   * as `chunkSize` code units are written, so the first bytes are available
+   * before the whole tree has been written and the output is never held as
+   * one string.
+   *
+   * @param {Node} node - Document, fragment or element to serialize
+   * @param {number} [chunkSize] - Chunk size in UTF-16 code units (see
+   *   chunks.js); Infinity yields the whole output as one chunk
+   * @yields {string} Non-empty chunks of at most `chunkSize` code units (one
+   *   more when a surrogate pair straddles the boundary)
+   * @returns {Generator<string, void, void>} The chunks, in order
+   */
+  *chunks(node, chunkSize) {
+    this.buffer = new ChunkBuffer(chunkSize);
     this.writeProlog(node);
-    this.writeNode(node, createNamespaceScope(), 0, TEXT_MODE.ESCAPE);
-    return this.parts.join("");
+
+    const open = [];
+    const root = this.openNode(
+      node,
+      createNamespaceScope(),
+      0,
+      TEXT_MODE.ESCAPE,
+    );
+    if (root) open.push(root);
+
+    while (open.length > 0) {
+      const frame = open[open.length - 1];
+      const child = frame.nextChild(this);
+      if (child) {
+        const opened = this.openNode(
+          child,
+          frame.scope,
+          frame.depth,
+          frame.textMode,
+        );
+        if (opened) open.push(opened);
+      } else {
+        open.pop();
+        this.write(frame.end);
+      }
+      if (this.buffer.full) yield* this.buffer.take();
+    }
+    yield* this.buffer.take(true);
+  }
+
+  /**
+   * Append markup to the output.
+   *
+   * @param {string} text - Markup
+   * @returns {void}
+   */
+  write(text) {
+    this.buffer.write(text);
   }
 
   /**
@@ -105,122 +162,116 @@ export class BaseWriter {
     if (this.emitsXmlDeclaration) {
       const { version, encoding, standalone } = this.settings;
       const standalonePart = standalone ? ` standalone="${standalone}"` : "";
-      this.parts.push(
+      this.write(
         `<?xml version="${version}" encoding="${encoding}"${standalonePart}?>\n`,
       );
     }
 
     const doctype = this.doctypeMarkup(findRootElement(node));
     if (doctype) {
-      this.parts.push(`${doctype}\n`);
+      this.write(`${doctype}\n`);
     }
   }
 
   /**
-   * Write any result tree node.
+   * Start writing any result tree node. Leaves (character data, comments,
+   * processing instructions) are written at once; for an element with
+   * children or a result root, the start is written and the frame of its
+   * children is returned for the walk in {@link BaseWriter#chunks}.
    *
    * @param {Node} node - Node to write
    * @param {Map<string, string>} scope - Namespace scope in effect
    * @param {number} depth - Current indentation depth
    * @param {string} textMode - {@link TEXT_MODE} for character data children
-   * @returns {void}
+   * @returns {object|null} The frame of the children (see frames.js), or
+   *   null when the node is written completely
    */
-  writeNode(node, scope, depth, textMode) {
+  openNode(node, scope, depth, textMode) {
     switch (node.nodeType) {
       case NODE_TYPE.ELEMENT:
-        this.writeElement(node, scope, depth);
-        break;
+        return this.openElement(node, scope, depth);
       case NODE_TYPE.TEXT:
       case NODE_TYPE.CDATA_SECTION:
         this.writeText(node, textMode);
         break;
       case NODE_TYPE.COMMENT:
-        this.parts.push(`<!--${safeCommentText(node.nodeValue)}-->`);
+        this.write(`<!--${safeCommentText(node.nodeValue)}-->`);
         break;
       case NODE_TYPE.PROCESSING_INSTRUCTION:
         this.writeProcessingInstruction(node);
         break;
       case NODE_TYPE.DOCUMENT:
       case NODE_TYPE.DOCUMENT_FRAGMENT:
-        this.writeChildNodes(node, scope, depth, textMode);
-        break;
+        return new TopLevelFrame(
+          node,
+          scope,
+          depth,
+          textMode,
+          this.topLevelLineBreaks === true,
+        );
       default:
         break;
     }
+    return null;
   }
 
   /**
-   * Write every child of a node without adding whitespace.
-   *
-   * @param {Node} node - Parent node
-   * @param {Map<string, string>} scope - Namespace scope in effect
-   * @param {number} depth - Current indentation depth
-   * @param {string} textMode - {@link TEXT_MODE} for character data children
-   * @returns {void}
-   */
-  writeChildNodes(node, scope, depth, textMode) {
-    for (const child of node.childNodes) {
-      this.writeNode(child, scope, depth, textMode);
-    }
-  }
-
-  /**
-   * Write an element with its namespaces, attributes and children.
+   * Write the start tag of an element with its namespaces and attributes,
+   * or the whole element when it is empty.
    *
    * @param {Element} element - Element to write
    * @param {Map<string, string>} scope - Namespace scope inherited from the parent
    * @param {number} depth - Current indentation depth
-   * @returns {void}
+   * @returns {object|null} The frame of its children, null when empty
    */
-  writeElement(element, scope, depth) {
-    const namespaces = this.emitsNamespaces
-      ? collectNamespaceDeclarations(element, scope)
-      : { declarations: [], scope };
+  openElement(element, scope, depth) {
+    const namespaces = collectNamespaceDeclarations(element, scope);
     const name = element.nodeName;
 
-    this.parts.push(
-      `<${name}${this.namespaceMarkup(namespaces.declarations)}` +
+    this.write(
+      `<${name}${this.namespaceMarkup(namespaces.declarations, element)}` +
         this.attributesMarkup(element),
     );
 
     const leading = this.leadingChildMarkup(element);
     if (!element.firstChild && !leading) {
-      this.parts.push(this.emptyElementMarkup(element, name));
-      return;
+      this.write(this.emptyElementMarkup(element, name));
+      return null;
     }
 
-    this.parts.push(">");
-    this.writeElementChildren(element, namespaces.scope, depth, leading);
-    this.parts.push(`</${name}>`);
+    this.write(">");
+    return this.childrenFrame(
+      element,
+      namespaces.scope,
+      depth,
+      leading,
+      `</${name}>`,
+    );
   }
 
   /**
-   * Write the children of an element, indenting element-only content.
+   * Frame of the children of an element, indenting element-only content.
    *
    * @param {Element} element - Parent element
    * @param {Map<string, string>} scope - Namespace scope in effect
    * @param {number} depth - Depth of the parent element
-   * @param {string} [leading] - Markup the serializer adds before the
+   * @param {string} leading - Markup the serializer adds before the
    *   children, indented like a child (see leadingChildMarkup)
-   * @returns {void}
+   * @param {string} endTag - End tag of the element
+   * @returns {ContentFrame|IndentFrame} The frame
    */
-  writeElementChildren(element, scope, depth, leading = "") {
+  childrenFrame(element, scope, depth, leading, endTag) {
     const textMode = this.childTextMode(element);
     const indentable = this.indentableChildren(element, textMode);
 
     if (!indentable) {
-      this.parts.push(leading);
-      this.writeChildNodes(element, scope, depth, textMode);
-      return;
+      this.write(leading);
+      return new ContentFrame(element, scope, depth, textMode, endTag);
     }
 
-    const childIndent = `\n${INDENT_UNIT.repeat(depth + 1)}`;
-    if (leading) this.parts.push(childIndent, leading);
-    for (const child of indentable) {
-      this.parts.push(childIndent);
-      this.writeNode(child, scope, depth + 1, textMode);
-    }
-    this.parts.push(`\n${INDENT_UNIT.repeat(depth)}`);
+    const frame = new IndentFrame(indentable, scope, depth, textMode, endTag);
+    if (leading) this.write(frame.lineStart + leading);
+    return frame;
   }
 
   /**
@@ -244,9 +295,10 @@ export class BaseWriter {
    * Build the namespace declaration markup of an element.
    *
    * @param {Array<{prefix: string, uri: string}>} declarations - Declarations
+   * @param {Element} [_element] - The element they are written on
    * @returns {string} Attribute markup, starting with a space when non-empty
    */
-  namespaceMarkup(declarations) {
+  namespaceMarkup(declarations, _element) {
     return declarations
       .map(({ prefix, uri }) => {
         const name = prefix ? `xmlns:${prefix}` : "xmlns";
@@ -294,17 +346,17 @@ export class BaseWriter {
     const value = node.nodeValue || "";
 
     if (isRawText(node)) {
-      this.parts.push(value);
+      this.write(value);
       return;
     }
 
     const mode = this.resolveTextMode(node, textMode);
     if (mode === TEXT_MODE.CDATA) {
-      this.parts.push(this.cdataMarkup(value));
+      this.write(this.cdataMarkup(value));
     } else if (mode === TEXT_MODE.RAW) {
-      this.parts.push(value);
+      this.write(value);
     } else {
-      this.parts.push(this.escapeText(value));
+      this.write(this.escapeText(value));
     }
   }
 
@@ -333,6 +385,6 @@ export class BaseWriter {
   writeProcessingInstruction(node) {
     const data = node.nodeValue || "";
     const separator = data ? " " : "";
-    this.parts.push(`<?${node.target}${separator}${data}${this.piTerminator}`);
+    this.write(`<?${node.target}${separator}${data}${this.piTerminator}`);
   }
 }

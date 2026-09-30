@@ -3,7 +3,8 @@
  *
  * XSLT 1.0 section 12 adds functions to the XPath function library, and the
  * EXSLT `node-set()` extension (also under the msxsl namespace) is registered
- * by expanded name next to them. They live here rather than in `src/xpath` so
+ * by expanded name next to them, together with the other EXSLT functions of
+ * `./exslt/index.js`. They live here rather than in `src/xpath` so
  * that module stays a pure XPath 1.0 implementation; the engine registers this
  * map on its evaluator through
  * {@link XPathEvaluator#registerFunctions}.
@@ -13,12 +14,15 @@
 
 import { formatNumber, DEFAULT_DECIMAL_FORMAT } from "./formatNumber.js";
 import { isXsltElementAvailable, XSLT_NAMESPACE } from "./elements.js";
-import { expandedFunctionName } from "../xpath/evaluator.js";
+import {
+  expandedFunctionName,
+  resolveNamespacePrefix,
+} from "../xpath/evaluator.js";
 import { rootNodeOf } from "../xpath/axes.js";
+import { EXSLT_COMMON, createExsltFunctions } from "./exslt/index.js";
 
 /** Namespace of the EXSLT common module (`exsl:node-set()`). */
-// A namespace name is an identifier, not a URL that is fetched; EXSLT defines it with http.
-export const EXSLT_COMMON_NAMESPACE = "http://exslt.org/common"; // NOSONAR
+export const EXSLT_COMMON_NAMESPACE = EXSLT_COMMON;
 
 /** Namespace of the MSXML extension functions (`msxsl:node-set()`). */
 export const MSXSL_NAMESPACE = "urn:schemas-microsoft-com:xslt";
@@ -84,6 +88,29 @@ function splitQName(qname) {
 }
 
 /**
+ * Expanded name key of the decimal format named by the third argument of
+ * `format-number()`, with the prefix resolved in the expression's scope
+ * (XSLT 1.0 section 12.3); the table is keyed the same way (see
+ * declarationNames.js).
+ *
+ * @param {string} qname - The decimal format QName
+ * @param {{namespaces: Object<string, string>}} ctx - The XPath context
+ * @returns {string} `{uri}local`, or the local name in no namespace
+ * @throws {Error} When the prefix is not declared
+ */
+function decimalFormatKey(qname, ctx) {
+  const { prefix, localName } = splitQName(qname);
+  if (prefix === null) return localName;
+  const namespaceUri = resolveNamespacePrefix(prefix, ctx.namespaces);
+  if (!namespaceUri) {
+    throw new Error(
+      `format-number(): undeclared namespace prefix "${prefix}" in "${qname}"`,
+    );
+  }
+  return `{${namespaceUri}}${localName}`;
+}
+
+/**
  * Build the XSLT function map for an engine.
  *
  * @param {import('./engine.js').XsltEngine} engine - The engine providing loaders, keys and formats
@@ -127,6 +154,7 @@ export function createXsltFunctions(engine) {
   };
 
   return {
+    ...createExsltFunctions(engine),
     [expandedFunctionName(EXSLT_COMMON_NAMESPACE, "node-set")]: nodeSet,
     [expandedFunctionName(MSXSL_NAMESPACE, "node-set")]: nodeSet,
 
@@ -165,7 +193,8 @@ export function createXsltFunctions(engine) {
     "format-number": (args, ctx) => {
       const value = evaluator.toNumber(evaluate(args[0], ctx));
       const pattern = asString(args[1], ctx);
-      const formatName = args.length > 2 ? asString(args[2], ctx) : "";
+      const formatName =
+        args.length > 2 ? decimalFormatKey(asString(args[2], ctx), ctx) : "";
       const format =
         engine.decimalFormats[formatName] || DEFAULT_DECIMAL_FORMAT;
       return formatNumber(value, pattern, format);
@@ -200,25 +229,32 @@ export function createXsltFunctions(engine) {
     /**
      * `function-available(name)` - reflects the evaluator function table. A
      * prefixed name is resolved through the stylesheet's namespace bindings,
-     * just as a call of that function would be.
+     * just as a call of that function would be. A function can report itself
+     * unavailable through an `isAvailable()` property (`dyn:evaluate()` does
+     * until the engine enables it).
      */
     "function-available": (args, ctx) => {
       const { prefix, localName } = splitQName(asString(args[0], ctx));
-      return (
-        evaluator.resolveFunction(localName, prefix, ctx.namespaces) !== null
-      );
+      const fn = evaluator.resolveFunction(localName, prefix, ctx.namespaces);
+      return fn !== null && fn.isAvailable?.() !== false;
     },
 
     /** `element-available(name)` - reflects the XSLT elements the engine runs. */
     "element-available": (args, ctx) => {
       const { prefix, localName } = splitQName(asString(args[0], ctx));
-      if (!prefix) return false;
+      // An unprefixed name is in the default namespace (XSLT 1.0 section
+      // 15), which may be the XSLT namespace itself (libxslt bug-200)
+      const namespaceUri = prefix
+        ? (ctx.namespaces[prefix] ?? (prefix === "xsl" ? XSLT_NAMESPACE : null))
+        : ctx.namespaces[""] || null;
+      if (!namespaceUri) return false;
 
-      const namespaceUri =
-        ctx.namespaces[prefix] ?? (prefix === "xsl" ? XSLT_NAMESPACE : null);
-
-      return (
-        namespaceUri === XSLT_NAMESPACE && isXsltElementAvailable(localName)
+      if (namespaceUri === XSLT_NAMESPACE) {
+        return isXsltElementAvailable(localName);
+      }
+      // Extension elements with an implementation (registerExtensionElement)
+      return Boolean(
+        engine.extensionElements?.has(`{${namespaceUri}}${localName}`),
       );
     },
 

@@ -1,0 +1,88 @@
+<!doctype html>
+<!--
+  The website moved from https://spagu.github.io/XSLT-Processor/ to
+  https://xslt-processor.tradik.com/. .github/workflows/site.yml publishes this
+  page to GitHub Pages as index.html and 404.html; GitHub Pages answers every
+  unknown path with 404.html, so each old URL lands on the same path (query and
+  #anchor included) of the new domain. Without JavaScript, the meta refresh
+  and the link go to the home page.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@tradik/xslt-processor has moved</title>
+    <meta
+      name="description"
+      content="The @tradik/xslt-processor website moved to xslt-processor.tradik.com."
+    />
+    <meta name="robots" content="noindex, follow" />
+    <link rel="canonical" href="https://xslt-processor.tradik.com/" />
+    <meta
+      http-equiv="refresh"
+      content="3; url=https://xslt-processor.tradik.com/"
+    />
+    <!-- Google Tag Manager; GTM-XXXXXXX is a placeholder, as in site/ssg.yaml -->
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != "dataLayer" ? "&l=" + l : "";
+        j.async = true;
+        j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, "script", "dataLayer", "GTM-XXXXXXX");
+    </script>
+    <script>
+      // /XSLT-Processor/docs/cli/?x#y -> https://xslt-processor.tradik.com/docs/cli/?x#y
+      location.replace(
+        "https://xslt-processor.tradik.com" +
+          location.pathname.replace(/^\/XSLT-Processor(?=\/|$)/, "") +
+          location.search +
+          location.hash,
+      );
+    </script>
+    <style>
+      body {
+        margin: 0;
+        padding: 4rem 1rem;
+        background: #ffffff;
+        color: #1f2937;
+        font:
+          1.1rem/1.6 system-ui,
+          sans-serif;
+        text-align: center;
+      }
+      a {
+        color: #2563eb;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #202124;
+          color: #e8eaed;
+        }
+        a {
+          color: #8ab4f8;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+        height="0"
+        width="0"
+        style="display: none; visibility: hidden"
+        title="Google Tag Manager"
+      ></iframe
+    ></noscript>
+    <p>
+      The @tradik/xslt-processor website moved to
+      <a href="https://xslt-processor.tradik.com/">xslt-processor.tradik.com</a
+      >.
+    </p>
+  </body>
+</html>

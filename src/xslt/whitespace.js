@@ -10,6 +10,7 @@
 "use strict";
 
 import { isTextContinuation, isTextNode } from "../xpath/axes.js";
+import { matchesNameTest, nameTestPriority } from "./spaceNameTests.js";
 
 /** Node type of a document type declaration, which cannot be imported. */
 const DOCUMENT_TYPE_NODE = 10;
@@ -52,42 +53,15 @@ export function textRun(first) {
 }
 
 /**
- * Compute the XSLT default priority of an element name test.
- *
- * @param {string} nameTest - A name test such as `*`, `ns:*` or `item`
- * @returns {number} The default priority
- */
-function nameTestPriority(nameTest) {
-  if (nameTest === "*") return -0.5;
-  if (nameTest.endsWith(":*")) return -0.25;
-  return 0;
-}
-
-/**
- * Check whether an element matches a name test.
- *
- * @param {Element} element - The element to test
- * @param {string} nameTest - A name test such as `*`, `ns:*` or `item`
- * @returns {boolean} True when the element matches
- */
-function matchesNameTest(element, nameTest) {
-  if (nameTest === "*") return true;
-
-  if (nameTest.endsWith(":*")) {
-    const prefix = nameTest.slice(0, -2);
-    return element.nodeName.startsWith(`${prefix}:`);
-  }
-
-  return element.nodeName === nameTest || element.localName === nameTest;
-}
-
-/**
  * Decides which whitespace-only text nodes of the source tree are removed.
  */
 export class WhitespaceFilter {
   /**
-   * @param {string[]} [stripSpace] - Name tests from `xsl:strip-space`
-   * @param {string[]} [preserveSpace] - Name tests from `xsl:preserve-space`
+   * @param {Array<string|import('./spaceNameTests.js').ElementNameTest>} [stripSpace] -
+   *   Name tests from `xsl:strip-space`: expanded (see spaceNameTests.js),
+   *   or strings matched by their lexical name
+   * @param {Array<string|import('./spaceNameTests.js').ElementNameTest>} [preserveSpace] -
+   *   Name tests from `xsl:preserve-space`
    */
   constructor(stripSpace = [], preserveSpace = []) {
     this.stripSpace = stripSpace;
@@ -193,7 +167,7 @@ function pruneWhitespace(root, filter) {
     }
   }
 
-  for (const node of doomed) node.remove();
+  for (const node of doomed) node.parentNode.removeChild(node);
 }
 
 /**

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="320" height="180"><style>
+.bg{fill:#e8f0fe}.paper{fill:#fff;stroke:#dadce0;stroke-width:2}.ink{fill:#9aa0a6}.line{stroke:#9aa0a6;stroke-width:4;stroke-linecap:round;fill:none}
+.b{fill:#4285f4}.r{fill:#ea4335}.y{fill:#fbbc04}.g{fill:#34a853}
+.bs{stroke:#4285f4}.rs{stroke:#ea4335}.ys{stroke:#fbbc04}.gs{stroke:#34a853}
+.st{stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.t{font:700 18px ui-monospace,Menlo,Consolas,monospace;fill:#202124}
+@media (prefers-color-scheme:dark){.bg{fill:#292a2d}.paper{fill:#35363a;stroke:#5f6368}.ink{fill:#80868b}.line{stroke:#80868b}
+.b{fill:#8ab4f8}.r{fill:#f28b82}.y{fill:#fdd663}.g{fill:#81c995}.bs{stroke:#8ab4f8}.rs{stroke:#f28b82}.ys{stroke:#fdd663}.gs{stroke:#81c995}.t{fill:#e8eaed}}
+</style><rect class="bg" width="320" height="180"/><rect class="paper" x="24" y="50" width="84" height="96" rx="8"/><rect class="b" x="36" y="64" width="29.4" height="8" rx="4"/><rect class="ink" x="36" y="82" width="48" height="6" rx="3"/><rect class="ink" x="46" y="98" width="20" height="6" rx="3"/><rect class="ink" x="56" y="114" width="28" height="6" rx="3"/><rect class="paper" x="118" y="50" width="84" height="96" rx="8"/><rect class="g" x="130" y="64" width="29.4" height="8" rx="4"/><rect class="ink" x="130" y="82" width="48" height="6" rx="3"/><rect class="ink" x="140" y="98" width="20" height="6" rx="3"/><rect class="ink" x="150" y="114" width="28" height="6" rx="3"/><rect class="paper" x="212" y="50" width="84" height="96" rx="8"/><rect class="y" x="224" y="64" width="29.4" height="8" rx="4"/><rect class="ink" x="224" y="82" width="48" height="6" rx="3"/><rect class="ink" x="234" y="98" width="20" height="6" rx="3"/><rect class="ink" x="244" y="114" width="28" height="6" rx="3"/><text class="t" x="44" y="136">ESM</text><text class="t" x="138" y="136">CJS</text><text class="t" x="224" y="136">IIFE</text></svg>

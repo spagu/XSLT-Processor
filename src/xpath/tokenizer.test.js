@@ -127,6 +127,24 @@ describe("XPath Tokenizer", () => {
       const tokens = tokenize("a | b");
       assert.strictEqual(tokens[1].type, TokenType.PIPE);
     });
+
+    it("reads an operator name after a prefix as a local name (libxslt bug-225)", () => {
+      const tokens = tokenize("html:div|l:and");
+      assert.deepStrictEqual(
+        tokens.map((token) => token.type),
+        [
+          TokenType.NAME,
+          TokenType.COLON,
+          TokenType.NAME,
+          TokenType.PIPE,
+          TokenType.NAME,
+          TokenType.COLON,
+          TokenType.NAME,
+          TokenType.EOF,
+        ],
+      );
+      assert.strictEqual(tokens[2].value, "div");
+    });
   });
 
   describe("Literals", () => {

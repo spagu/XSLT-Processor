@@ -1,0 +1,20 @@
+{{/* A documentation page: the guide list beside the rendered Markdown. */}}
+{{define "doc.html"}}{{template "head" .}}{{ $b := .Vars.base_path }}{{ $here := .Page.Link }}
+<div class="wrap doc-layout">
+  <nav class="doc-nav" aria-label="Documentation">
+    <p class="doc-nav__title" id="doc-nav-title">Guides</p>
+    <ul aria-labelledby="doc-nav-title">
+      <li><a href="{{ $b }}/docs/"{{ if eq $here "/docs/" }} aria-current="page"{{ end }}>Overview</a></li>
+      {{ range .Data.nav.docs }}<li><a href="{{ $b }}{{ .url }}"{{ if eq $here .url }} aria-current="page"{{ end }}>{{ .label }}</a></li>
+      {{ end }}<li><a href="{{ $b }}/changelog/"{{ if eq $here "/changelog/" }} aria-current="page"{{ end }}>Changelog</a></li>
+    </ul>
+  </nav>
+  <main id="main" class="doc-main">
+    <article class="prose">
+      <h1>{{ .Page.Title }}</h1>
+      {{ .Page.Content | safeHTML }}
+    </article>
+    {{ with .Page.Extra.source_path }}<p class="doc-source">This page is generated from <a href="{{ $.Vars.repo_url }}/blob/main/{{ . }}">{{ . }}</a> in the repository. Corrections are welcome as a pull request to that file.</p>{{ end }}
+  </main>
+</div>
+{{template "footer" .}}{{end}}

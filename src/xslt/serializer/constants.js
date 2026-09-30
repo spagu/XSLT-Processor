@@ -61,23 +61,15 @@ export const VOID_ELEMENTS = new Set([
 ]);
 
 /**
- * HTML attributes holding URIs, whose non-ASCII characters the html output
- * method %-escapes (XSLT 1.0 section 16.2).
+ * HTML attributes holding URIs, which the html output method %-escapes
+ * (XSLT 1.0 section 16.2): the attributes libxml2 (and so Chrome) escapes,
+ * on any element. `name` is a URI attribute on `a` only (see
+ * {@link URI_ATTRIBUTES_OF_A}).
  */
-export const URI_ATTRIBUTES = new Set([
-  "action",
-  "background",
-  "cite",
-  "classid",
-  "codebase",
-  "data",
-  "formaction",
-  "href",
-  "longdesc",
-  "profile",
-  "src",
-  "usemap",
-]);
+export const URI_ATTRIBUTES = new Set(["action", "href", "src"]);
+
+/** Further URI attributes of the `a` element (libxml2). */
+export const URI_ATTRIBUTES_OF_A = new Set(["name"]);
 
 /**
  * HTML elements whose character data must not be escaped.

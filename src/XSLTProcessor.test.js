@@ -6,7 +6,13 @@
 
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import { JSDOM } from "jsdom";
+import {
+  domEnvironment,
+  findAll,
+  findFirst,
+  jsdomOnly,
+} from "./domEnvironment.test.js";
+import { installDomGlobals } from "../bin/lib/dom.js";
 import {
   XSLTProcessor,
   isNativeXSLTSupported,
@@ -14,17 +20,9 @@ import {
 } from "./XSLTProcessor.js";
 import { XsltEngine } from "./xslt/engine.js";
 
-// Setup JSDOM environment
+// DOM under test (jsdom, or xmldom with DOM=xmldom), installed globally
 function setupDOM() {
-  const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
-    contentType: "text/html",
-  });
-
-  global.document = dom.window.document;
-  global.DOMParser = dom.window.DOMParser;
-  global.XMLSerializer = dom.window.XMLSerializer;
-
-  return dom;
+  return installDomGlobals(domEnvironment);
 }
 
 function parseXML(xmlString) {
@@ -274,7 +272,7 @@ describe("XSLTProcessor", () => {
       const fragment = processor.transformToFragment(xml, document);
 
       assert.ok(fragment);
-      const p = fragment.querySelector("p");
+      const p = findFirst(fragment, "p");
       assert.ok(p);
       assert.strictEqual(p.textContent, "Hello");
     });
@@ -305,7 +303,7 @@ describe("XSLTProcessor", () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const items = fragment.querySelectorAll("li");
+      const items = findAll(fragment, "li");
       assert.strictEqual(items.length, 3);
     });
 
@@ -328,10 +326,10 @@ describe("XSLTProcessor", () => {
       processor.importStylesheet(xslt);
 
       const fragment1 = processor.transformToFragment(xmlWithShow, document);
-      assert.ok(fragment1.querySelector("p"));
+      assert.ok(findFirst(fragment1, "p"));
 
       const fragment2 = processor.transformToFragment(xmlWithoutShow, document);
-      assert.ok(!fragment2.querySelector("p"));
+      assert.ok(!findFirst(fragment2, "p"));
     });
 
     it("should handle xsl:choose", () => {
@@ -360,7 +358,7 @@ describe("XSLTProcessor", () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const p = fragment.querySelector("p");
+      const p = findFirst(fragment, "p");
       assert.strictEqual(p.textContent, "Type B");
     });
 
@@ -388,7 +386,7 @@ describe("XSLTProcessor", () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const spans = fragment.querySelectorAll("span");
+      const spans = findAll(fragment, "span");
       assert.strictEqual(spans.length, 2);
     });
 
@@ -414,7 +412,7 @@ describe("XSLTProcessor", () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const p = fragment.querySelector("p");
+      const p = findFirst(fragment, "p");
       assert.ok(p.textContent.includes("Hello"));
       assert.ok(p.textContent.includes("World"));
     });
@@ -444,8 +442,8 @@ describe("XSLTProcessor", () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      assert.ok(fragment.querySelector("p"));
-      assert.ok(fragment.querySelector("span"));
+      assert.ok(findFirst(fragment, "p"));
+      assert.ok(findFirst(fragment, "span"));
     });
 
     it("should handle xsl:attribute", () => {
@@ -469,7 +467,7 @@ describe("XSLTProcessor", () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const div = fragment.querySelector("div");
+      const div = findFirst(fragment, "div");
       assert.strictEqual(div.getAttribute("class"), "my-class");
     });
 
@@ -489,7 +487,7 @@ describe("XSLTProcessor", () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const a = fragment.querySelector("a");
+      const a = findFirst(fragment, "a");
       assert.strictEqual(a.getAttribute("href"), "/item/123");
     });
 
@@ -520,7 +518,7 @@ describe("XSLTProcessor", () => {
       processor.importStylesheet(xslt);
       const fragment = processor.transformToFragment(xml, document);
 
-      const items = fragment.querySelectorAll("li");
+      const items = findAll(fragment, "li");
       assert.strictEqual(items[0].textContent, "Alice");
       assert.strictEqual(items[1].textContent, "Bob");
       assert.strictEqual(items[2].textContent, "Charlie");
@@ -988,7 +986,7 @@ describe("XSLTProcessor", () => {
 
       assert.ok(result);
       assert.strictEqual(
-        result.documentElement.querySelector("hello").textContent,
+        findFirst(result.documentElement, "hello").textContent,
         "World",
       );
     });
@@ -1025,7 +1023,7 @@ describe("XSLTProcessor", () => {
       const result = processor.transformToDocument(parseXML("<root/>"));
 
       assert.strictEqual(
-        result.documentElement.querySelector("hello").textContent,
+        findFirst(result.documentElement, "hello").textContent,
         "World",
       );
     });
@@ -1104,7 +1102,7 @@ describe("XSLTProcessor", () => {
       const result = processor.transformToDocument(parseXML("<root/>"));
 
       assert.strictEqual(
-        result.documentElement.querySelector("hello").textContent,
+        findFirst(result.documentElement, "hello").textContent,
         "World",
       );
     });
@@ -1293,26 +1291,35 @@ describe("XSLTProcessor", () => {
   });
 
   describe("transformToFragment with an HTML owner document", () => {
-    it("should keep element names and namespaces", () => {
-      const processor = new XSLTProcessor();
-      processor.importStylesheet(
-        parseXML(`<?xml version="1.0"?>
+    it(
+      "should keep element names and namespaces",
+      jsdomOnly("HTML documents"),
+      () => {
+        const processor = new XSLTProcessor();
+        processor.importStylesheet(
+          parseXML(`<?xml version="1.0"?>
           <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <xsl:template match="/"><BAR><qux/></BAR></xsl:template>
           </xsl:stylesheet>
         `),
-      );
+        );
 
-      const fragment = processor.transformToFragment(
-        parseXML("<foo/>"),
-        document,
-      );
+        const fragment = processor.transformToFragment(
+          parseXML("<foo/>"),
+          document,
+        );
 
-      assert.strictEqual(fragment.ownerDocument, document);
-      assert.strictEqual(fragment.firstChild.nodeName, "BAR");
-      assert.strictEqual(fragment.firstChild.namespaceURI, null);
-      assert.strictEqual(fragment.firstChild.firstChild.nodeName, "qux");
-    });
+        // Elements in no namespace become XHTML elements of the HTML owner
+        // document, as in Chrome and Firefox; the name keeps its case
+        assert.strictEqual(fragment.ownerDocument, document);
+        assert.strictEqual(fragment.firstChild.localName, "BAR");
+        assert.strictEqual(
+          fragment.firstChild.namespaceURI,
+          "http://www.w3.org/1999/xhtml",
+        );
+        assert.strictEqual(fragment.firstChild.firstChild.localName, "qux");
+      },
+    );
   });
 
   describe("invalid stylesheets", () => {

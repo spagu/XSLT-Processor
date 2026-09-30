@@ -12,56 +12,56 @@
  * - dist/xslt-processor.d.cts - TypeScript declarations (CommonJS)
  */
 
-import { build } from 'esbuild';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { build } from "esbuild";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const rootDir = join(__dirname, '..');
-const srcDir = join(rootDir, 'src');
-const distDir = join(rootDir, 'dist');
+const rootDir = join(__dirname, "..");
+const srcDir = join(rootDir, "src");
+const distDir = join(rootDir, "dist");
 
 // Ensure dist directory exists
 mkdirSync(distDir, { recursive: true });
 
 async function buildAll() {
-  console.log('Building xslt-processor...\n');
+  console.log("Building xslt-processor...\n");
 
   // ESM build
-  console.log('Building ESM module...');
+  console.log("Building ESM module...");
   await build({
-    entryPoints: [join(srcDir, 'index.js')],
-    outfile: join(distDir, 'xslt-processor.js'),
+    entryPoints: [join(srcDir, "index.js")],
+    outfile: join(distDir, "xslt-processor.js"),
     bundle: true,
-    format: 'esm',
-    platform: 'neutral',
-    target: ['es2022'],
-    sourcemap: true
+    format: "esm",
+    platform: "neutral",
+    target: ["es2022"],
+    sourcemap: true,
   });
 
   // CommonJS build
-  console.log('Building CommonJS module...');
+  console.log("Building CommonJS module...");
   await build({
-    entryPoints: [join(srcDir, 'index.js')],
-    outfile: join(distDir, 'xslt-processor.cjs'),
+    entryPoints: [join(srcDir, "index.js")],
+    outfile: join(distDir, "xslt-processor.cjs"),
     bundle: true,
-    format: 'cjs',
-    platform: 'node',
-    target: ['node20'],
-    sourcemap: true
+    format: "cjs",
+    platform: "node",
+    target: ["node20"],
+    sourcemap: true,
   });
 
   // Browser IIFE build
-  console.log('Building browser bundle...');
+  console.log("Building browser bundle...");
   await build({
-    entryPoints: [join(srcDir, 'index.js')],
-    outfile: join(distDir, 'xslt-processor.browser.js'),
+    entryPoints: [join(srcDir, "index.js")],
+    outfile: join(distDir, "xslt-processor.browser.js"),
     bundle: true,
-    format: 'iife',
-    globalName: 'XsltProcessorLib',
-    platform: 'browser',
-    target: ['es2022'],
+    format: "iife",
+    globalName: "XsltProcessorLib",
+    platform: "browser",
+    target: ["es2022"],
     sourcemap: true,
     footer: {
       js: `
@@ -69,53 +69,57 @@ async function buildAll() {
 if (typeof window !== 'undefined') {
   XsltProcessorLib.installGlobal();
 }
-`
-    }
+`,
+    },
   });
 
   // Minified browser build
-  console.log('Building minified browser bundle...');
+  console.log("Building minified browser bundle...");
   await build({
-    entryPoints: [join(srcDir, 'index.js')],
-    outfile: join(distDir, 'xslt-processor.browser.min.js'),
+    entryPoints: [join(srcDir, "index.js")],
+    outfile: join(distDir, "xslt-processor.browser.min.js"),
     bundle: true,
-    format: 'iife',
-    globalName: 'XsltProcessorLib',
-    platform: 'browser',
-    target: ['es2022'],
+    format: "iife",
+    globalName: "XsltProcessorLib",
+    platform: "browser",
+    target: ["es2022"],
     minify: true,
     sourcemap: true,
     footer: {
-      js: `if(typeof window!=='undefined'){XsltProcessorLib.installGlobal();}`
-    }
+      js: `if(typeof window!=='undefined'){XsltProcessorLib.installGlobal();}`,
+    },
   });
 
   // Generate TypeScript declarations
-  console.log('Generating TypeScript declarations...');
+  console.log("Generating TypeScript declarations...");
   // Maintained as a real declaration file next to this script
   const declarations = readFileSync(
-    join(__dirname, 'xslt-processor.d.ts'),
-    'utf8'
+    join(__dirname, "xslt-processor.d.ts"),
+    "utf8",
   );
 
   // The same declarations are emitted twice so that TypeScript's node16/nodenext
   // resolution picks a CommonJS-flavoured file for `require()` consumers instead
   // of treating the ESM `.d.ts` as the type source of the `.cjs` bundle.
-  writeFileSync(join(distDir, 'xslt-processor.d.ts'), declarations);
-  writeFileSync(join(distDir, 'xslt-processor.d.cts'), declarations);
+  writeFileSync(join(distDir, "xslt-processor.d.ts"), declarations);
+  writeFileSync(join(distDir, "xslt-processor.d.cts"), declarations);
 
-  console.log('\nBuild complete! Output files:');
-  console.log('  dist/xslt-processor.js         - ESM module');
-  console.log('  dist/xslt-processor.cjs        - CommonJS module');
-  console.log('  dist/xslt-processor.browser.js - Browser bundle');
-  console.log('  dist/xslt-processor.browser.min.js - Minified browser bundle');
-  console.log('  dist/xslt-processor.d.ts       - TypeScript declarations (ESM)');
-  console.log('  dist/xslt-processor.d.cts      - TypeScript declarations (CommonJS)');
+  console.log("\nBuild complete! Output files:");
+  console.log("  dist/xslt-processor.js         - ESM module");
+  console.log("  dist/xslt-processor.cjs        - CommonJS module");
+  console.log("  dist/xslt-processor.browser.js - Browser bundle");
+  console.log("  dist/xslt-processor.browser.min.js - Minified browser bundle");
+  console.log(
+    "  dist/xslt-processor.d.ts       - TypeScript declarations (ESM)",
+  );
+  console.log(
+    "  dist/xslt-processor.d.cts      - TypeScript declarations (CommonJS)",
+  );
 }
 
 try {
   await buildAll();
 } catch (error) {
-  console.error('Build failed:', error);
+  console.error("Build failed:", error);
   process.exit(1);
 }

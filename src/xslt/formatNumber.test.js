@@ -19,7 +19,16 @@ describe("formatNumber", () => {
     [-1234, "#,##0;(#,##0)", "(1,234)"],
     [1234, "#,##0;(#,##0)", "1,234"],
     [-1234, "#,##0", "-1,234"],
-    [0.5, "#.##", ".5"],
+    // libxslt (Chrome) numbers/format-number: a zero integer part is written
+    // unless fraction zeros are required; `.#` shows one fraction digit; a
+    // trailing decimal separator is kept
+    [0.5, "#.##", "0.5"],
+    [0.5, ".#", ".5"],
+    [0, ".##", ".0"],
+    [1, ".#", "1.0"],
+    [0, "#.00", ".00"],
+    [-0.5, ".", "-1."],
+    [0, "#.", "0."],
     [0, "#", "0"],
     [1234567, "#,##0", "1,234,567"],
     [12, "#,##0", "12"],

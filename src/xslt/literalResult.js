@@ -42,10 +42,20 @@ export function lookupNamespaceUri(node, prefix) {
 
 /**
  * The `xsl:namespace-alias` declarations of a stylesheet.
+ *
+ * Literal result names are aliased as libxslt (and so Chrome) does, see
+ * {@link NamespaceAliasMap#resolveLiteral}: the namespace URI is replaced and
+ * the prefix written in the stylesheet is kept (`axsl:stylesheet` with
+ * `xmlns:axsl` bound to the XSLT namespace); `result-prefix="#default"`
+ * without a default namespace in scope gives names in no namespace, and
+ * `stylesheet-prefix="#default"` without a default namespace in scope
+ * aliases the elements in no namespace, which then take the result prefix.
  */
 export class NamespaceAliasMap {
   constructor() {
     this.byUri = new Map();
+    /** Alias of elements in no namespace (`#default` stylesheet prefix). */
+    this.noNamespaceAlias = null;
   }
 
   /**
@@ -62,22 +72,22 @@ export class NamespaceAliasMap {
     const resultPrefix = node.getAttribute("result-prefix");
     if (!stylesheetPrefix || !resultPrefix) return;
 
+    const isDefaultSource = stylesheetPrefix === "#default";
     const fromUri = lookupNamespaceUri(
       node,
-      stylesheetPrefix === "#default" ? null : stylesheetPrefix,
+      isDefaultSource ? null : stylesheetPrefix,
     );
-    if (!fromUri) return;
+    if (!fromUri && !isDefaultSource) return;
 
     const isDefaultResult = resultPrefix === "#default";
     const toUri = lookupNamespaceUri(
       node,
       isDefaultResult ? null : resultPrefix,
     );
+    const alias = { uri: toUri, prefix: isDefaultResult ? null : resultPrefix };
 
-    this.byUri.set(fromUri, {
-      uri: toUri,
-      prefix: isDefaultResult ? null : resultPrefix,
-    });
+    if (fromUri) this.byUri.set(fromUri, alias);
+    else if (toUri) this.noNamespaceAlias = alias;
   }
 
   /**
@@ -89,7 +99,7 @@ export class NamespaceAliasMap {
    * aliases.isEmpty();
    */
   isEmpty() {
-    return this.byUri.size === 0;
+    return this.byUri.size === 0 && this.noNamespaceAlias === null;
   }
 
   /**
@@ -123,6 +133,39 @@ export class NamespaceAliasMap {
     return {
       namespaceUri: alias.uri,
       qname: alias.prefix ? `${alias.prefix}:${localName}` : localName,
+    };
+  }
+
+  /**
+   * Apply aliasing to the name of a literal result element or attribute as
+   * libxslt does: the namespace URI is replaced and the stylesheet prefix
+   * kept. An element in no namespace takes the `#default` stylesheet-prefix
+   * alias with its result prefix; an alias to no namespace drops the prefix.
+   *
+   * @param {Element|Attr} node - The literal result element or attribute
+   * @returns {{namespaceUri: (string|null), qname: string}|null} The aliased
+   *   name, or null when no alias applies
+   *
+   * @example
+   * // xmlns:axsl="urn:alias", <xsl:namespace-alias stylesheet-prefix="axsl"
+   * //   result-prefix="xsl"/>
+   * aliases.resolveLiteral(axslStylesheetElement);
+   * // { namespaceUri: 'http://www.w3.org/1999/XSL/Transform', qname: 'axsl:stylesheet' }
+   */
+  resolveLiteral(node) {
+    const { localName } = node;
+    if (!node.namespaceURI) {
+      const alias = node.nodeType === 1 ? this.noNamespaceAlias : null;
+      return alias
+        ? { namespaceUri: alias.uri, qname: `${alias.prefix}:${localName}` }
+        : null;
+    }
+    const alias = this.byUri.get(node.namespaceURI);
+    if (!alias) return null;
+    if (!alias.uri) return { namespaceUri: null, qname: localName };
+    return {
+      namespaceUri: alias.uri,
+      qname: node.prefix ? `${node.prefix}:${localName}` : localName,
     };
   }
 }

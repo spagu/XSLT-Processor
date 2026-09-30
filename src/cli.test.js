@@ -21,10 +21,8 @@ import { tmpdir } from "node:os";
 import { join, dirname, parse } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  JSDOM_MISSING_MESSAGE,
   applyOutputOverrides,
   createDomEnvironment,
-  loadJsdom,
   parseDocument,
   runTransformation,
 } from "../bin/lib/transform.js";
@@ -526,32 +524,6 @@ describe("xslt CLI external resources and encodings", () => {
     assert.strictEqual(
       readFileSync(join(workDir, "result.txt"), "utf-8"),
       stdout,
-    );
-  });
-});
-
-describe("CLI jsdom loading", () => {
-  it("loads jsdom when it is installed", async () => {
-    const module = await loadJsdom();
-    assert.strictEqual(typeof module.JSDOM, "function");
-  });
-
-  it("explains how to install jsdom when it is missing", async () => {
-    const missing = Object.assign(new Error("Cannot find package 'jsdom'"), {
-      code: "ERR_MODULE_NOT_FOUND",
-    });
-    await assert.rejects(
-      loadJsdom(() => Promise.reject(missing)),
-      (error) =>
-        error.message === JSDOM_MISSING_MESSAGE && error.cause === missing,
-    );
-  });
-
-  it("rethrows other loading errors unchanged", async () => {
-    const broken = new SyntaxError("broken module");
-    await assert.rejects(
-      loadJsdom(() => Promise.reject(broken)),
-      (error) => error === broken,
     );
   });
 });

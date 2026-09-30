@@ -6,6 +6,7 @@
 export {
   XSLT_MAX_EXPRESSION_DEPTH,
   XSLT_MAX_RESULT_SIZE,
+  XSLT_MAX_TEMPLATE_DEPTH,
   XsltContext,
   XsltEngine,
 } from "./engine.js";

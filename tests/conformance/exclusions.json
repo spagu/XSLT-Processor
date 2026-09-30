@@ -1,0 +1,45 @@
+{
+  "description": "libxslt cases whose expected output does not measure XSLT 1.0 conformance of this processor: implementation-defined values, libxslt/EXSLT extensions, DTD features the jsdom XML parser used by the runner does not support, cases the runner misclassifies, and documented deliberate deviations from libxslt. A listed case that passes still counts as a pass; a listed case that does not pass is reported as skip and left out of the pass rate.",
+  "cases": {
+    "REC/test-5.2-10": "harness: id() needs an ID attribute declared in the internal DTD subset, which the jsdom XML parser ignores",
+    "general/bug-163": "harness: id() needs an ID attribute declared in the internal DTD subset, which the jsdom XML parser ignores",
+    "general/bug-53": "harness: DTD default attribute values are not applied by the jsdom XML parser",
+    "general/bug-110": "harness: the jsdom XML parser does not expand DTD entities",
+    "general/bug-139": "harness: the jsdom XML parser does not expand DTD entities",
+    "general/bug-24-": "harness: the jsdom XML parser does not expand DTD entities",
+    "general/bug-21-": "harness: unparsed-entity-uri() needs DTD unparsed entity declarations, which the jsdom XML parser does not expose",
+    "general/bug-52": "harness: unparsed-entity-uri() needs DTD unparsed entity declarations, which the jsdom XML parser does not expose",
+    "REC/test-12.4-1": "implementation-defined: generate-id() values (XSLT 1.0 section 12.4)",
+    "general/bug-224": "implementation-defined: generate-id() values (XSLT 1.0 section 12.4)",
+    "general/bug-81": "libxslt prints numbers with 15 significant digits; XPath 1.0 section 4.2 asks for the shortest round-tripping form, which this processor writes",
+    "general/bug-5-": "libxslt prints numbers with 15 significant digits; XPath 1.0 section 4.2 asks for the shortest round-tripping form, which this processor writes",
+    "documents/fragment": "implementation-defined: XPointer fragment identifiers in document() URIs (XSLT 1.0 section 12.1)",
+    "general/bug-100": "extension: libxslt:test extension element",
+    "namespaces/extra2": "extension: libxml:debug extension element",
+    "general/bug-65": "extension: libxslt:node-set() function",
+    "general/bug-116": "extension: EXSLT sets module",
+    "general/date_add": "extension: EXSLT dates-and-times module",
+    "general/bug-137": "extension: EXSLT func:function",
+    "general/bug-174": "extension: EXSLT func:function",
+    "general/bug-178": "extension: EXSLT func:function",
+    "general/bug-192": "extension: EXSLT func:function",
+    "general/bug-207": "extension: EXSLT func:function",
+    "general/bug-209": "extension: EXSLT func:function",
+    "general/bug-210": "extension: EXSLT func:function",
+    "general/bug-211": "extension: EXSLT func:function",
+    "general/bug-212": "extension: EXSLT func:function",
+    "general/bug-213": "extension: EXSLT func:function",
+    "general/bug-216": "extension: EXSLT func:function",
+    "general/bug-223": "extension: EXSLT func:function",
+    "general/bug-225": "extension: EXSLT func:function",
+    "REC/test-7.1.1-3": "deviation: libxslt ignores xsl:exclude-result-prefixes on a literal result element for the namespaces it inherits from the template; XSLT 1.0 section 7.1.1 excludes them, as Firefox does and this processor does",
+    "general/bug-6-": "deviation: empty XHTML elements are written as <hr /> and <a></a> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype",
+    "general/bug-142": "deviation: empty XHTML elements are written as <li></li> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype",
+    "general/bug-168": "deviation: empty XHTML elements are written as <A></A> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype"
+  },
+  "casesByDom": {
+    "xmldom": {
+      "general/bug-140": "harness: the xmldom XML parser does not expand entities declared in the internal DTD subset"
+    }
+  }
+}

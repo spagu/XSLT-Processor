@@ -9,6 +9,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import {
   compile,
+  dom,
   parseXML,
   run,
   stylesheet,
@@ -18,22 +19,28 @@ import { detectOutputMethod } from "./serializer/settings.js";
 import { XHTML_NAMESPACE, wrapTextResult } from "./resultTree.js";
 
 describe("transformToDocument with text output", () => {
-  it("wraps the text in an XHTML pre element, like Chrome", () => {
+  it("wraps the text in Blink's XHTML page, like Chrome", () => {
     const engine = compile(
       stylesheet(
         `<xsl:template match="/">a &lt; b<xsl:value-of select="d"/></xsl:template>`,
       ),
     );
     const doc = engine.transformToDocument(parseXML("<d>!</d>"));
+    assert.strictEqual(doc.doctype.name, "html");
+    assert.strictEqual(
+      doc.doctype.publicId,
+      "-//W3C//DTD XHTML 1.0 Strict//EN",
+    );
+    assert.strictEqual(
+      doc.doctype.systemId,
+      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd",
+    );
     const root = doc.documentElement;
     assert.strictEqual(root.namespaceURI, XHTML_NAMESPACE);
-    assert.deepStrictEqual(
-      Array.from(root.childNodes, (n) => n.localName),
-      ["head", "body"],
+    assert.strictEqual(
+      new dom.window.XMLSerializer().serializeToString(root),
+      `<html xmlns="${XHTML_NAMESPACE}">\n<head><title></title></head>\n<body>\n<pre>a &lt; b!</pre>\n</body>\n</html>`,
     );
-    const pre = root.lastChild.firstChild;
-    assert.strictEqual(pre.localName, "pre");
-    assert.strictEqual(pre.textContent, "a < b!");
   });
 
   it("builds the wrapper in any document", () => {
@@ -43,10 +50,8 @@ describe("transformToDocument with text output", () => {
       null,
     );
     wrapTextResult(doc, "");
-    assert.strictEqual(
-      doc.documentElement.lastChild.firstChild.childNodes.length,
-      0,
-    );
+    const pre = doc.getElementsByTagName("pre")[0];
+    assert.strictEqual(pre.childNodes.length, 0);
   });
 });
 
@@ -63,19 +68,21 @@ describe("default output method", () => {
       null,
     );
     const fragment = doc.createDocumentFragment();
-    fragment.append(
+    for (const node of [
       doc.createComment("c"),
       doc.createCDATASection(" "),
       doc.createTextNode(" \n"),
       doc.createElement("html"),
       doc.createTextNode("after"),
-    );
+    ]) {
+      fragment.appendChild(node);
+    }
     assert.strictEqual(detectOutputMethod(fragment), "html");
     assert.strictEqual(
       detectOutputMethod(fragment.lastChild.previousSibling),
       "html",
     );
-    fragment.prepend(doc.createTextNode(" "));
+    fragment.insertBefore(doc.createTextNode(" "), fragment.firstChild);
     assert.strictEqual(detectOutputMethod(fragment), "xml");
   });
 });

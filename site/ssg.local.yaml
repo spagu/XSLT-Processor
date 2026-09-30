@@ -1,0 +1,8 @@
+# Local preview: the production config with http://localhost:8888 as the
+# domain and readable (not minified) output. Used by `make site-serve`.
+include:
+  - ssg.yaml
+domain: localhost:8888
+output_dir: public-local
+minify_html: false
+minify_css: false

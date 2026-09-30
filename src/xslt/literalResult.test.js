@@ -133,6 +133,62 @@ describe("NamespaceAliasMap", () => {
     });
   });
 
+  it("aliases literal names keeping their prefix, as libxslt does", () => {
+    const aliases = new NamespaceAliasMap();
+    const doc = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="${XSLT_NAMESPACE}"
+                        xmlns:r="urn:result" xmlns="urn:default" xmlns:s="urn:default">
+          <xsl:namespace-alias stylesheet-prefix="#default" result-prefix="r"/>
+          <x s:a="1"/><s:y/><z xmlns="" b="2"/>
+        </xsl:stylesheet>`);
+    aliases.add(doc.getElementsByTagName("xsl:namespace-alias")[0]);
+    const [x, y, z] = Array.from(doc.documentElement.children).slice(1);
+
+    assert.deepStrictEqual(aliases.resolveLiteral(x), {
+      namespaceUri: "urn:result",
+      qname: "x",
+    });
+    assert.deepStrictEqual(aliases.resolveLiteral(x.attributes[0]), {
+      namespaceUri: "urn:result",
+      qname: "s:a",
+    });
+    assert.deepStrictEqual(aliases.resolveLiteral(y), {
+      namespaceUri: "urn:result",
+      qname: "s:y",
+    });
+    assert.strictEqual(aliases.resolveLiteral(z), null);
+    assert.strictEqual(aliases.resolveLiteral(z.attributes[0]), null);
+  });
+
+  it("aliases elements in no namespace with #default and no default namespace", () => {
+    const aliases = new NamespaceAliasMap();
+    const doc = parseXML(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="${XSLT_NAMESPACE}" xmlns:r="urn:result">
+          <xsl:namespace-alias stylesheet-prefix="#default" result-prefix="r"/>
+          <x a="1"/>
+        </xsl:stylesheet>`);
+    aliases.add(doc.getElementsByTagName("xsl:namespace-alias")[0]);
+    const x = doc.documentElement.lastElementChild;
+
+    assert.strictEqual(aliases.isEmpty(), false);
+    assert.deepStrictEqual(aliases.resolveLiteral(x), {
+      namespaceUri: "urn:result",
+      qname: "r:x",
+    });
+    assert.strictEqual(aliases.resolveLiteral(x.attributes[0]), null);
+  });
+
+  it("ignores #default to #default without default namespaces", () => {
+    const aliases = new NamespaceAliasMap();
+    aliases.add(
+      aliasElement(`<?xml version="1.0"?>
+        <xsl:stylesheet version="1.0" xmlns:xsl="${XSLT_NAMESPACE}">
+          <xsl:namespace-alias stylesheet-prefix="#default" result-prefix="#default"/>
+        </xsl:stylesheet>`),
+    );
+    assert.strictEqual(aliases.isEmpty(), true);
+  });
+
   it("should ignore incomplete declarations", () => {
     const aliases = new NamespaceAliasMap();
     aliases.add(

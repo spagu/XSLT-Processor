@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-30
+
+### Changed
+
+- **libxslt parity** (task 0021): the libxslt 1.1.45 conformance corpus passes completely (299 of 299 counted cases; 32 cases are skipped as DTD-dependent, implementation-defined or extension-only).
+- `importStylesheet()` rejects duplicate named templates or global variables at the same import precedence, text between top-level elements, invalid or undeclared names of templates and attribute sets, and an attribute set that uses itself. An undeclared prefix in an XPath name test is an error instead of matching names in no namespace.
+- `xsl:namespace-alias` keeps the literal prefix and supports `#default` without a default namespace; named templates, attribute sets and decimal formats are compared by expanded name, and attribute sets with the same name are merged across import precedence; `xsl:strip-space`/`xsl:preserve-space` resolve namespaces.
+- HTML output writes namespace declarations and derives the doctype from `version` (`version="5"` gives `<!DOCTYPE html>`); XHTML 1.0 doctypes get libxml2's Content-Type meta and `xmlns`; generated prefixes are `ns_1`, `ns_2`, ... like libxslt.
+- **Browser parity**: `transformToFragment` into an HTML document creates XHTML elements for xml output; `transformToDocument` returns an HTML document for html output and Blink's text page (XHTML doctype, `head`/`title`, `pre`) for text output. `engine.outputSettings.indent` defaults to `undefined`; `engine.stripSpace`/`preserveSpace` hold expanded names.
+- **Unprefixed name tests are namespace-strict** (task 0003): `item`, `@a` and names in patterns match only nodes in no namespace (XPath 1.0 section 2.3), like Chrome/libxslt. Elements of HTML documents are still matched by unprefixed, case-insensitive names. Migration: bind a prefix to the namespace, or use `local-name()`; the deprecated `new XSLTProcessor({ legacyNameTests: true })` (also on `XsltEngine`/`XPathEvaluator`) restores the old matching for now.
+- **`transformToFragment(source, htmlDocument)`** with html output (declared or detected) returns real HTML elements parsed by the owner document, like Chrome: `<a>` is an `HTMLAnchorElement` and scripts run when inserted. The markup is parsed as body content, so `html`/`head`/`body` tags are dropped. XML output keeps the XML DOM nodes.
+- **Extension elements** (`extension-element-prefixes`) are no longer copied to the result: their `xsl:fallback` children run; without a fallback nothing is output and a warning is shown. New `XsltEngine#registerExtensionElement(uri, localName, handler)`; `element-available()` reports registered elements.
+- **HTML URI attributes** are %-escaped like libxml2: only `href`, `action`, `src` and `a/@name` on elements in no namespace; spaces, control characters, DEL and non-ASCII characters are escaped (`a b` becomes `a%20b`).
+- `id()`/`key()` in patterns accept only string literals (XSLT 1.0 section 5.2); other arguments are an import error.
+- `xsl:number` numbers negative values as 0 with a warning; alphabetic and Roman formats fall back to decimals below 1, and Roman above 5000 (libxslt).
+
+### Fixed
+
+- **Deeply nested result trees** no longer overflow the call stack when serialized (task 0024): `transformToString`, `transformToStream`, `serializeResult` and `serializeChunks` walk the result tree on an explicit stack of open elements, so trees nested 50,000 elements deep serialize with the xml, html, xhtml and text methods. Output is byte-identical, and serialization is 10 to 30% faster on large documents.
+- **Document order** is computed once per transformation (`DocumentOrderIndex`) instead of calling `compareDocumentPosition` for every comparison, except where that method is native (browsers). With xmldom a union-heavy transformation dropped from about 150 s to 0.7 s.
+- **Muenchian grouping was about 12% slower than in 1.1.3** under jsdom: sorting `key(...)/@v` walked the attribute list of every element (now only for two attributes of the same element), unprefixed name tests read the owner document's content type for every node (now only for HTML-specific outcomes), and `key()` read properties of the jsdom Document proxy on each call. In the benchmark Muenchian grouping is now 1.09 times faster than 1.1.3 (157 ms to 144 ms), and the other scenarios gained 2 to 6%.
+- **Deep template recursion** (task 0005): recursive `xsl:call-template` and `xsl:apply-templates` stopped at about 1,000 to 1,400 levels with `Template recursion too deep`. Templates now run from an explicit work stack, so the JavaScript stack no longer grows with template depth: libxslt's limit of 3,000 nested templates fits in Node.js and every browser, and more with a higher limit.
+- **`transformToDocument()` returned `null`** when the result had whitespace text around its root element (common with built-in templates), found by the browser tests; document-level whitespace is dropped and a DocumentType node is created from `doctype-public`/`doctype-system`.
+- A carriage return in XML text is written as `&#13;`; adjacent text nodes in `cdata-section-elements` form one CDATA section; `xsl:copy-of` declares the namespaces in scope; `xml:id` via `xsl:attribute`; `element-available()` with the default namespace; `format-number()` patterns `.`, `#.` and `.#`; `html:div` and other operator names as QName local parts; `xsl:number` on namespace nodes.
+- **`xsl:number` hung on huge values** (`format="I"` or `"a"` with `9007199254740992`), a denial of service found by the conformance suite; conversion now takes logarithmic time. Values from 1e21 print as full digits, NaN and Infinity as `NaN`/`Infinity`.
+- `xsl:number` format tokens of any Unicode digit family (`٠١`, `１`, ...) use that family's digits; `count="@*" level="any"` counts the attribute itself.
+- A global `xsl:param` with higher import precedence wins over an imported `xsl:variable` of the same name (XSLT 1.0 section 11.4).
+- `self::*` and other non-attribute axes no longer match attribute or namespace nodes.
+- Node-sets holding an element and its own attributes are sorted in document order under jsdom.
+- The release workflow ran twice per release (on the tag push and on the published release), including `npm publish`; it now runs once, on the published release.
+- The CLI entry point handles an unexpected rejection from `main()` instead of leaving the promise unhandled (SonarCloud S9383).
+
+### Security
+
+- Updated the development dependency `brace-expansion` to 5.0.12 (GHSA-q2hr-2g5m-vwhr, GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p).
+- Build, conformance and browser-test scripts confine paths from command line arguments and HTTP requests to the repository (or the temporary directory) after canonicalizing them, and run `tar`/`codesign` from fixed system directories instead of looking them up in `PATH` (SonarCloud S8707, S2083, S4036).
+- CI, release and Docker builds install dependencies with `npm ci --ignore-scripts`, so lifecycle scripts of dependencies never run during builds (SonarCloud S6505).
+- The GitHub Pages workflow grants `pages: write` and `id-token: write` only to the deploy job instead of the whole workflow (SonarCloud S8233).
+
+### Added
+
+- **DOM implementations other than jsdom** (task 0007): @xmldom/xmldom 0.9+ is supported in Node.js (optional peer dependency). The XML declaration and top-level whitespace xmldom keeps are ignored by every axis and by `xsl:number`, results are built without `append`/`remove`/`createRange`, and xmldom's `appendChild(DocumentFragment)` and `Document.doctype` bugs are worked around. linkedom (no namespace support) and xmldom 0.8 are not supported.
+- **CLI DOM choice**: the CLI uses jsdom, or @xmldom/xmldom when jsdom is not installed; `XSLT_DOM=jsdom|xmldom` picks one. With xmldom, start-up takes 72 ms instead of 457 ms and an issue-#9-sized transformation 1.9 s instead of 4.9 s. The standalone executables bundle both.
+- `npm run test:dom` runs the test suites, the CLI tests and the conformance suite with jsdom and with xmldom (298/298; one case needs internal-DTD entities that xmldom does not expand); CI job `dom-matrix`.
+- `maxTemplateDepth` option for `XSLTProcessor` and `XsltEngine`, default 3000 (`XSLT_MAX_TEMPLATE_DEPTH`, libxslt's `xsltMaxDepth`); deeper nesting throws `Template recursion too deep`, as libxslt reports a potential infinite recursion.
+- **Asynchronous and streaming API** (task 0010): `XSLTProcessor#transformToStream(source, { signal, chunkSize })` returns a `ReadableStream<string>` serialized on demand; `transformAsync(source, { signal, stylesheet, stylesheetUri, fetchStylesheet, fetchDocument })` returns a `Promise<string>`; `importStylesheetAsync(style, uri, { loader, documentLoader, signal })` loads the `xsl:import`/`xsl:include` tree and literal `document()` URIs with `fetch` or a custom loader. Sources may be nodes, strings, bytes, `ReadableStream`s or async iterables. New exports `serializeChunks()`, `DEFAULT_CHUNK_SIZE`, `transformToChunks()` and `transformToStream()`, with TypeScript types. The CLI writes its output in chunks with backpressure (byte-identical, about 27% less peak memory on a 100 MB result).
+- **Project website** (task 0015) with the documentation, the changelog and an XSLT playground, built with spagu/ssg and deployed to GitHub Pages (`make site`, `.github/workflows/site.yml`); it replaces the Jekyll workflow. Pull requests build and check the site without deploying it.
+- **Standalone `xslt` executables** (task 0008) for linux-x64/arm64, darwin-x64/arm64 and windows-x64, attached to each GitHub release with `checksums.sha256`. They are built as Node.js Single Executable Applications with jsdom bundled (`scripts/binaries/`) and smoke-tested on each operating system in CI; `scripts/install.sh` installs them with checksum verification.
+- **Browser tests** (task 0009): `npm run test:browser` runs the built bundles in Chromium, Firefox and WebKit with Playwright, in CI on pull requests; an informational differential test compares the output with the browser's native `XSLTProcessor`.
+- **`namespace::` axis** (task 0004): namespace nodes for every binding in scope (including `xml`), with `name()`, string value, parent, `generate-id()`, union deduplication, and `xsl:copy`/`xsl:copy-of` adding the declaration.
+- `XSLTProcessor`/`XsltEngine` options `enableDynamicEvaluate` and `clock` for EXSLT `dyn:evaluate()` and reproducible current-time functions.
+- **EXSLT** (task 0002): the common, math, sets, strings, dates-and-times and dynamic functions libexslt provides, with libexslt's behaviour (new `src/xslt/exslt/`). `dyn:evaluate` is opt-in through `engine.enableDynamicEvaluate` because it evaluates XPath built from data.
+- **Conformance suite**: `npm run test:conformance` runs libxslt 1.1.45's test corpus (MIT, downloaded and checksum-verified) against the library, reports pass rates per spec section and fails CI only on regressions against `tests/conformance/baseline.json`. Initial result: 249 of 300 counted cases pass (83%).
+
+### Internal
+
+- The input decoding core moved from `bin/lib/decode.js` to `src/io/decode.js`, shared by the CLI and the asynchronous API; the serializer writes into chunks, and the string result joins them (one implementation).
+- **Engine split** (task 0022): `src/xslt/engine.js` (2,537 lines) is now a thin `XsltEngine` facade of 243 lines; its methods live in 17 modules under `src/xslt/engine/` by concern (stylesheet loading, top-level declarations, template rules and invocation, instruction dispatch, control flow, variables and parameters, text and number instructions, node construction and copying, transformation entry points, function support) and are installed on the prototype. No API or behaviour change and no measurable slowdown; `splitUnionPattern` and `findMatchingTemplate` were simplified to stay under SonarCloud's cognitive complexity limit.
+
+- **Repository hygiene** (task 0018): `LICENSE` and `LICENSE.md` named different copyright holders; `LICENSE.md` is now the only licence file ("spagu (tradik) and the XSLT-Processor contributors"). `npm test` fails when line or function coverage of the library (test files excluded) drops below 100% or branch coverage below 96% (Node.js 22.8+), so the coverage badge is enforced; README.md shows the SonarCloud quality gate. Private vulnerability reporting is enabled on GitHub.
+- npm publishing uses Trusted Publishing (OIDC) only; the `publish` job no longer reads an `NPM_TOKEN` secret, as npm is retiring publishing with 2FA-bypass tokens.
+- The benchmark headline no longer throws on an empty result list (`reduce()` without an initial value, SonarCloud S6959).
+
+### Documentation
+
+- **Benchmarks** (task 0023): `docs/BENCHMARKS.md` compares 1.1.3 and 1.2.0 on 14 scenarios with charts and tables (`npm run bench`, `node scripts/benchmark/charts.mjs`). 1.2.0 is faster than 1.1.3 in every scenario: 1.39 times on geometric mean, up to 1.81 times on a 100 MB result, with up to 58% less peak memory. The CLI with `XSLT_DOM=xmldom` is 2.6 times faster than with jsdom; jsdom stays the default for compatibility (internal DTD entities).
+- The website publishes images embedded with `<img>` in `docs/*.md` (copied to `/assets/`), so the benchmark charts render there too.
+- README.md shortened from about 1,080 to 220 lines; the details moved to `docs/` (API, loaders, examples, CLI, conformance and known deviations, security limits, development, browser support, style guide) with an index in `docs/README.md`.
+- `npm run docs:check` (scripts/check-links.mjs) verifies every relative link and heading anchor in the Markdown files; CI runs it.
+- **Website moved to <https://xslt-processor.tradik.com/>** on Cloudflare Pages (`wrangler.toml`, `make site-deploy`); the Site workflow deploys with `cloudflare/wrangler-action` instead of GitHub Pages and needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets. The site is built for the domain root, so ssg's link check now runs on the production build too. `package.json` `homepage` points to the site. CSS and JS are served with `max-age=0, must-revalidate` (ssg's default one-year `immutable` needs content-hashed names, and ssg's fingerprinting breaks ES module imports: spagu/ssg#309). Old links to `spagu.github.io/XSLT-Processor/...` keep working: GitHub Pages now serves a redirect page (`site/redirect/index.html`, also as `404.html`) that sends every path to the same path on the new domain.
+- The home page hero has a photo background (layered coastal rock and sea, WebP at 640/1024/1420 px with a JPEG fallback, preloaded per breakpoint) under a scrim of the page colour that keeps every hero text colour at WCAG 2.2 AA in light and dark mode.
+
 ## [1.1.3] - 2026-09-29
 
 ### Fixed

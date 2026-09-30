@@ -1,0 +1,9 @@
+# Cloudflare Pages project of the website, https://xslt-processor.tradik.com/.
+# Build the site first (make site), then deploy site/public with
+#   npx wrangler pages deploy --branch=main   (or: make site-deploy)
+# .github/workflows/site.yml does both on every push to main. The custom
+# domain is attached to the project in the Cloudflare dashboard
+# (Workers & Pages > xslt-processor > Custom domains).
+name = "xslt-processor"
+pages_build_output_dir = "site/public"
+compatibility_date = "2026-09-30"

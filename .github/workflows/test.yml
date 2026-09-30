@@ -28,7 +28,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run linter
         run: npm run lint
@@ -36,11 +36,38 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+      - name: Check documentation links
+        run: npm run docs:check
+
+      - name: Test binary build scripts
+        if: matrix.node-version == '26.x'
+        run: npm run test:binaries
+
       - name: Run tests with coverage
         run: npm test
 
       - name: Build distribution
         run: npm run build
+
+  dom-matrix:
+    # Test suites and conformance run against jsdom and @xmldom/xmldom
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js 24.x
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run the DOM test matrix
+        run: npm run test:dom
 
   docker-test:
     runs-on: ubuntu-latest

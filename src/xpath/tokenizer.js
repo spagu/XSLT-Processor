@@ -153,6 +153,8 @@ export class XPathTokenizer {
     const lastToken = this.getLastToken();
     // No preceding token means we're at the start - not an operator context
     if (!lastToken) return false;
+    // The local part of a QName (`html:div`) is a name, never an operator
+    if (lastToken.type === TokenType.COLON) return false;
     // If preceding token is a "blocker", it's not an operator context
     if (OPERATOR_CONTEXT_BLOCKERS.has(lastToken.type)) return false;
     // Otherwise, it IS an operator context (after names, numbers, closing brackets, etc.)

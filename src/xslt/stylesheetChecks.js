@@ -5,10 +5,14 @@
  *   and `xsl:number count`/`from` are compiled at import time, so an invalid
  *   pattern makes `importStylesheet` fail with an error naming it, as libxslt
  *   (and so the browsers' XSLTProcessor) rejects such a stylesheet.
+ * - Two global xsl:variable elements of the same name and import precedence
+ *   (section 11.4) and text at the top level of a stylesheet (section 2.2)
+ *   make `importStylesheet` fail, as libxslt rejects such a stylesheet.
  * - Two local variables or parameters of the same name where one is in the
- *   scope of the other (section 11.5), and two global ones with the same
- *   import precedence (section 11.4), are errors libxslt reports; they are
- *   only warned about here, and the binding used so far keeps being used.
+ *   scope of the other (section 11.5), and a global xsl:param clashing with
+ *   another global binding of the same import precedence (section 11.4),
+ *   are errors libxslt only reports; they are warned about here, and the
+ *   binding used so far keeps being used.
  *
  * @module xslt/stylesheetChecks
  */
@@ -147,10 +151,11 @@ export function checkLocalBindings(declaration, warn) {
 }
 
 /**
- * Warn about a global variable or parameter repeating the name of an
- * earlier one with the same import precedence (XSLT 1.0 section 11.4). The
- * message names the binding the engine uses: the later declaration, except
- * that a global xsl:variable wins over an xsl:param of the same name.
+ * Check a global variable or parameter repeating the name of an earlier one
+ * with the same import precedence (XSLT 1.0 section 11.4). Two
+ * xsl:variable elements are an error, as in libxslt; a clash involving an
+ * xsl:param is warned about, naming the binding the engine uses: the later
+ * declaration, except that a global xsl:variable wins over an xsl:param.
  *
  * @param {{name: string, kind: string, precedence: number}} declaration - The
  *   new declaration: its name, "variable" or "param", and import precedence
@@ -158,21 +163,44 @@ export function checkLocalBindings(declaration, warn) {
  *   registered so far under that name (with `node` and `importPrecedence`)
  * @param {(message: string) => void} warn - Reports the duplicate
  * @returns {void}
+ * @throws {Error} When an xsl:variable repeats an xsl:variable
  *
  * @example
- * checkGlobalDuplicate({ name: "v", kind: "variable", precedence: 1 },
+ * checkGlobalDuplicate({ name: "v", kind: "param", precedence: 1 },
  *   { variable: { node, importPrecedence: 1 } }, console.warn);
  */
 export function checkGlobalDuplicate(declaration, earlier, warn) {
   const { name, kind, precedence } = declaration;
-  const clash = [earlier.variable, earlier.param].some(
-    (definition) =>
-      definition?.node && definition.importPrecedence === precedence,
-  );
-  if (!clash) return;
+  const clashes = (definition) =>
+    Boolean(definition?.node) && definition.importPrecedence === precedence;
+  if (kind === "variable" && clashes(earlier.variable)) {
+    throw new Error(
+      `redefinition of global variable $${name} at the same import precedence (XSLT 1.0 section 11.4)`,
+    );
+  }
+  if (!clashes(earlier.variable) && !clashes(earlier.param)) return;
   const used =
     kind === "param" && earlier.variable ? "the xsl:variable" : "the later one";
   warn(
     `duplicate global binding of variable $${name} at the same import precedence; ${used} is used (XSLT 1.0 section 11.4)`,
   );
+}
+
+/**
+ * Reject text other than whitespace among the top-level elements of a
+ * stylesheet (XSLT 1.0 section 2.2), as libxslt does.
+ *
+ * @param {Element} root - The xsl:stylesheet or xsl:transform element
+ * @returns {void}
+ * @throws {Error} When a text node holds non-whitespace characters
+ */
+export function checkTopLevelText(root) {
+  for (let child = root.firstChild; child; child = child.nextSibling) {
+    const isText = child.nodeType === 3 || child.nodeType === 4;
+    if (isText && /[^ \t\r\n]/.test(child.nodeValue)) {
+      throw new Error(
+        `misplaced text at the top level of the stylesheet: "${child.nodeValue.trim()}" (XSLT 1.0 section 2.2)`,
+      );
+    }
+  }
 }

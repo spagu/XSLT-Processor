@@ -83,6 +83,8 @@ function parseSubPattern(subPattern, format) {
     suffix,
     multiplier,
     minInteger: countOccurrences(integerPart, format.zeroDigit),
+    integerHash: countOccurrences(integerPart, format.digit),
+    hasDecimal: decimalIndex !== -1,
     minFraction: countOccurrences(fractionPart, format.zeroDigit),
     maxFraction: Math.min(fractionPart.length, 100),
     groupingSize:
@@ -143,31 +145,42 @@ function translateDigits(text, zeroDigit) {
 /**
  * Format the magnitude of a finite number according to a parsed subpattern.
  *
+ * Follows libxslt (and so Chrome) where the JDK rules leave room: a pattern
+ * without integer digits and zero fraction digits (`.#`) shows one fraction
+ * digit, as the JDK does; an integer part of zero is written as `0` unless
+ * the pattern asks for fraction zeros (`#.#` gives `0.5`, `.#` gives `.5`);
+ * and a decimal separator with no fraction digits after it is kept (`#.`
+ * gives `1.`).
+ *
  * @param {number} magnitude - Absolute, already scaled value
  * @param {Object} spec - Parsed subpattern
  * @param {Object} format - Decimal format symbols
  * @returns {string} The formatted number without prefix or suffix
  */
 function formatMagnitude(magnitude, spec, format) {
+  const noDigits = spec.minInteger + spec.integerHash + spec.minFraction === 0;
+  const minFraction = noDigits && spec.maxFraction > 0 ? 1 : spec.minFraction;
   const fixed = magnitude.toFixed(spec.maxFraction);
   const [rawInteger, rawFraction = ""] = fixed.split(".");
 
   let fraction = rawFraction;
-  while (fraction.length > spec.minFraction && fraction.endsWith("0")) {
+  while (fraction.length > minFraction && fraction.endsWith("0")) {
     fraction = fraction.slice(0, -1);
   }
 
-  let integer = rawInteger.padStart(spec.minInteger, "0");
-  if (spec.minInteger === 0 && integer === "0" && fraction.length > 0) {
-    integer = "";
-  }
+  let integer = (rawInteger === "0" ? "" : rawInteger).padStart(
+    spec.minInteger,
+    "0",
+  );
+  if (integer === "" && spec.minInteger + minFraction === 0) integer = "0";
 
   integer = applyGrouping(integer, spec.groupingSize, format.groupingSeparator);
 
-  const body =
-    fraction.length > 0
-      ? integer + format.decimalSeparator + fraction
-      : integer;
+  let body = integer;
+  if (fraction.length > 0) body += format.decimalSeparator + fraction;
+  else if (spec.maxFraction === 0 && spec.hasDecimal) {
+    body += format.decimalSeparator;
+  }
 
   return translateDigits(body, format.zeroDigit);
 }

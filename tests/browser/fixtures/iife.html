@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="description" content="Loads the IIFE (CDN) bundle of @tradik/xslt-processor for the Playwright browser tests." />
+    <title>IIFE bundle test page</title>
+    <!--
+      Query parameters:
+        min       load xslt-processor.browser.min.js instead of the full bundle
+        noNative  remove the native XSLTProcessor first (a browser without it)
+    -->
+    <script>
+      (() => {
+        const query = new URLSearchParams(location.search);
+        window.NativeXSLTProcessor =
+          typeof window.XSLTProcessor === "function" ? window.XSLTProcessor : null;
+        if (query.has("noNative")) {
+          delete window.XSLTProcessor;
+        }
+        const script = document.createElement("script");
+        script.src = query.has("min")
+          ? "/dist/xslt-processor.browser.min.js"
+          : "/dist/xslt-processor.browser.js";
+        script.onload = () => {
+          window.ready = true;
+        };
+        document.head.append(script);
+      })();
+    </script>
+  </head>
+  <body>
+    <main id="out"></main>
+  </body>
+</html>

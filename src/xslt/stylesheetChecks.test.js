@@ -167,18 +167,27 @@ describe("duplicate bindings", () => {
     assert.deepStrictEqual(warnings, []);
   });
 
-  it("warns about globals declared twice at the same import precedence", () => {
+  it("warns about global params clashing at the same import precedence", () => {
     const xsl = stylesheet(
-      '<xsl:variable name="v" select="1"/><xsl:variable name="v" select="2"/><xsl:param name="p" select="1"/><xsl:param name="p" select="2"/><xsl:variable name="m" select="1"/><xsl:param name="m" select="2"/>' +
-        T('<xsl:value-of select="concat($v, $p, $m)"/>'),
+      '<xsl:param name="p" select="1"/><xsl:param name="p" select="2"/><xsl:variable name="m" select="1"/><xsl:param name="m" select="2"/>' +
+        T('<xsl:value-of select="concat($p, $m)"/>'),
     );
     const { result, warnings } = warned(() => run(xsl));
-    assert.strictEqual(result, "221");
+    assert.strictEqual(result, "21");
     assert.deepStrictEqual(warnings, [
-      "XSLT: duplicate global binding of variable $v at the same import precedence; the later one is used (XSLT 1.0 section 11.4)",
       "XSLT: duplicate global binding of variable $p at the same import precedence; the later one is used (XSLT 1.0 section 11.4)",
       "XSLT: duplicate global binding of variable $m at the same import precedence; the xsl:variable is used (XSLT 1.0 section 11.4)",
     ]);
+  });
+
+  it("rejects two global variables of the same name and import precedence (libxslt reports/tst-1)", () => {
+    const xsl = stylesheet(
+      '<xsl:variable name="v" select="1"/><xsl:variable name="v" select="2"/>',
+    );
+    assert.throws(
+      () => compile(xsl),
+      /redefinition of global variable \$v at the same import precedence/,
+    );
   });
 
   it("allows an imported global of the same name", () => {
@@ -219,6 +228,25 @@ describe("duplicate bindings", () => {
     assert.deepStrictEqual(messages, [
       "duplicate binding of variable $a in template; the later one is used (XSLT 1.0 section 11.5)",
     ]);
+  });
+});
+
+describe("top-level text", () => {
+  it("rejects text among the top-level elements (libxslt reports/tst-2)", () => {
+    const xsl = stylesheet(
+      '\n  a not allowed top level element\n<xsl:template match="/"/>',
+    );
+    assert.throws(
+      () => compile(xsl),
+      /misplaced text at the top level of the stylesheet: "a not allowed top level element"/,
+    );
+  });
+
+  it("accepts whitespace, comments and CDATA whitespace", () => {
+    const xsl = stylesheet(
+      '<!-- c --><![CDATA[ \t ]]>\n<xsl:template match="/">ok</xsl:template>',
+    );
+    assert.strictEqual(run(xsl), "ok");
   });
 });
 

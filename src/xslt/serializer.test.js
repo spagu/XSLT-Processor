@@ -459,10 +459,7 @@ describe("serializeResult", () => {
         doctypeSystem: "about:legacy-compat",
       });
 
-      assert.strictEqual(
-        output,
-        '<!DOCTYPE html SYSTEM "about:legacy-compat">\n<html></html>',
-      );
+      assert.strictEqual(output, "<!DOCTYPE html>\n<html></html>");
     });
 
     it("should fall back to the html doctype name without a root element", () => {
@@ -475,10 +472,7 @@ describe("serializeResult", () => {
         doctypeSystem: "about:legacy-compat",
       });
 
-      assert.strictEqual(
-        output,
-        '<!DOCTYPE html SYSTEM "about:legacy-compat">\nbare',
-      );
+      assert.strictEqual(output, "<!DOCTYPE html>\nbare");
     });
 
     it("should write void elements without a slash", () => {
@@ -534,13 +528,18 @@ describe("serializeResult", () => {
       assert.strictEqual(output, "<html><p>a &lt; b &amp; c</p></html>");
     });
 
-    it("should not emit namespace declarations", () => {
+    it("should emit namespace declarations like libxml2 (libxslt bug-114, bug-130)", () => {
       const doc = parseXML(
-        '<html xmlns="http://www.w3.org/1999/xhtml"><p/></html>',
+        '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:f="urn:f"><p/><br/><f:img/><img xmlns=""/><div xmlns=""/></html>',
       );
       const output = serializeResult(doc, { method: "html" });
 
-      assert.strictEqual(output, "<html><p></p></html>");
+      // XHTML and no-namespace elements keep the HTML rules; other
+      // namespaces are not HTML (end tag always)
+      assert.strictEqual(
+        output,
+        '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:f="urn:f"><p></p><br><f:img></f:img><img xmlns=""><div xmlns=""></div></html>',
+      );
     });
 
     it("should terminate processing instructions with a single bracket", () => {

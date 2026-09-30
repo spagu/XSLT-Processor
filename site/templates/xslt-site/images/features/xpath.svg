@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="320" height="180"><style>
+.bg{fill:#e8f0fe}.paper{fill:#fff;stroke:#dadce0;stroke-width:2}.ink{fill:#9aa0a6}.line{stroke:#9aa0a6;stroke-width:4;stroke-linecap:round;fill:none}
+.b{fill:#4285f4}.r{fill:#ea4335}.y{fill:#fbbc04}.g{fill:#34a853}
+.bs{stroke:#4285f4}.rs{stroke:#ea4335}.ys{stroke:#fbbc04}.gs{stroke:#34a853}
+.st{stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.t{font:700 18px ui-monospace,Menlo,Consolas,monospace;fill:#202124}
+@media (prefers-color-scheme:dark){.bg{fill:#292a2d}.paper{fill:#35363a;stroke:#5f6368}.ink{fill:#80868b}.line{stroke:#80868b}
+.b{fill:#8ab4f8}.r{fill:#f28b82}.y{fill:#fdd663}.g{fill:#81c995}.bs{stroke:#8ab4f8}.rs{stroke:#f28b82}.ys{stroke:#fdd663}.gs{stroke:#81c995}.t{fill:#e8eaed}}
+</style><rect class="bg" width="320" height="180"/><path class="line" d="M160 36L90 86"/><path class="line" d="M160 36L230 86"/><path class="line" d="M90 86L60 140"/><path class="line" d="M90 86L120 140"/><path class="line" d="M230 86L200 140"/><path class="line" d="M230 86L260 140"/><path class="bs st" d="M160 36L230 86L200 140M230 86L260 140"/><circle class="b" cx="160" cy="36" r="11"/><circle class="paper" cx="90" cy="86" r="11"/><circle class="b" cx="230" cy="86" r="11"/><circle class="paper" cx="60" cy="140" r="11"/><circle class="paper" cx="120" cy="140" r="11"/><circle class="g" cx="200" cy="140" r="13"/><circle class="g" cx="260" cy="140" r="13"/></svg>

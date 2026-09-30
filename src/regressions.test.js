@@ -5,12 +5,8 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { JSDOM } from "jsdom";
 import { XSLTProcessor } from "./index.js";
-
-const { window } = new JSDOM("");
-const parseXML = (s) =>
-  new window.DOMParser().parseFromString(s, "application/xml");
+import { parseXmlDocument as parseXML } from "./domEnvironment.test.js";
 
 /**
  * Run a stylesheet body against an XML string and return the text output.
@@ -171,5 +167,27 @@ describe("XHTML empty elements (issue #11 attachment)", () => {
     assert.match(out, /<meta charset="UTF-8" \/>/);
     assert.match(out, /<div><\/div><br \/>/);
     assert.match(out, /<x:data xmlns:x="urn:x"\/>/);
+  });
+});
+
+describe("xsl:strip-space with an undeclared prefix", () => {
+  it("warns once and keeps transforming", () => {
+    const originalWarn = console.warn;
+    const warnings = [];
+    console.warn = (message) => warnings.push(String(message));
+    try {
+      const result = run(
+        "<r> <a>1</a> </r>",
+        `<xsl:strip-space elements="zz:* r"/>
+         <xsl:template match="/"><xsl:value-of select="count(r/node())"/></xsl:template>`,
+      );
+      assert.strictEqual(result, "1");
+    } finally {
+      console.warn = originalWarn;
+    }
+    assert.ok(
+      warnings.some((w) => w.includes("zz")),
+      warnings.join("\n"),
+    );
   });
 });

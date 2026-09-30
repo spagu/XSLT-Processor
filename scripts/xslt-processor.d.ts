@@ -14,7 +14,10 @@
  * @param href - The resolved URI of the referenced stylesheet
  * @param baseUri - The URI of the importing/including stylesheet, if known
  */
-export type StylesheetLoader = (href: string, baseUri?: string) => Document | string;
+export type StylesheetLoader = (
+  href: string,
+  baseUri?: string,
+) => Document | string;
 
 /**
  * Loader used by the XSLT document() function.
@@ -26,7 +29,10 @@ export type StylesheetLoader = (href: string, baseUri?: string) => Document | st
  * @param uri - The resolved URI of the requested document
  * @param baseUri - The base URI the reference was resolved against, if known
  */
-export type DocumentLoader = (uri: string, baseUri?: string) => Document | string | null;
+export type DocumentLoader = (
+  uri: string,
+  baseUri?: string,
+) => Document | string | null;
 
 /**
  * Anything with a DOMParser-like parseFromString method (a browser, jsdom or
@@ -37,10 +43,91 @@ export interface DomParserLike {
 }
 
 /**
+ * What an asynchronous loader may resolve to: a Document, markup, bytes
+ * (decoded from the byte order mark or XML declaration, else UTF-8), a fetch
+ * Response, or null when the resource is unavailable.
+ */
+export type AsyncLoaderResult =
+  Document | string | Uint8Array | ArrayBuffer | Response | null;
+
+/**
+ * Asynchronous loader of stylesheet modules and document() documents.
+ * @param uri - The resolved URI
+ * @param baseUri - The URI it was resolved against, if known
+ * @param init - Holds the AbortSignal of the call
+ */
+export type AsyncLoader = (
+  uri: string,
+  baseUri: string | undefined,
+  init: { signal?: AbortSignal },
+) => AsyncLoaderResult | Promise<AsyncLoaderResult>;
+
+/**
+ * Input of the asynchronous API: a node, markup, bytes, or a stream of
+ * markup/bytes. Streams are read to their end before parsing (XSLT 1.0 needs
+ * the whole source tree).
+ */
+export type AsyncSource =
+  | Node
+  | string
+  | Uint8Array
+  | ArrayBuffer
+  | ReadableStream<string | Uint8Array | ArrayBuffer>
+  | AsyncIterable<string | Uint8Array | ArrayBuffer>;
+
+/** Options of transformToStream. */
+export interface StreamOptions {
+  /** Cancels: the stream is errored with the abort reason. */
+  signal?: AbortSignal;
+  /** Chunk size in UTF-16 code units (default 16384); Infinity for one chunk. */
+  chunkSize?: number;
+}
+
+/** Options of importStylesheetAsync. */
+export interface ImportAsyncOptions {
+  /** Loader of xsl:import/xsl:include modules; the global fetch by default. */
+  loader?: AsyncLoader;
+  /** Loader of literal document() documents; `loader` by default. */
+  documentLoader?: AsyncLoader;
+  /** Cancels loading. */
+  signal?: AbortSignal;
+}
+
+/** Options of transformAsync. */
+export interface TransformAsyncOptions {
+  /** Cancels loading and reading. */
+  signal?: AbortSignal;
+  /** A stylesheet to import first with importStylesheetAsync. */
+  stylesheet?: AsyncSource;
+  /** The URI of that stylesheet. */
+  stylesheetUri?: string;
+  /** Loader of its xsl:import/xsl:include modules (fetch by default). */
+  fetchStylesheet?: AsyncLoader;
+  /** Loader of the literal document() documents of the stylesheet. */
+  fetchDocument?: AsyncLoader;
+}
+
+/**
  * XSLTProcessor - Applies XSLT stylesheet transformations to XML documents.
  */
 export class XSLTProcessor {
-  constructor();
+  constructor(options?: {
+    /**
+     * @deprecated Let unprefixed name tests (`item`, `@a`) also match nodes
+     * in a namespace, as before 1.2.0. XPath 1.0 and Chrome match only nodes
+     * in no namespace.
+     */
+    legacyNameTests?: boolean;
+    /** Allow EXSLT `dyn:evaluate()`; it evaluates XPath built from data. */
+    enableDynamicEvaluate?: boolean;
+    /** Clock for EXSLT current-time functions (reproducible output). */
+    clock?: () => Date;
+    /**
+     * Deepest nesting of template instantiations; deeper recursion throws
+     * "Template recursion too deep" (default 3000, as in libxslt).
+     */
+    maxTemplateDepth?: number;
+  });
 
   /**
    * The underlying XSLT engine (advanced usage).
@@ -99,12 +186,53 @@ export class XSLTProcessor {
   transformToString(source: Node): string | null;
 
   /**
+   * Imports a stylesheet after loading its xsl:import/xsl:include tree and
+   * its literal document() documents asynchronously (non-W3C). Rejects on a
+   * load failure or an import cycle; the previous stylesheet is then kept.
+   * @param style - The stylesheet, as a node or as markup/stream to parse
+   * @param stylesheetUri - Base URI of relative hrefs and document() URIs
+   * @param options - Loaders and AbortSignal
+   */
+  importStylesheetAsync(
+    style: AsyncSource,
+    stylesheetUri?: string,
+    options?: ImportAsyncOptions,
+  ): Promise<void>;
+
+  /**
+   * Transforms asynchronously and resolves with the serialized result
+   * (non-W3C). Unlike transformToString, failures reject.
+   * @param source - Node, markup, bytes or stream of the source document
+   * @param options - AbortSignal, optional stylesheet and loaders
+   */
+  transformAsync(
+    source: AsyncSource,
+    options?: TransformAsyncOptions,
+  ): Promise<string>;
+
+  /**
+   * Transforms and streams the serialized result in chunks (non-W3C). The
+   * result tree is built in memory on the first read; the output string is
+   * produced chunk by chunk on demand. Failures error the stream.
+   * @param source - Node, markup, bytes or stream of the source document
+   * @param options - AbortSignal and chunk size
+   */
+  transformToStream(
+    source: AsyncSource,
+    options?: StreamOptions,
+  ): ReadableStream<string>;
+
+  /**
    * Sets a parameter in the XSLT stylesheet.
    * @param namespaceURI - The namespace URI (use null for no namespace)
    * @param localName - The local name of the parameter
    * @param value - The value to set
    */
-  setParameter(namespaceURI: string | null, localName: string, value: unknown): void;
+  setParameter(
+    namespaceURI: string | null,
+    localName: string,
+    value: unknown,
+  ): void;
 
   /**
    * Gets the value of a parameter from the XSLT stylesheet.
@@ -182,7 +310,7 @@ export class XPathContext {
     size?: number,
     variables?: Record<string, unknown>,
     namespaces?: Record<string, string>,
-    hostContext?: unknown
+    hostContext?: unknown,
   );
 
   node: Node;
@@ -203,7 +331,7 @@ export class XPathContext {
 export type XPathFunction = (
   this: XPathEvaluator,
   args: unknown[],
-  context: XPathContext
+  context: XPathContext,
 ) => unknown;
 
 /**
@@ -217,6 +345,12 @@ export class XPathEvaluator {
     maxResultSize?: number;
     /** Longest string a function may produce (default XPathLimits.MAX_STRING_LENGTH). */
     maxStringLength?: number;
+    /**
+     * @deprecated Let unprefixed name tests (`item`, `@a`) also match nodes
+     * in a namespace, as before 1.2.0. XPath 1.0 and Chrome match only nodes
+     * in no namespace.
+     */
+    legacyNameTests?: boolean;
   });
 
   evaluate(ast: unknown, context: XPathContext): unknown;
@@ -238,7 +372,10 @@ export class XPathEvaluator {
 export function evaluateXPath(
   expression: string,
   contextNode: Node,
-  options?: { variables?: Record<string, unknown>; namespaces?: Record<string, string> }
+  options?: {
+    variables?: Record<string, unknown>;
+    namespaces?: Record<string, string>;
+  },
 ): unknown;
 
 /**
@@ -247,7 +384,10 @@ export function evaluateXPath(
 export function selectXPath(
   expression: string,
   contextNode: Node,
-  options?: { variables?: Record<string, unknown>; namespaces?: Record<string, string> }
+  options?: {
+    variables?: Record<string, unknown>;
+    namespaces?: Record<string, string>;
+  },
 ): Node[];
 
 /**
@@ -256,7 +396,10 @@ export function selectXPath(
 export function selectFirstXPath(
   expression: string,
   contextNode: Node,
-  options?: { variables?: Record<string, unknown>; namespaces?: Record<string, string> }
+  options?: {
+    variables?: Record<string, unknown>;
+    namespaces?: Record<string, string>;
+  },
 ): Node | null;
 
 /**
@@ -306,6 +449,12 @@ export const XSLT_MAX_RESULT_SIZE: number;
 export const XSLT_MAX_EXPRESSION_DEPTH: number;
 
 /**
+ * Default limit of nested template instantiations in a transformation
+ * (3000, libxslt's `xsltMaxDepth`).
+ */
+export const XSLT_MAX_TEMPLATE_DEPTH: number;
+
+/**
  * XSLT processing engine.
  */
 export class XsltEngine {
@@ -322,12 +471,55 @@ export class XsltEngine {
     maxResultSize?: number;
     /** Deepest XPath expression nesting (default XSLT_MAX_EXPRESSION_DEPTH). */
     maxRecursionDepth?: number;
+    /**
+     * Deepest nesting of template instantiations; deeper recursion throws
+     * "Template recursion too deep" (default XSLT_MAX_TEMPLATE_DEPTH).
+     */
+    maxTemplateDepth?: number;
+    /**
+     * @deprecated Let unprefixed name tests (`item`, `@a`) also match nodes
+     * in a namespace, as before 1.2.0. XPath 1.0 and Chrome match only nodes
+     * in no namespace.
+     */
+    legacyNameTests?: boolean;
+    /** Allow EXSLT `dyn:evaluate()`; it evaluates XPath built from data. */
+    enableDynamicEvaluate?: boolean;
+    /** Clock for EXSLT current-time functions (reproducible output). */
+    clock?: () => Date;
   });
+
+  /** Whether EXSLT `dyn:evaluate()` is allowed. */
+  enableDynamicEvaluate: boolean;
+  /** Clock for EXSLT current-time functions, or null for the system clock. */
+  clock: (() => Date) | null;
 
   setStylesheetLoader(loader: StylesheetLoader | null): this;
   setDocumentLoader(loader: DocumentLoader | null): this;
   importStylesheet(stylesheetNode: Node, stylesheetUri?: string): void;
   transform(sourceNode: Node, ownerDocument: Document): DocumentFragment;
+  /**
+   * Like transform(), but html output into an HTML document is parsed as
+   * HTML (real HTMLElements), as Chrome's transformToFragment does.
+   */
+  transformToFragment(
+    sourceNode: Node,
+    ownerDocument: Document,
+  ): DocumentFragment;
+  /**
+   * Register the implementation of an extension element (XSLT 1.0 section
+   * 14.1), used instead of its xsl:fallback children.
+   * @returns This engine, to allow chaining
+   */
+  registerExtensionElement(
+    namespaceUri: string,
+    localName: string,
+    handler: (
+      node: Element,
+      context: XsltContext,
+      output: Node,
+      engine: XsltEngine,
+    ) => void,
+  ): this;
   transformToDocument(sourceNode: Node): Document;
   transformToString(sourceNode: Node): string;
 
@@ -341,12 +533,12 @@ export class XsltEngine {
  * A null method means "not declared": html or xml is picked from the result.
  */
 export interface OutputSettings {
-  method?: 'xml' | 'html' | 'xhtml' | 'text' | 'auto' | (string & {}) | null;
+  method?: "xml" | "html" | "xhtml" | "text" | "auto" | (string & {}) | null;
   version?: string;
   encoding?: string;
-  standalone?: 'yes' | 'no' | string | null;
-  indent?: 'yes' | 'no' | boolean;
-  omitXmlDeclaration?: 'yes' | 'no' | boolean;
+  standalone?: "yes" | "no" | string | null;
+  indent?: "yes" | "no" | boolean;
+  omitXmlDeclaration?: "yes" | "no" | boolean;
   doctypePublic?: string | null;
   doctypeSystem?: string | null;
   mediaType?: string | null;
@@ -355,8 +547,7 @@ export interface OutputSettings {
    * engine resolves them from xsl:output.
    */
   cdataSectionElements?:
-    | string
-    | Array<string | { namespaceUri: string | null; localName: string }>;
+    string | Array<string | { namespaceUri: string | null; localName: string }>;
 }
 
 /**
@@ -367,8 +558,42 @@ export interface OutputSettings {
  */
 export function serializeResult(
   node: Node | null,
-  outputSettings?: OutputSettings
+  outputSettings?: OutputSettings,
 ): string;
+
+/** Default chunk size of the streaming serializer (16384 code units). */
+export const DEFAULT_CHUNK_SIZE: number;
+
+/**
+ * Serialize a transformation result in chunks of at most `chunkSize` UTF-16
+ * code units (one more when a surrogate pair straddles the boundary); joined,
+ * they equal serializeResult().
+ * @throws RangeError When chunkSize is not a positive integer or Infinity
+ */
+export function serializeChunks(
+  node: Node | null,
+  outputSettings?: OutputSettings,
+  options?: { chunkSize?: number },
+): Iterator<string> & Iterable<string>;
+
+/**
+ * Transform with an engine and serialize the result in chunks: the result
+ * tree is built by this call, serialization runs as the chunks are read.
+ */
+export function transformToChunks(
+  engine: XsltEngine,
+  sourceNode: Node,
+  options?: { chunkSize?: number },
+): Iterator<string> & Iterable<string>;
+
+/**
+ * Transform with an engine and stream the serialized result.
+ */
+export function transformToStream(
+  engine: XsltEngine,
+  sourceNode: Node,
+  options?: StreamOptions,
+): ReadableStream<string>;
 
 /**
  * Mark a text node as produced with disable-output-escaping="yes".
@@ -385,8 +610,12 @@ export function isRawText(node: Node | null): boolean;
  */
 export function resolveOutputSettings(
   outputSettings: OutputSettings | null,
-  node: Node | null
-): Required<OutputSettings> & { indent: boolean; omitXmlDeclaration: boolean; cdataSectionElements: Set<string> };
+  node: Node | null,
+): Required<OutputSettings> & {
+  indent: boolean;
+  omitXmlDeclaration: boolean;
+  cdataSectionElements: Set<string>;
+};
 
 /**
  * Version information.

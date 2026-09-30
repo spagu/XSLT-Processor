@@ -18,7 +18,7 @@ import {
   printHelp,
   printVersion,
 } from "./lib/options.js";
-import { createDomEnvironment, runTransformation } from "./lib/transform.js";
+import { createDomEnvironment, streamTransformation } from "./lib/transform.js";
 import { decodeXml } from "./lib/decode.js";
 import { writeResult } from "./lib/output.js";
 import {
@@ -81,7 +81,7 @@ async function main() {
       readFile(xsltFile),
     ]);
 
-    const { output, encoding } = runTransformation({
+    const { chunks, encoding } = streamTransformation({
       dom,
       xmlContent: decodeXml(xmlBytes, xmlFile),
       xsltContent: decodeXml(xsltBytes, xsltFile),
@@ -91,11 +91,15 @@ async function main() {
       baseDir,
     });
 
-    await writeResult(output, outputFile, { encoding });
+    await writeResult(chunks, outputFile, { encoding });
   } catch (err) {
     console.error(`Error: ${err.message}`);
     process.exit(1);
   }
 }
 
-main();
+main().catch((err) => {
+  // main() reports expected failures itself; this catches anything unexpected.
+  console.error(`Error: ${err?.message ?? err}`);
+  process.exit(1);
+});

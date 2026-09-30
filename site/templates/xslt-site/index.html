@@ -1,0 +1,4 @@
+{{/* Unused: the front page is the generated home.md with the landing layout. */}}
+{{define "index.html"}}{{template "head-with" (dict "Ctx" . "Title" .Site.Title "Description" .Site.Description "Link" "/" "Robots" "" "Layout" "landing" "Canonical" (printf "https://%s/" .Domain))}}
+<main id="main" class="wrap prose"><h1>{{ .Site.Title }}</h1></main>
+{{template "footer" .}}{{end}}

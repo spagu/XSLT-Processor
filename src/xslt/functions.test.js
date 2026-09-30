@@ -12,6 +12,7 @@ import assert from "node:assert";
 import { JSDOM } from "jsdom";
 import { XsltEngine } from "./engine.js";
 import { VENDOR, VENDOR_URL, createXsltFunctions } from "./functions.js";
+import { createExsltFunctions } from "./exslt/index.js";
 import { XSLT_NAMESPACE } from "./elements.js";
 import { XPathContext } from "../xpath/evaluator.js";
 import { parse as parseXPath } from "../xpath/parser.js";
@@ -562,6 +563,17 @@ describe("function-available() and element-available()", () => {
     );
   });
 
+  it("expands an unprefixed name with the default namespace (libxslt bug-200)", () => {
+    const engine = new XsltEngine();
+    const evaluate = (namespaces) =>
+      engine.xpathEvaluator.evaluate(
+        parseXPath("element-available('if')"),
+        new XPathContext(parseXML("<root/>"), 1, 1, {}, namespaces),
+      );
+    assert.strictEqual(evaluate({ "": XSLT_NAMESPACE }), true);
+    assert.strictEqual(evaluate({ "": "urn:other" }), false);
+  });
+
   it("should treat an unbound xsl prefix as the XSLT namespace", () => {
     const engine = new XsltEngine();
     const context = new XPathContext(parseXML("<root/>"), 1, 1, {}, {});
@@ -590,19 +602,24 @@ describe("createXsltFunctions", () => {
   it("should expose the whole XSLT function library", () => {
     const engine = new XsltEngine();
 
-    assert.deepStrictEqual(Object.keys(createXsltFunctions(engine)).sort(), [
-      "current",
-      "document",
-      "element-available",
-      "format-number",
-      "function-available",
-      "generate-id",
-      "key",
-      "system-property",
-      "unparsed-entity-uri",
-      "{http://exslt.org/common}node-set",
-      "{urn:schemas-microsoft-com:xslt}node-set",
-    ]);
+    const exsltKeys = Object.keys(createExsltFunctions(engine));
+    assert.deepStrictEqual(
+      Object.keys(createXsltFunctions(engine)).sort(),
+      [
+        ...exsltKeys,
+        "current",
+        "document",
+        "element-available",
+        "format-number",
+        "function-available",
+        "generate-id",
+        "key",
+        "system-property",
+        "unparsed-entity-uri",
+        "{http://exslt.org/common}node-set",
+        "{urn:schemas-microsoft-com:xslt}node-set",
+      ].sort(),
+    );
   });
 });
 
@@ -725,5 +742,25 @@ describe("node-set() extension functions", () => {
       () => run(`<xsl:value-of select="exsl:nonesuch()"/>`),
       /Unknown function: exsl:nonesuch/,
     );
+  });
+});
+
+describe("element-available() and registered extension elements", () => {
+  it("reports an extension element once an implementation is registered", async () => {
+    const { XSLTProcessor } = await import("../XSLTProcessor.js");
+    const { JSDOM } = await import("jsdom");
+    const { window } = new JSDOM("");
+    const parse = (s) =>
+      new window.DOMParser().parseFromString(s, "application/xml");
+    const stylesheet = `<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+        xmlns:my="urn:my" extension-element-prefixes="my">
+      <xsl:output method="text"/>
+      <xsl:template match="/"><xsl:value-of select="element-available('my:log')"/></xsl:template>
+    </xsl:stylesheet>`;
+    const processor = new XSLTProcessor();
+    processor.importStylesheet(parse(stylesheet));
+    assert.strictEqual(processor.transformToString(parse("<r/>")), "false");
+    processor.engine.registerExtensionElement("urn:my", "log", () => {});
+    assert.strictEqual(processor.transformToString(parse("<r/>")), "true");
   });
 });

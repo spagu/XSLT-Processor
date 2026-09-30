@@ -36,7 +36,7 @@ Please report vulnerabilities privately through GitHub:
 
 - **XPath API** (`evaluateXPath`, `selectXPath`, `XPathEvaluator`): expressions
   may come from untrusted input and are bounded by recursion, result size and
-  string length limits (see "Security Features" in the [README](README.md)).
+  string length limits (see [Security Limits](docs/SECURITY-LIMITS.md)).
 - **XSLT stylesheets** are treated as trusted program code: inside a
   transformation the XPath limits are much higher (`XSLT_MAX_RESULT_SIZE`,
   `XSLT_MAX_EXPRESSION_DEPTH`) and a stylesheet can loop or recurse until the

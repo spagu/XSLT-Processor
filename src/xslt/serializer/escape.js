@@ -5,7 +5,7 @@
  * (XSLT 1.0 section 16).
  */
 
-const XML_TEXT_ESCAPES = { "&": "&amp;", "<": "&lt;" };
+const XML_TEXT_ESCAPES = { "&": "&amp;", "<": "&lt;", "\r": "&#13;" };
 
 const HTML_TEXT_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
 
@@ -37,13 +37,18 @@ function escapeWith(value, pattern, escapes) {
  * Escape character data for the xml output method.
  *
  * `>` is only escaped where it would close a CDATA section, matching the
- * "minimal escaping" rule of XSLT 1.0 section 16.1.
+ * "minimal escaping" rule of XSLT 1.0 section 16.1. A carriage return is
+ * written as `&#13;`, as libxml2 does, since an XML parser would turn a
+ * literal one into a line feed.
  *
  * @param {string} value - Text content
  * @returns {string} Escaped text
+ *
+ * @example
+ * escapeXmlText("a<b\r"); // "a&lt;b&#13;"
  */
 export function escapeXmlText(value) {
-  return escapeWith(value, /[&<]/g, XML_TEXT_ESCAPES).replaceAll(
+  return escapeWith(value, /[&<\r]/g, XML_TEXT_ESCAPES).replaceAll(
     "]]>",
     "]]&gt;",
   );
@@ -85,28 +90,38 @@ export function escapeHtmlAttribute(value) {
   return escapeWith(value, /&(?!\{)|"/g, HTML_ATTRIBUTE_ESCAPES);
 }
 
-/** Runs of characters outside ASCII. */
-const NON_ASCII_RUN = /[\u{80}-\u{10FFFF}]+/gu;
+/** Leading HTML whitespace, which libxml2 writes unescaped. */
+const LEADING_HTML_SPACE = /^[ \t\n\f\r]*/;
+
+/** Runs of spaces, control characters, DEL and characters outside ASCII. */
+const URI_UNSAFE_RUN = /[^!-~]+/gu;
 
 /**
- * %-escape the non-ASCII characters of a URI attribute value as their UTF-8
- * bytes (XSLT 1.0 section 16.2, HTML 4.0 appendix B.2.1). ASCII characters,
- * `%` included, are kept as they are.
+ * %-escape a URI attribute value as libxml2's HTML serializer does (and so
+ * Chrome's XSLTProcessor): after any leading HTML whitespace, which is kept,
+ * spaces, control characters, DEL and non-ASCII characters become the
+ * %-escaped bytes of their UTF-8 encoding (XSLT 1.0 section 16.2, HTML 4.01
+ * appendix B.2.1). Printable ASCII, `%` included, is kept as it is.
  *
  * @param {string} value - Attribute value
- * @returns {string} The value with only ASCII characters
+ * @returns {string} The escaped value
  *
  * @example
- * escapeUriNonAscii("/café?q=1"); // "/caf%C3%A9?q=1"
+ * escapeUriAttribute("/café?q=a b"); // "/caf%C3%A9?q=a%20b"
  */
-export function escapeUriNonAscii(value) {
+export function escapeUriAttribute(value) {
+  const text = String(value);
+  const leading = LEADING_HTML_SPACE.exec(text)[0];
   const encoder = new globalThis.TextEncoder();
-  return String(value).replaceAll(NON_ASCII_RUN, (run) =>
-    Array.from(
-      encoder.encode(run),
-      (byte) => `%${byte.toString(16).toUpperCase().padStart(2, "0")}`,
-    ).join(""),
-  );
+  const rest = text
+    .slice(leading.length)
+    .replaceAll(URI_UNSAFE_RUN, (run) =>
+      Array.from(
+        encoder.encode(run),
+        (byte) => `%${byte.toString(16).toUpperCase().padStart(2, "0")}`,
+      ).join(""),
+    );
+  return leading + rest;
 }
 
 /**

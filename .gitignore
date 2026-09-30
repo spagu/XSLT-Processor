@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 dist/
+dist-bin/
 
 # IDE
 .vscode/
@@ -36,3 +37,23 @@ temp/
 
 # Planning notes (not versioned)
 /tasks/
+
+# XSLT conformance corpus (downloaded) and generated reports
+/tests/conformance/corpus/
+/tests/conformance/report.json
+/tests/conformance/report.md
+
+# Playwright browser tests (results and reports)
+/test-results/
+/playwright-report/
+# Project website: generated content and ssg output (site/scripts/build-content.mjs, make site)
+/site/content/
+/site/data/
+/site/static/vendor/
+/site/static/assets/
+/site/public/
+/site/public-local/
+/site/.ssg-cache/
+
+# Wrangler (Cloudflare Pages) local state
+.wrangler/

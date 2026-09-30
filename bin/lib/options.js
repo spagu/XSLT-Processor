@@ -68,6 +68,9 @@ default), e.g. UTF-16, ISO-8859-1 or windows-1252. The result is written in
 the encoding named by xsl:output (UTF-8 by default); characters that encoding
 cannot represent are written as character references (&#8364;).
 
+The DOM implementation is jsdom, or @xmldom/xmldom when jsdom is not
+installed; set XSLT_DOM=xmldom or XSLT_DOM=jsdom to choose one.
+
 EXAMPLES:
   # Basic transformation
   xslt data.xml transform.xsl

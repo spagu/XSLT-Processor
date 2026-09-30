@@ -5,12 +5,14 @@
 [![GitHub forks](https://img.shields.io/github/forks/spagu/XSLT-Processor?style=social)](https://github.com/spagu/XSLT-Processor/network/members)
 
 [![CI](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/test.yml)
+[![Browser tests](https://github.com/spagu/XSLT-Processor/actions/workflows/browser.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/browser.yml)
 [![Release](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml)
 [![npm version](https://img.shields.io/npm/v/@tradik/xslt-processor.svg)](https://www.npmjs.com/package/@tradik/xslt-processor)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.19.0-brightgreen.svg)](https://nodejs.org/)
-[![Line Coverage](https://img.shields.io/badge/line%20coverage-100%25-brightgreen.svg)](#test-coverage)
-[![TypeScript](https://img.shields.io/badge/types-included-3178c6.svg?logo=typescript&logoColor=white)](#typescript)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=spagu_XSLT-Processor&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=spagu_XSLT-Processor)
+[![Line Coverage](https://img.shields.io/badge/line%20coverage-100%25-brightgreen.svg)](docs/CONFORMANCE.md#test-coverage)
+[![TypeScript](https://img.shields.io/badge/types-included-3178c6.svg?logo=typescript&logoColor=white)](docs/API.md#typescript)
 
 > **Source Code:** [github.com/spagu/XSLT-Processor](https://github.com/spagu/XSLT-Processor)
 
@@ -27,26 +29,31 @@ This library ensures your XSLT-based applications continue to work regardless of
 ## Features
 
 - **1:1 Native API Compatibility**: Drop-in replacement for native `XSLTProcessor`
-- **XSLT 1.0**: Every element and function of the W3C XSLT 1.0 Recommendation, with the few gaps listed under [Known Deviations](#known-deviations)
+- **XSLT 1.0**: Every element and function of the W3C XSLT 1.0 Recommendation, with the few gaps listed under [Known Deviations](docs/CONFORMANCE.md#known-deviations)
 - **XPath 1.0 Engine**: Built-in XPath evaluator with all core functions
 - **`xsl:output` Serialization**: `transformToString()` honors method, indent, doctype, CDATA sections and `disable-output-escaping`
 - **Zero Dependencies**: The library has no runtime dependencies; only the `xslt` command line tool needs `jsdom` (an optional peer dependency)
 - **Multiple Formats**: ESM, CommonJS, and browser IIFE bundles
 - **TypeScript Support**: Includes TypeScript declarations
 
-## Contents
+## Documentation
 
-- [Installation](#installation)
-- [Usage](#usage): [CDN](#browser-via-cdn-recommended), [ESM](#esm-module), [CommonJS](#commonjs), [CLI](#cli-usage)
-- [API Reference](#api-reference): [XSLTProcessor](#xsltprocessor), [Module exports](#module-exports), [xsl:output](#serializing-output-xsloutput), [xsl:import/xsl:include](#using-xslimport-and-xslinclude), [document()](#using-the-document-function)
-- [Complete Example](#complete-example)
-- [Security Features](#security-features)
-- [XSLT Elements](#xslt-elements-supported) and [XPath Functions](#xpath-functions-supported)
-- [Known Deviations](#known-deviations)
-- [Development](#development) and [Publishing to npm](#publishing-to-npm)
-- [Browser Compatibility](#browser-compatibility)
-- [W3C Standards Compliance](#w3c-standards-compliance)
-- [Style Guide](#style-guide)
+The documentation is also published as a website with an interactive playground: <https://xslt-processor.tradik.com/> ([playground](https://xslt-processor.tradik.com/playground/)).
+
+| Guide | Contents |
+|-------|----------|
+| [API Reference](docs/API.md) | `XSLTProcessor` methods, parameters, `xsl:output` serialization, module exports, `XsltEngine` options, TypeScript |
+| [Loaders](docs/LOADERS.md) | `xsl:import`, `xsl:include` and the `document()` function |
+| [Complete Example](docs/EXAMPLES.md) | A product list transformed into an HTML table (browser and CLI) |
+| [Command Line Tool](docs/CLI.md) | `xslt` options, base directory, includes, input encodings |
+| [Conformance](docs/CONFORMANCE.md) | W3C compliance tables, supported elements and functions, known deviations, test coverage |
+| [Security Limits](docs/SECURITY-LIMITS.md) | XPath and XSLT limits, prototype pollution protection, input validation |
+| [Browser Compatibility](docs/BROWSER-SUPPORT.md) | Minimum browser versions, native XSLT removal timeline, feature detection |
+| [Benchmarks](docs/BENCHMARKS.md) | 1.1.3 vs 1.2.0: speed-up, time and peak memory per scenario, with charts, tables and `npm run bench` to reproduce |
+| [Development](docs/DEVELOPMENT.md) | Setup, tests, Docker, Makefile, publishing to npm |
+| [Style Guide](docs/STYLE-GUIDE.md) | Project colors with WCAG 2.2 contrast ratios |
+
+All guides are listed in the [documentation index](docs/README.md).
 
 ## Installation
 
@@ -57,7 +64,7 @@ npm install @tradik/xslt-processor
 The library itself has no dependencies. The `xslt` command line tool also
 needs `jsdom` (an optional peer dependency, `>=25`), see [CLI Usage](#cli-usage).
 
-## Usage
+## Quick Start
 
 ### Browser via CDN (Recommended)
 
@@ -85,7 +92,7 @@ Use a CDN for the easiest browser integration - no build step required:
 </script>
 ```
 
-The bundle defines the global `XsltProcessorLib` (all [module exports](#module-exports))
+The bundle defines the global `XsltProcessorLib` (all [module exports](docs/API.md#module-exports))
 and calls `installGlobal()`: `window.XSLTProcessor` is replaced only when the
 browser has no working native implementation. To always use this
 implementation, call `XsltProcessorLib.installGlobal(true)` or use
@@ -148,11 +155,27 @@ const processor = new XSLTProcessor();
 // ...
 ```
 
-### CLI Usage
+### Node.js
 
-The package includes a command-line tool for transforming XML documents:
+Node.js has no DOM, so bring one such as `jsdom`. The
+[filesystem loader example](docs/LOADERS.md#nodejs-example-filesystem-loader)
+is a complete Node.js script, and the [API Reference](docs/API.md) covers every
+method.
 
-The command line tool needs a DOM implementation, so install `jsdom` next to
+## CLI Usage
+
+The package includes a command-line tool for transforming XML documents.
+
+Without Node.js, use the standalone executable attached to every GitHub
+release (Linux x64/arm64, macOS x64/arm64, Windows x64), installed with a
+checksum check:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spagu/XSLT-Processor/main/scripts/install.sh | bash
+```
+
+See [Standalone executables](docs/CLI.md#standalone-executables) for manual
+installation. With Node.js, the command line tool needs a DOM implementation, so install `jsdom` next to
 the package. It is an optional peer dependency: library users do not need it.
 Without it, `xslt` exits with an explanation instead of a stack trace.
 
@@ -177,896 +200,25 @@ xslt data.xml template.xsl --method text
 xslt data.xml template.xsl --no-declaration
 ```
 
-The output is serialized according to the `xsl:output` element of the
-stylesheet (see [Serializing output](#serializing-output-xsloutput)); the
-options below override individual `xsl:output` settings.
-
-All file arguments must live inside the current working directory (symbolic
-links are resolved first). To work with files elsewhere, run the command from
-that directory or point `XSLT_BASE_DIR` at it:
-
-```bash
-XSLT_BASE_DIR=/srv/data xslt /srv/data/in.xml /srv/data/t.xsl -o /srv/data/out.html
-```
-
-`xsl:include`, `xsl:import` and `document()` are resolved relative to the
-stylesheet that references them (relative paths, absolute paths and `file:`
-URLs). The files they load must stay inside the same base directory; anything
-outside it, and any `http:`/`https:` URI, is refused. A stylesheet include that
-cannot be loaded stops the run with an error, while a `document()` that cannot
-be loaded yields an empty node-set and a one-line warning on stderr.
-
-Input files (the XML document, the stylesheet, included stylesheets and
-`document()` files) are decoded following XML 1.0 Appendix F: a byte order mark
-(UTF-8, UTF-16LE, UTF-16BE) wins, then the `encoding` of the XML declaration,
-otherwise UTF-8. Any WHATWG encoding label is accepted, e.g. `ISO-8859-1`,
-`windows-1252`, `ISO-8859-2`, `Shift_JIS`; an unknown label is reported as an
-error.
-
-The result is written to stdout byte for byte, exactly as with `-o`; only when
-stdout is an interactive terminal is a final newline added if missing.
-
-#### CLI Options
-
-| Option | Description |
-|--------|-------------|
-| `-o, --output <file>` | Write output to file instead of stdout |
-| `-p, --param <n>=<v>` | Set XSLT parameter (can be used multiple times) |
-| `-f, --format` | Format output with indentation (same as `--indent`) |
-| `--indent` | Override `xsl:output` to `indent="yes"` |
-| `--method <m>` | Override the `xsl:output` method (`xml`, `html`, `xhtml`, `text`) |
-| `--no-declaration` | Override `xsl:output` to omit the XML declaration |
-| `-h, --help` | Show help message |
-| `-v, --version` | Show version number |
-
-## API Reference
-
-### XSLTProcessor
-
-#### Constructor
-
-```javascript
-const processor = new XSLTProcessor();
-```
-
-#### Methods
-
-| Method | Description |
-|--------|-------------|
-| `importStylesheet(node, stylesheetUri?)` | Imports an XSLT stylesheet from a Document or Element node. The optional `stylesheetUri` is the base URI used to resolve relative `xsl:import`/`xsl:include` hrefs |
-| `transformToFragment(source, output)` | Transforms XML and returns a DocumentFragment owned by `output` |
-| `transformToDocument(source)` | Transforms XML and returns an XMLDocument |
-| `transformToString(source)` | Transforms XML and returns the serialized result honoring `xsl:output` (non-W3C extension) |
-| `setParameter(namespaceURI, localName, value)` | Sets an XSLT parameter |
-| `getParameter(namespaceURI, localName)` | Gets an XSLT parameter value (`''` when it is not set) |
-| `removeParameter(namespaceURI, localName)` | Removes an XSLT parameter |
-| `clearParameters()` | Removes all parameters |
-| `reset()` | Resets the processor, removing stylesheet and parameters (the stylesheet and document loaders are kept) |
-| `setStylesheetLoader(loader)` | Sets the loader used to resolve `xsl:import`/`xsl:include` (non-W3C extension). Pass `null` to remove it. Returns the processor for chaining |
-| `setDocumentLoader(loader)` | Sets the loader used to resolve the XSLT `document()` function (non-W3C extension). Pass `null` to remove it. Returns the processor for chaining |
-
-Like the native implementation, the `transformTo*` methods return `null` when
-the transformation fails (for example `xsl:message terminate="yes"`) and log
-the error with `console.error`. Missing arguments, a source that is not a
-Document, Element or DocumentFragment, and calling them before
-`importStylesheet()` throw instead.
-
-`importStylesheet()` throws for a stylesheet that is not valid XSLT 1.0, for
-example an invalid pattern such as `match="a/.."` (the error names the
-pattern), as Chrome's native processor rejects such stylesheets. The processor
-then keeps its previously imported stylesheet. Invalid names computed at run
-time by `xsl:element`/`xsl:attribute` are reported with `console.warn` and
-skipped, as libxslt does.
-
-#### Properties
-
-| Property | Description |
-|----------|-------------|
-| `engine` | Read-only access to the underlying `XsltEngine` (advanced usage). It is `null` until `importStylesheet()` has been called |
-
-### Module exports
-
-| Export | Description |
-|--------|-------------|
-| `XSLTProcessor` (also the default export) | The processor class described above |
-| `isNativeXSLTSupported()` | `true` when `globalThis.XSLTProcessor` exists and transforms a test document. After `installGlobal()` it tests the installed polyfill |
-| `installGlobal(force = false)` | Sets `globalThis.XSLTProcessor` to this implementation when native XSLT is not functional (always with `force`). Returns `true` when installed |
-| `serializeResult(node, outputSettings?)` | Serializes a document, fragment or element with `xsl:output` settings, see [below](#serializing-output-xsloutput) |
-| `resolveOutputSettings(outputSettings, node)` | Normalizes raw `xsl:output` settings (booleans for `indent`/`omitXmlDeclaration`, a `Set` of CDATA element names, detected method) |
-| `markRawText(textNode)`, `isRawText(node)` | Mark / test a text node that is serialized without escaping (`disable-output-escaping`) |
-| `evaluateXPath(expr, node, { variables, namespaces }?)` | Evaluates an XPath 1.0 expression; returns a node array, string, number or boolean |
-| `selectXPath(expr, node, options?)` | Returns the matching nodes as an array (`[]` for non node-set results) |
-| `selectFirstXPath(expr, node, options?)` | Returns the first matching node or `null` |
-| `parseXPath(expr)` | Parses an expression into the AST accepted by `XPathEvaluator#evaluate` |
-| `XPathEvaluator`, `XPathContext` | Low-level XPath API, see [Custom Security Limits](#custom-security-limits) |
-| `XPathResultType` | The DOM `XPathResult` type constants (`ANY_TYPE` ... `FIRST_ORDERED_NODE_TYPE`) |
-| `XsltEngine`, `XsltContext` | The engine behind `XSLTProcessor` (advanced usage) |
-| `XSLT_MAX_RESULT_SIZE`, `XSLT_MAX_EXPRESSION_DEPTH` | Default XPath limits inside a transformation (5,000,000 and 1000) |
-| `VERSION` | The package version, e.g. `'1.1.3'` |
-| `isBrowser`, `isNode` | Environment flags evaluated at load time |
-
-### TypeScript
-
-Declarations ship as `dist/xslt-processor.d.ts` (ESM) and
-`dist/xslt-processor.d.cts` (CommonJS) and are picked up automatically through
-the `exports` map. The `StylesheetLoader` and `OutputSettings` types are
-exported as well.
-
-### Serializing output (xsl:output)
-
-`transformToString(source)` serializes the result tree according to the
-`xsl:output` element of the stylesheet (XSLT 1.0 section 16). Unlike the DOM
-based methods it returns ready to write markup, so the CLI and Node.js users do
-not need a separate `XMLSerializer` or a hand rolled re-indenter.
-
-```javascript
-const xslt = parser.parseFromString(`<?xml version="1.0"?>
-  <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-    <xsl:output method="xml" indent="yes"/>
-    <xsl:template match="/"><BAR><QUX/></BAR></xsl:template>
-  </xsl:stylesheet>`, 'application/xml');
-
-const processor = new XSLTProcessor();
-processor.importStylesheet(xslt);
-
-processor.transformToString(xmlDoc);
-// <?xml version="1.0" encoding="UTF-8"?>
-// <BAR>
-//   <QUX/>
-// </BAR>
-```
-
-Supported `xsl:output` attributes:
-
-| Attribute | Behavior |
-|-----------|----------|
-| `method="xml"` | XML declaration, minimal escaping, empty elements as `<x/>` (default). Empty elements in the XHTML namespace follow the XHTML compatibility rules below |
-| `method="html"` | No XML declaration, void elements as `<br>`, minimized boolean attributes, unescaped `script`/`style` |
-| `method="xhtml"` | XML rules, but void elements are written as `<br />` and other empty elements get an end tag (`<script src="a.js"></script>`, `<div></div>`), so the output also parses as HTML. Elements in other namespaces keep `<x/>` |
-| `method="text"` | Concatenation of all text nodes, no escaping |
-| `indent="yes"` | Newline plus two-space indentation for element-only content; mixed content and `pre`/`script`/`style`/`textarea` are left untouched |
-| `encoding`, `version`, `standalone` | Written into the XML declaration |
-| `omit-xml-declaration="yes"` | Suppresses the XML declaration |
-| `doctype-public`, `doctype-system` | Emit a `<!DOCTYPE ...>` before the document element |
-| `cdata-section-elements` | Text children of the listed elements are wrapped in `<![CDATA[...]]>`, split around any `]]>` |
-| `media-type` | Parsed and exposed on the settings object |
-
-`disable-output-escaping="yes"` on `xsl:text` and `xsl:value-of` is honored: the
-generated text is emitted verbatim, so `&lt;b&gt;` reaches the output as `<b>`.
-
-The serializer can also be used on its own, for example on a fragment produced
-by `transformToFragment`:
-
-```javascript
-import { serializeResult } from '@tradik/xslt-processor';
-
-serializeResult(fragment, { method: 'html', indent: 'yes' });
-```
-
-When `method` is absent (or `auto`), the output method is derived from the
-result tree: `html` when the document element is `html` in no namespace, `xml`
-otherwise.
-
-### Parameters Example
-
-```javascript
-const processor = new XSLTProcessor();
-processor.importStylesheet(xsltDoc);
-
-// Set parameters
-processor.setParameter(null, 'sortOrder', 'ascending');
-processor.setParameter(null, 'itemsPerPage', 10);
-
-// Get parameter
-const sortOrder = processor.getParameter(null, 'sortOrder');
-
-// Clear parameters
-processor.clearParameters();
-```
-
-### Using xsl:import and xsl:include
-
-To use `xsl:import` and `xsl:include` elements in your stylesheets, configure a
-stylesheet loader that tells the processor how to fetch external stylesheets.
-
-Call `processor.setStylesheetLoader(...)` **before** `importStylesheet()` -
-references are resolved while the main stylesheet is being compiled, so a loader
-set afterwards is too late for that stylesheet (it still applies to the next
-`importStylesheet()` call).
-
-The loader is **synchronous**. It receives the resolved `href` and the `baseUri`
-of the importing stylesheet, and must return either a `Document` or an XML
-`string` (which is parsed automatically). Promises are not awaited, so pre-load
-remote stylesheets before importing.
-
-```javascript
-import { XSLTProcessor } from '@tradik/xslt-processor';
-
-const processor = new XSLTProcessor();
-
-// Pre-loaded stylesheets, keyed by resolved URI
-const stylesheets = {
-  '/styles/base.xsl': baseXslText,
-  '/styles/utils.xsl': utilsXslText,
-};
-
-processor.setStylesheetLoader((href, baseUri) => {
-  // href:    resolved URI of the xsl:import/xsl:include target
-  // baseUri: URI of the importing stylesheet (the stylesheetUri you passed in)
-  const xml = stylesheets[href];
-  if (!xml) {
-    throw new Error(`Unknown stylesheet: ${href} (from ${baseUri})`);
-  }
-  return xml; // a Document is also accepted
-});
-
-// The second argument is the base URI used to resolve relative hrefs
-processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
-```
-
-If you need remote stylesheets in the browser, fetch them first and hand the
-loader a ready-made map:
-
-```javascript
-const hrefs = ['/styles/base.xsl', '/styles/utils.xsl'];
-const texts = await Promise.all(
-  hrefs.map((href) => fetch(href).then((response) => response.text())),
-);
-const cache = Object.fromEntries(hrefs.map((href, i) => [href, texts[i]]));
-
-processor.setStylesheetLoader((href) => cache[href]);
-processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
-```
-
-#### Node.js example (filesystem loader)
-
-Node.js has no DOM, so bring one such as `jsdom`. XML strings returned by a
-loader are parsed with the global `DOMParser`, which therefore has to be set
-(or make the loader return a `Document` itself).
-
-```javascript
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { JSDOM } from 'jsdom';
-import { XSLTProcessor } from '@tradik/xslt-processor';
-
-const { window } = new JSDOM('');
-globalThis.DOMParser = window.DOMParser; // used to parse the loader's strings
-
-const parser = new DOMParser();
-const mainPath = path.resolve('./styles/main.xsl');
-
-const processor = new XSLTProcessor();
-
-processor.setStylesheetLoader((href) => {
-  // href is already resolved against the importing stylesheet's URI
-  return readFileSync(href, 'utf8'); // returned XML string is parsed for you
-});
-
-const mainStylesheet = parser.parseFromString(
-  readFileSync(mainPath, 'utf8'),
-  'application/xml',
-);
-
-processor.importStylesheet(mainStylesheet, mainPath);
-
-const xml = parser.parseFromString(readFileSync('./data.xml', 'utf8'), 'application/xml');
-const result = processor.transformToDocument(xml);
-console.log(new window.XMLSerializer().serializeToString(result));
-```
-
-#### Advanced: the engine accessor
-
-After `importStylesheet()`, `processor.engine` exposes the underlying
-`XsltEngine` for advanced inspection (output settings, compiled templates). It
-is `null` before the first import, which is why the loader must be configured
-through `processor.setStylesheetLoader(...)` rather than `processor.engine`.
-
-### Using the document() function
-
-The XSLT `document()` function loads additional XML documents at transformation
-time. Configure a **synchronous** document loader with
-`processor.setDocumentLoader(...)`; it receives the resolved URI and the base URI
-and returns a `Document`, an XML `string` (parsed automatically) or `null`.
-
-Semantics:
-
-- `document('')` returns the stylesheet itself, per the XSLT 1.0 specification.
-- A node-set argument loads one document per node and returns their union.
-- Relative URIs are resolved against the `stylesheetUri` passed to
-  `importStylesheet()`; fragment identifiers are ignored.
-- Without a loader, or when the loader returns `null`, `document()` evaluates to
-  an **empty node-set** instead of failing the transformation.
-- Each resolved URI is loaded once and cached for the life of the processor.
-
-```javascript
-import { readFileSync } from 'node:fs';
-import { XSLTProcessor } from '@tradik/xslt-processor';
-
-const processor = new XSLTProcessor();
-
-processor.setDocumentLoader((uri) => {
-  // uri is already resolved against the stylesheet URI (here /styles/...)
-  try {
-    return readFileSync(uri, 'utf8'); // XML string is parsed for you
-  } catch {
-    return null; // -> empty node-set, the transformation keeps going
-  }
-});
-
-processor.importStylesheet(mainStylesheet, '/styles/main.xsl');
-const result = processor.transformToDocument(xmlDoc);
-```
-
-```xml
-<xsl:template match="/">
-  <rate><xsl:value-of select="document('rates.xml')/rates/eur"/></rate>
-</xsl:template>
-```
-
-#### Import vs Include Behavior
-
-- **xsl:include**: Merges templates at the same precedence level. If multiple templates match, priority attribute decides.
-- **xsl:import**: Imported templates have lower precedence than importing stylesheet. The importing stylesheet's templates always win over imported ones with the same match pattern.
-
-```xml
-<!-- main.xsl -->
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:import href="base.xsl"/>  <!-- imported templates have lower precedence -->
-  <xsl:include href="utils.xsl"/> <!-- included templates have same precedence -->
-
-  <xsl:template match="item">
-    <!-- This template overrides the one from base.xsl -->
-  </xsl:template>
-</xsl:stylesheet>
-```
-
-### Utility Functions
-
-```javascript
-import {
-  isNativeXSLTSupported,
-  installGlobal,
-  serializeResult,
-  markRawText
-} from '@tradik/xslt-processor';
-
-// Check if native XSLT is functional
-if (!isNativeXSLTSupported()) {
-  console.log('Using JS implementation');
-}
-
-// Install as global XSLTProcessor
-installGlobal(); // Only if native not available
-installGlobal(true); // Force install
-
-// Serialize any result tree with xsl:output settings
-serializeResult(node, { method: 'xml', indent: 'yes' });
-
-// Mark a text node so that it is emitted without escaping
-markRawText(document.createTextNode('<b>raw</b>'));
-```
-
-## Complete Example
-
-Here's a full example transforming a list of products into an HTML table:
-
-**products.xml:**
-```xml
-<?xml version="1.0"?>
-<products>
-  <product id="1">
-    <name>Widget</name>
-    <price>29.99</price>
-    <stock>150</stock>
-  </product>
-  <product id="2">
-    <name>Gadget</name>
-    <price>49.99</price>
-    <stock>75</stock>
-  </product>
-</products>
-```
-
-**products.xsl:**
-```xml
-<?xml version="1.0"?>
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:param name="title" select="'Product Catalog'"/>
-
-  <xsl:template match="/">
-    <html>
-      <head><title><xsl:value-of select="$title"/></title></head>
-      <body>
-        <h1><xsl:value-of select="$title"/></h1>
-        <table>
-          <tr><th>ID</th><th>Name</th><th>Price</th><th>Stock</th></tr>
-          <xsl:apply-templates select="products/product">
-            <xsl:sort select="name"/>
-          </xsl:apply-templates>
-        </table>
-      </body>
-    </html>
-  </xsl:template>
-
-  <xsl:template match="product">
-    <tr>
-      <td><xsl:value-of select="@id"/></td>
-      <td><xsl:value-of select="name"/></td>
-      <td>$<xsl:value-of select="price"/></td>
-      <td>
-        <xsl:choose>
-          <xsl:when test="stock > 100">In Stock</xsl:when>
-          <xsl:when test="stock > 0">Low Stock</xsl:when>
-          <xsl:otherwise>Out of Stock</xsl:otherwise>
-        </xsl:choose>
-      </td>
-    </tr>
-  </xsl:template>
-</xsl:stylesheet>
-```
-
-**JavaScript:**
-```javascript
-import { XSLTProcessor } from '@tradik/xslt-processor';
-
-const processor = new XSLTProcessor();
-processor.importStylesheet(xsltDoc);
-processor.setParameter(null, 'title', 'My Product List');
-
-const result = processor.transformToFragment(xmlDoc, document);
-document.body.appendChild(result);
-```
-
-**CLI:**
-```bash
-xslt products.xml products.xsl -p title="My Product List" -f -o catalog.html
-```
-
-## Security Features
-
-The XPath evaluator includes comprehensive security hardening to prevent common attack vectors.
-
-### DoS Prevention Limits
-
-| `XPathEvaluator` option | Default | Description |
-|-------------------------|---------|-------------|
-| `maxRecursionDepth` | 100 | Prevents stack overflow from deeply nested expressions |
-| `maxResultSize` | 10,000 | Prevents memory exhaustion from large result sets |
-| `maxStringLength` | 1,000,000 | Limits string processing to prevent memory issues |
-
-Exceeding a limit throws an `Error` (`Maximum recursion depth exceeded (100)`,
-`Result set exceeds maximum size (10000)`).
-
-These limits apply to the standalone XPath API (`evaluateXPath`, `selectXPath`,
-`selectFirstXPath` always use the defaults; `XPathEvaluator` accepts the options), where expressions may come from untrusted input. Inside an
-XSLT transformation the stylesheet is trusted program code, so `XsltEngine`
-allows up to 5,000,000 nodes per location step (`XSLT_MAX_RESULT_SIZE`), which
-lets stylesheets process large catalogs and exports, and allows XPath
-expressions nested up to 1000 levels deep (`XSLT_MAX_EXPRESSION_DEPTH`). Pass
-`new XsltEngine({ maxResultSize, maxRecursionDepth })` to choose other bounds.
-
-Other `XsltEngine` options: `stylesheetLoader`, `documentLoader` (see above) and
-`domParser`, a `DOMParser`-compatible object used to parse XML strings returned
-by loaders. It defaults to the global `DOMParser` or the stylesheet document's
-window, so it only needs to be set for DOM implementations such as
-`@xmldom/xmldom` in Node.js. `setStylesheetLoader()` and `setDocumentLoader()`
-return the engine, so calls can be chained.
-
-### Prototype Pollution Protection
-
-The following variable names are blocked:
-- `__proto__`, `constructor`, `prototype`
-- `__defineGetter__`, `__defineSetter__`
-- `__lookupGetter__`, `__lookupSetter__`
-
-### Input Validation
-
-- **AST Validation**: All AST nodes are validated before evaluation
-- **Type Safety**: Strict type checking on all inputs
-- **Safe Variable Lookup**: Uses `hasOwnProperty` to prevent prototype chain attacks
-
-### Custom Security Limits
-
-```javascript
-import { XPathEvaluator, XPathContext, parseXPath } from '@tradik/xslt-processor';
-
-const evaluator = new XPathEvaluator({
-  maxRecursionDepth: 50,    // Lower for untrusted input
-  maxResultSize: 1000,      // Limit result set size
-  maxStringLength: 10000    // Limit string operations
-});
-
-const ast = parseXPath('//item');
-const context = new XPathContext(xmlDoc);
-const result = evaluator.evaluate(ast, context); // array of <item> elements
-```
-
-## XSLT Elements Supported
-
-| Element | Status |
-|---------|--------|
-| `xsl:apply-templates` | Supported |
-| `xsl:attribute` | Supported |
-| `xsl:call-template` | Supported |
-| `xsl:choose` / `when` / `otherwise` | Supported |
-| `xsl:comment` | Supported |
-| `xsl:copy` | Supported |
-| `xsl:copy-of` | Supported |
-| `xsl:element` | Supported |
-| `xsl:for-each` | Supported |
-| `xsl:if` | Supported |
-| `xsl:message` | Supported |
-| `xsl:number` | Supported (`lang` and `letter-value` are ignored) |
-| `xsl:output` | Supported |
-| `xsl:param` | Supported |
-| `xsl:processing-instruction` | Supported |
-| `xsl:sort` | Supported |
-| `xsl:template` | Supported |
-| `xsl:text` | Supported |
-| `xsl:value-of` | Supported |
-| `xsl:variable` | Supported |
-| `xsl:with-param` | Supported |
-| `xsl:import` | Supported |
-| `xsl:include` | Supported |
-| `xsl:apply-imports` | Supported |
-| `xsl:attribute-set` | Supported (also via `xsl:use-attribute-sets` on literal result elements) |
-| `xsl:key` | Supported (see `key()`) |
-| `xsl:decimal-format` | Supported (see `format-number()`) |
-| `xsl:namespace-alias` | Supported |
-| `xsl:strip-space` / `xsl:preserve-space` | Supported |
-| `xsl:fallback` | Partial: accepted, but never instantiated (see [Known Deviations](#known-deviations)) |
-
-## XPath Functions Supported
-
-### Node Set Functions
-- `count()`, `id()`, `last()`, `local-name()`, `name()`, `namespace-uri()`, `position()`
-
-### String Functions
-- `concat()`, `contains()`, `normalize-space()`, `starts-with()`, `string()`, `string-length()`, `substring()`, `substring-after()`, `substring-before()`, `translate()`
-
-### Boolean Functions
-- `boolean()`, `false()`, `lang()`, `not()`, `true()`
-
-### Number Functions
-- `ceiling()`, `floor()`, `number()`, `round()`, `sum()`
-
-### XSLT-Defined Functions
-- `current()` - the XSLT current node, also inside predicates
-- `document(object, base?)` - external documents, see `setDocumentLoader()`
-- `element-available(name)`, `function-available(name)` - reflect the real element and function tables
-- `format-number(number, pattern, decimalFormat?)` - full XSLT 1.0 picture strings, honouring `xsl:decimal-format`
-- `generate-id(nodeSet?)` - stable identifier for the life of the transformation
-- `key(name, value)` - `xsl:key` lookup, with lazily built per-document indexes
-- `system-property(name)` - `xsl:version`, `xsl:vendor`, `xsl:vendor-url`
-- `unparsed-entity-uri(name)` - always returns `''` (unparsed entities are not exposed by the DOM)
-
-### Extension Functions
-- `exsl:node-set(value)` (namespace `http://exslt.org/common`) and `msxsl:node-set(value)` (namespace `urn:schemas-microsoft-com:xslt`) - turn a result tree fragment into a node-set, so `exsl:node-set($rtf)/item` works; `function-available('exsl:node-set')` is true
-
-### Conformance Notes
-- CDATA sections count as text everywhere (string-value, `text()`, `xsl:value-of`, `xsl:copy-of`); a run of adjacent text and CDATA nodes is a single text node
-- Patterns (`match`, `count`, `from`, `xsl:key`) support every XSLT 1.0 form, including multi-step paths, `//`, positional predicates, `id()` and `key()`, and are matched in time proportional to the node's depth
-- Template conflicts with equal priority and import precedence resolve to the last template, like libxslt
-- Without `xsl:output method`, a result whose root element is `<html>` is serialized as HTML
-- XML whitespace means space, tab, CR and LF only; a non-breaking space is ordinary text
-- The identity transform `<xsl:template match="@*|node()"><xsl:copy><xsl:apply-templates select="@*|node()"/></xsl:copy></xsl:template>` round-trips a document exactly
-- `xsl:number` supports `level="single|multiple|any"` with `count`, `from`, `grouping-separator`/`grouping-size` and the `1`, `01`, `a`, `A`, `i`, `I` format tokens
-- The result tree is built in a neutral XML document and imported into the output
-  document at the end, so element names and namespaces survive an HTML owner document
+See [Command Line Tool](docs/CLI.md) for all options, the base directory,
+`xsl:include`/`document()` resolution and input encodings.
 
 ## Known Deviations
 
-Differences from the XSLT 1.0 / XPath 1.0 specifications and from libxslt
-(the engine behind Chrome's native `XSLTProcessor`):
+The main differences from XSLT 1.0 / XPath 1.0 and from libxslt:
 
-- **`namespace::` axis**: not implemented, it always selects an empty node-set
-  (`count(namespace::*)` is `0`). Namespace nodes are not part of the data model.
-- **Unprefixed name tests match namespaced nodes**: `a` in a pattern or path
-  also selects `<q:a xmlns:q="urn:q"/>` and `<a xmlns="urn:d"/>`; per XPath 1.0
-  it should only match `a` in no namespace. Use `local-name()` and
-  `namespace-uri()` when the distinction matters.
-- **`xsl:fallback`** is never instantiated, and an unknown XSLT or extension
-  element produces no output (with an `Unknown XSLT element` warning) even in
-  forward-compatible mode (`version="2.0"`).
-- **`transformToFragment()` into an HTML document**: the fragment contains
-  elements in no namespace built by the XML DOM, not `HTMLElement`s as a browser
-  would create for `method="html"`. They serialize and render as markup when
-  inserted, but `instanceof HTMLElement` is `false` and HTML-only properties are
-  missing.
-- **Recursion depth**: roughly 1,000 to 1,500 nested template invocations fit
-  in Node's default stack (libxslt allows about 3,000). Deeper recursion stops
-  with `Template recursion too deep`; raise the limit with
-  `node --stack-size=...` or rewrite the recursion.
-- **`xsl:number`**: `lang` and `letter-value` are ignored, and only the Latin
-  format tokens listed above are recognized.
-- **`unparsed-entity-uri()`** always returns `''` because the DOM does not
-  expose unparsed entities.
+- `xsl:number` ignores `lang` and `letter-value`;
+- `unparsed-entity-uri()` always returns `''`;
+- numbers convert to strings in the XPath 1.0 form (`10000000000`), where libxslt writes `1e+10`.
 
-## Development
+Details and workarounds: [Known Deviations](docs/CONFORMANCE.md#known-deviations).
 
-### Prerequisites
+## Contributing and Security
 
-- Node.js 22+ (native test runner; CI runs 22, 24 and 26)
-- Docker (optional, for containerized testing)
-
-### Setup
-
-```bash
-git clone https://github.com/spagu/XSLT-Processor.git
-cd XSLT-Processor
-npm install
-```
-
-### Commands
-
-```bash
-# Run tests
-npm test
-
-# Run tests with watch mode
-npm run test:watch
-
-# Build bundles
-npm run build
-
-# Lint code
-npm run lint
-
-# Format code / check formatting
-npm run format
-npm run format:check
-```
-
-The `Makefile` wraps the same commands (`make test`, `make build`, `make lint`,
-`make docker-test`, ...; `make help` lists them).
-
-### Docker
-
-```bash
-# Run tests in container
-docker compose run --rm test
-
-# Development with tests in watch mode
-docker compose run --rm dev
-
-# Build bundles into ./dist
-docker compose run --rm build
-```
-
-### Publishing to npm
-
-The package is published to npm automatically by the `Release` workflow when a
-`v*` tag is pushed (or a GitHub release is published). Publishing uses npm
-**Trusted Publishing** (OIDC): no `NPM_TOKEN` secret and no OTP are involved,
-and every release carries provenance attestations. If an `NPM_TOKEN` secret
-exists it takes precedence over OIDC, so remove it once Trusted Publishing is
-configured.
-
-**One-time prerequisite** (npmjs.com -> package `@tradik/xslt-processor` ->
-Settings -> Trusted Publisher): provider *GitHub Actions*, owner `spagu`,
-repository `XSLT-Processor`, workflow `release.yml`, environment left empty.
-Alternatively add an `NPM_TOKEN` repository secret; the `publish` job passes it
-as `NODE_AUTH_TOKEN`. The token has to be one that bypasses two-factor
-authentication, otherwise the job fails with `EOTP` ("This operation requires a
-one-time password") because no one can type a code in CI:
-
-- a **Granular Access Token** with *Read and write* permission for this package, or
-- a classic token of type **Automation**.
-
-A classic **Publish** token still enforces 2FA and will not work. Without
-either, the `publish` job fails with `E404` and the package must be published
-manually with
-`npm publish --provenance --access public --otp=CODE`.
-
-**Release process:**
-
-```bash
-# 1. Bump the version in package.json, package-lock.json, src/index.js and
-#    add a CHANGELOG.md entry, then commit to main.
-
-# 2. Tag and push the tag; the workflow refuses to publish if the tag does
-#    not match package.json.
-git tag v1.1.3
-git push origin v1.1.3
-```
-
-**Automated workflow** (`.github/workflows/release.yml`):
-1. `test`: lint, formatting check and tests on Node.js 22, 24 and 26
-2. `build`: builds the distribution bundles and verifies the package contents (`npm pack --dry-run`)
-3. `build`: checks that the tag matches the `package.json` version
-4. `build`: uploads the `dist/` build artifacts to GitHub
-5. `publish` (tags only): `npm publish --provenance --access public`
-
-## Browser Compatibility
-
-The bundles are built for ES2022 without transpiling and use `Object.hasOwn()`
-and `Array.prototype.at()`, which set the minimum browser versions below.
-
-### Polyfill Support
-
-| Environment | Minimum Version | Status |
-|-------------|-----------------|--------|
-| Chrome | 93+ | Supported |
-| Edge | 93+ | Supported |
-| Firefox | 92+ | Supported |
-| Safari | 15.4+ | Supported |
-| Opera | 79+ | Supported |
-| Samsung Internet | 17+ | Supported |
-| Node.js | 20.19+ (`engines`) | Supported; CI tests 22, 24 and 26. Needs a DOM such as `jsdom` |
-
-### Native XSLT Deprecation Timeline
-
-| Browser | Deprecation Warning | Full Removal |
-|---------|---------------------|--------------|
-| Chrome | v143 (2026) | v164 (August 2027) |
-| Edge | v143 (2026) | v164 (August 2027) |
-| Other Chromium | v143 (2026) | v164 (August 2027) |
-
-### Feature Detection
-
-```javascript
-import { isNativeXSLTSupported, installGlobal } from '@tradik/xslt-processor';
-
-// Check native support and auto-install polyfill
-if (!isNativeXSLTSupported()) {
-  installGlobal();
-  console.log('Using JavaScript XSLT polyfill');
-}
-```
-
-## W3C Standards Compliance
-
-This implementation follows these W3C specifications; the exceptions are listed under [Known Deviations](#known-deviations).
-
-### Specifications Implemented
-
-| Specification | Version | Status |
-|---------------|---------|--------|
-| [XPath 1.0](http://www.w3.org/TR/1999/REC-xpath-19991116) | W3C Recommendation, 16 November 1999 | Supported except the `namespace::` axis |
-| [XSLT 1.0](http://www.w3.org/TR/1999/REC-xslt-19991116) | W3C Recommendation, 16 November 1999 | Supported except `xsl:fallback` instantiation |
-| [DOM Level 3 Core](http://www.w3.org/TR/2004/REC-DOM-Level-3-Core-20040407/) | W3C Recommendation, 7 April 2004 | Consumed, not implemented: the host DOM (browser or `jsdom`) is used |
-
-### XSLT 1.0 Specification Compliance
-
-| Section | Feature | Status | Notes |
-|---------|---------|--------|-------|
-| 2 | Stylesheet Structure | Supported | `xsl:stylesheet`, `xsl:transform` elements |
-| 3 | Data Model | Partial | Root, element, attribute, text, processing instruction and comment nodes; namespace nodes are not exposed |
-| 5 | Template Rules | Supported | Pattern matching, priority calculation |
-| 5.1 | Processing Model | Supported | Built-in templates for all node types |
-| 5.2 | Patterns | Supported | All pattern syntax including predicates |
-| 5.3 | Defining Template Rules | Supported | `match`, `name`, `priority`, `mode` attributes |
-| 5.4 | Applying Template Rules | Supported | `xsl:apply-templates` with `select`, `mode` |
-| 5.5 | Conflict Resolution | Supported | Import precedence and priority ordering |
-| 6 | Named Templates | Supported | `xsl:call-template`, `xsl:with-param` |
-| 7 | Creating Result Tree | Supported | Literal result elements, attribute value templates |
-| 7.1.2 | Creating Elements | Supported | `xsl:element` with dynamic names/namespaces |
-| 7.1.3 | Creating Attributes | Supported | `xsl:attribute` with dynamic names/namespaces |
-| 7.2 | Creating Text | Supported | `xsl:value-of`, `xsl:text` |
-| 7.3 | Creating PIs | Supported | `xsl:processing-instruction` |
-| 7.4 | Creating Comments | Supported | `xsl:comment` |
-| 7.5 | Copying | Supported | `xsl:copy`, `xsl:copy-of` |
-| 7.6 | Attribute Sets | Supported | `xsl:attribute-set`, `use-attribute-sets` |
-| 7.6.2 | Namespace Aliases | Supported | `xsl:namespace-alias` |
-| 8 | Repetition | Supported | `xsl:for-each` |
-| 9 | Conditional Processing | Supported | `xsl:if`, `xsl:choose`, `xsl:when`, `xsl:otherwise` |
-| 10 | Sorting | Supported | `xsl:sort` with multiple keys, `data-type`, `order`, `case-order`, `lang` (all attribute value templates). Text sorts by Unicode code point like libxslt/Chrome; `lang` or `case-order` switch to locale collation. Numbers sort with NaN first. |
-| 11 | Variables/Parameters | Supported | `xsl:variable`, `xsl:param`, scoping rules |
-| 11.1 | Result Tree Fragments | Supported | RTF handling as per spec |
-| 7.7 | Numbering | Supported | `xsl:number` with `level`, `count`, `from`, `value`, `format`, grouping; `lang` and `letter-value` are ignored |
-| 12 | Additional Functions | Supported | `document()`, `key()`, `format-number()`, `current()`, `generate-id()`, `system-property()`, `element-available()`, `function-available()`; `unparsed-entity-uri()` always returns `''` |
-| 12.3 | Number Formatting | Supported | `format-number()` with `xsl:decimal-format` |
-| 13 | Messages | Supported | `xsl:message` with `terminate` attribute |
-| 14 | Extensions | Partial | Extension functions `exsl:node-set()` and `msxsl:node-set()`; no extension elements |
-| 15 | Fallback | Partial | `xsl:fallback` is accepted but never instantiated |
-| 16 | Output | Supported | `xsl:output` honored by `transformToString()` / `serializeResult()` |
-| 16.1 | XML Output Method | Supported | XML declaration (`encoding`, `version`, `standalone`), `omit-xml-declaration`, `doctype-public`/`doctype-system`, namespace declarations, `indent="yes"` for element-only content |
-| 16.1 | CDATA Sections | Supported | `cdata-section-elements`, split around `]]>` |
-| 16.2 | HTML Output Method | Supported | Void elements as `<br>`, minimized boolean attributes, unescaped `script`/`style`, no re-indent inside `pre`/`script`/`style`/`textarea` |
-| 16.3 | Text Output Method | Supported | Concatenation of all text nodes, no escaping |
-| 16.4 | Disabling Output Escaping | Supported | `disable-output-escaping` on `xsl:text` and `xsl:value-of` |
-
-### XPath 1.0 Specification Compliance
-
-| Section | Feature | Status | Notes |
-|---------|---------|--------|-------|
-| 2.1 | Location Steps | Supported | axis::node-test[predicate] |
-| 2.2 | Axes | Partial | 12 of 13 axes; `namespace::` always returns an empty node-set |
-| 2.3 | Node Tests | Supported | Name tests, `node()`, `text()`, `comment()`, `processing-instruction()`; unprefixed names also match namespaced nodes |
-| 2.4 | Predicates | Supported | Position and boolean predicates |
-| 2.5 | Abbreviated Syntax | Supported | `.`, `..`, `@`, `//` |
-| 3.1 | Basics | Supported | Expression evaluation |
-| 3.2 | Function Calls | Supported | All core functions |
-| 3.3 | Node-sets | Supported | Union operator `\|` |
-| 3.4 | Booleans | Supported | `and`, `or`, `not()` |
-| 3.5 | Numbers | Supported | IEEE 754 double-precision |
-| 3.6 | Strings | Supported | Unicode string handling |
-| 3.7 | Lexical Structure | Supported | Full tokenization |
-| 4.1 | Node Set Functions | Supported | `last()`, `position()`, `count()`, `id()`, `local-name()`, `namespace-uri()`, `name()` |
-| 4.2 | String Functions | Supported | `string()`, `concat()`, `starts-with()`, `contains()`, `substring-before()`, `substring-after()`, `substring()`, `string-length()`, `normalize-space()`, `translate()` |
-| 4.3 | Boolean Functions | Supported | `boolean()`, `not()`, `true()`, `false()`, `lang()` |
-| 4.4 | Number Functions | Supported | `number()`, `sum()`, `floor()`, `ceiling()`, `round()` |
-
-### XPath Axes Implementation
-
-| Axis | Status | Description |
-|------|--------|-------------|
-| `child` | Supported | Children of context node |
-| `descendant` | Supported | Descendants of context node |
-| `parent` | Supported | Parent of context node |
-| `ancestor` | Supported | Ancestors of context node |
-| `following-sibling` | Supported | Following siblings |
-| `preceding-sibling` | Supported | Preceding siblings |
-| `following` | Supported | Nodes after context in document order |
-| `preceding` | Supported | Nodes before context in document order |
-| `attribute` | Supported | Attributes of context node |
-| `namespace` | Not supported | Always an empty node-set |
-| `self` | Supported | Context node itself |
-| `descendant-or-self` | Supported | Context node and descendants |
-| `ancestor-or-self` | Supported | Context node and ancestors |
-
-### DOM Requirements
-
-The library does not implement the DOM; it reads the source and stylesheet
-through the DOM Level 3 Core interfaces of the host (`Node`, `Document`,
-`Element`, `Attr`, `Text`, `CDATASection`, `Comment`, `ProcessingInstruction`,
-`DocumentFragment`, `NamedNodeMap`, `NodeList`) and creates the result with
-`document.implementation.createDocument()`. Browsers and `jsdom` provide all of
-them. XML strings returned by loaders are parsed with the global `DOMParser`.
-
-### Web API Compliance
-
-This implementation provides full compatibility with the [MDN XSLTProcessor API](https://developer.mozilla.org/en-US/docs/Web/API/XSLTProcessor):
-
-| Method | Status | Notes |
-|--------|--------|-------|
-| `importStylesheet(node)` | Supported | Accepts Document or Element |
-| `transformToFragment(source, output)` | Supported | Returns DocumentFragment |
-| `transformToDocument(source)` | Supported | Returns XMLDocument |
-| `transformToString(source)` | Extension | Not part of the W3C API; returns the `xsl:output` serialized result |
-| `setParameter(namespaceURI, localName, value)` | Supported | Full namespace support |
-| `getParameter(namespaceURI, localName)` | Supported | Returns parameter value |
-| `removeParameter(namespaceURI, localName)` | Supported | Removes single parameter |
-| `clearParameters()` | Supported | Removes all parameters |
-| `reset()` | Supported | Resets processor state |
-| `setStylesheetLoader(loader)` | Extension | Resolves `xsl:import`/`xsl:include` |
-| `setDocumentLoader(loader)` | Extension | Resolves `document()` |
-
-### Test Coverage
-
-`npm test` runs 1,060 tests with Node's built-in test runner (100% line and
-function coverage, 97% branch coverage for 1.1.3):
-
-| Area | Test files |
-|------|-----------|
-| XSLTProcessor API and serialization | `src/XSLTProcessor*.test.js`, `src/index.test.js` |
-| XPath tokenizer, evaluator, axes, conformance | `src/xpath/*.test.js` |
-| XSLT engine, patterns, templates, keys, numbering, sorting, scoping | `src/xslt/*.test.js` |
-| `xsl:output` serializers | `src/xslt/serializer.test.js`, `src/xslt/outputRecovery.test.js` |
-| Command line tool | `src/cli.test.js` |
-| Reported issues | `src/regressions.test.js` |
-
-## Style Guide
-
-### Colors
-
-The package has no user interface; these colors apply to badges, diagrams and
-any demo or documentation page built for the project.
-
-| Usage | Color | Hex | Contrast on `#ffffff` |
-|-------|-------|-----|-----------------------|
-| Primary | Blue | `#2563eb` | 5.17:1 |
-| Success | Green | `#15803d` | 5.02:1 |
-| Warning | Amber | `#b45309` | 5.02:1 |
-| Error | Red | `#dc2626` | 4.83:1 |
-| Text | Gray | `#1f2937` | 14.68:1 |
-| Background | White | `#ffffff` | - |
-
-Every foreground color reaches the WCAG 2.2 AA minimum of 4.5:1 for normal text
-on the white background (success and warning were darkened from `#16a34a`
-(3.30:1) and `#d97706` (3.19:1), which only passed for large text). Never
-signal state by color alone: pair it with text or an icon.
+- [CONTRIBUTORS.md](CONTRIBUTORS.md) - how to contribute
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [SECURITY.md](SECURITY.md) - reporting vulnerabilities and the threat model
+- [CHANGELOG.md](CHANGELOG.md) - release history
 
 ## License
 
