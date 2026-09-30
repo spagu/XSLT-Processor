@@ -26,8 +26,10 @@ export const repoRoot = join(
 /** URL prefixes that may be served. */
 const ALLOWED_PREFIXES = Object.freeze(["/dist/", "/tests/browser/fixtures/"]);
 
-/** Canonical repository root, for containment checks. */
-const realRepoRoot = realpathSync(repoRoot);
+/** Canonical directories the server may read from (with trailing separator). */
+const DIST_ROOT = join(realpathSync(repoRoot), "dist") + sep;
+const FIXTURES_ROOT =
+  join(realpathSync(repoRoot), "tests", "browser", "fixtures") + sep;
 
 /** Content types by file extension. */
 const CONTENT_TYPES = Object.freeze({
@@ -62,12 +64,10 @@ export function resolveRequestPath(urlPath) {
     return null;
   }
   // Canonical containment check: symlinks and ".." cannot leave the roots
-  const allowed = ALLOWED_PREFIXES.some((prefix) =>
-    canonical.startsWith(
-      join(realRepoRoot, prefix) + (prefix.endsWith("/") ? "" : sep),
-    ),
-  );
-  return allowed ? canonical : null;
+  if (canonical.startsWith(DIST_ROOT) || canonical.startsWith(FIXTURES_ROOT)) {
+    return canonical;
+  }
+  return null;
 }
 
 /**

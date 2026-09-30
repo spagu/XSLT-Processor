@@ -19,8 +19,12 @@ export const REPO_ROOT = realpathSync(
   join(dirname(fileURLToPath(import.meta.url)), "..", ".."),
 );
 
-/** Directories script paths may point into. */
-const ALLOWED_ROOTS = Object.freeze([REPO_ROOT, realpathSync(tmpdir())]);
+/** Canonical system temporary directory. */
+export const TMP_ROOT = realpathSync(tmpdir());
+
+/** Prefixes of paths inside the two allowed roots. */
+const REPO_PREFIX = REPO_ROOT.endsWith(sep) ? REPO_ROOT : REPO_ROOT + sep;
+const TMP_PREFIX = TMP_ROOT.endsWith(sep) ? TMP_ROOT : TMP_ROOT + sep;
 
 /**
  * Canonicalize a path whose tail may not exist yet: the deepest existing
@@ -42,30 +46,14 @@ function canonicalize(absolute) {
 }
 
 /**
- * Whether a canonical path is one of the allowed roots or inside one.
- *
- * @param {string} canonical - Canonical absolute path
- * @param {readonly string[]} roots - Canonical allowed roots
- * @returns {boolean} True when the path is allowed
- */
-function isInside(canonical, roots) {
-  return roots.some(
-    (root) =>
-      canonical === root ||
-      canonical.startsWith(root.endsWith(sep) ? root : root + sep),
-  );
-}
-
-/**
  * Resolve a path from a command line argument and confine it to the
  * repository or the system temporary directory.
  *
  * @param {string} candidate - Path as given (relative to the working directory)
- * @param {readonly string[]} [roots] - Allowed canonical roots
- * @returns {string} The canonical absolute path
- * @throws {Error} When the path is outside every allowed root
+ * @returns {string} The canonical absolute path, inside an allowed root
+ * @throws {Error} When the path is outside both roots
  */
-export function confinePath(candidate, roots = ALLOWED_ROOTS) {
+export function confinePath(candidate) {
   if (
     typeof candidate !== "string" ||
     candidate.length === 0 ||
@@ -74,12 +62,17 @@ export function confinePath(candidate, roots = ALLOWED_ROOTS) {
     throw new Error(`Invalid path: ${JSON.stringify(candidate)}`);
   }
   const canonical = canonicalize(resolve(candidate));
-  if (!isInside(canonical, roots)) {
-    throw new Error(
-      `Path ${canonical} is outside the repository and the temporary directory`,
-    );
+  if (
+    canonical === REPO_ROOT ||
+    canonical.startsWith(REPO_PREFIX) ||
+    canonical === TMP_ROOT ||
+    canonical.startsWith(TMP_PREFIX)
+  ) {
+    return canonical;
   }
-  return canonical;
+  throw new Error(
+    `Path ${canonical} is outside the repository and the temporary directory`,
+  );
 }
 
 /**

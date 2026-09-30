@@ -50,13 +50,6 @@ describe("confinePath", () => {
     assert.throws(() => confinePath(undefined), /Invalid path/);
     assert.throws(() => confinePath("a\0b"), /Invalid path/);
   });
-
-  it("handles roots given with a trailing separator", () => {
-    assert.strictEqual(
-      confinePath(join(REPO_ROOT, "x"), [REPO_ROOT + "/"]),
-      join(REPO_ROOT, "x"),
-    );
-  });
 });
 
 describe("systemTool", () => {
