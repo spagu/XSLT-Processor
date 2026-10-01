@@ -1,9 +1,10 @@
 {{/*
-  The playground, in two modes. XSLT 1.0 runs a stylesheet with the
-  library's browser bundle (copied to /vendor/ at build time); XPath 3.1
-  evaluates an expression with @tradik/xslt3, bundled to /vendor/ by
-  site/scripts/vendor.mjs and loaded with import() only when that mode is
-  opened (data-xslt3 below). Every file it needs is on this site, so it keeps
+  The playground, in three modes. XSLT 1.0 runs a stylesheet with the
+  library's browser bundle (copied to /vendor/ at build time); XSLT 3.0 runs
+  the same editors with @tradik/xslt3, and XPath 3.1 evaluates an expression
+  with it. @tradik/xslt3 is bundled to /vendor/ by site/scripts/vendor.mjs and
+  loaded with import() only when one of those two modes is opened (data-xslt3
+  below). data-mode lists the modes an element is shown in. Every file it needs is on this site, so it keeps
   working offline after loading. The preview frame is sandboxed without
   scripts: a stylesheet's output can never run code on this page.
 */}}
@@ -19,6 +20,8 @@
       <div class="pg-mode__options">
         <input type="radio" name="pg-mode" id="pg-mode-xslt" value="xslt" checked>
         <label for="pg-mode-xslt">XSLT 1.0 <span class="pg-mode__note">transform</span></label>
+        <input type="radio" name="pg-mode" id="pg-mode-xslt3" value="xslt3">
+        <label for="pg-mode-xslt3">XSLT 3.0 <span class="pg-mode__note">transform</span></label>
         <input type="radio" name="pg-mode" id="pg-mode-xpath" value="xpath">
         <label for="pg-mode-xpath">XPath 3.1 <span class="pg-mode__note">evaluate</span></label>
       </div>
@@ -36,14 +39,15 @@
           <label for="pg-live">Run while typing</label>
         </div>
       </div>
+      <p class="pg-compare hint" data-mode="xslt xslt3">Compare the engines: <a id="pg-compare" href="?mode=xslt3">Run this stylesheet with XSLT 3.0</a>, keeping the XML, the stylesheet and the parameters.</p>
 
       <div class="pg__editors">
         <div class="field">
           <label for="pg-xml">XML source</label>
           <textarea id="pg-xml" rows="20" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
         </div>
-        <div class="field" data-mode="xslt">
-          <label for="pg-xsl">XSLT 1.0 stylesheet</label>
+        <div class="field" data-mode="xslt xslt3">
+          <label for="pg-xsl" id="pg-xsl-label">XSLT 1.0 stylesheet</label>
           <textarea id="pg-xsl" rows="20" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
         </div>
         <div class="pg__xpath" data-mode="xpath" hidden>
@@ -64,9 +68,10 @@
         </div>
       </div>
 
-      <fieldset class="pg__params" data-mode="xslt">
+      <fieldset class="pg__params" data-mode="xslt xslt3">
         <legend>Parameters</legend>
-        <p class="hint">Each row calls <code>setParameter(null, name, value)</code> and overrides the top-level <code>xsl:param</code> of that name.</p>
+        <p class="hint" data-mode="xslt">Each row calls <code>setParameter(null, name, value)</code> and overrides the top-level <code>xsl:param</code> of that name.</p>
+        <p class="hint" data-mode="xslt3" hidden>Each row overrides the top-level <code>xsl:param</code> of that name. Values are passed as <code>xs:untypedAtomic</code>, so they convert to the type in its <code>as</code> attribute.</p>
         <ul id="pg-params" class="pg-param-list"></ul>
         <button type="button" id="pg-add-param" class="button button--small">Add parameter</button>
       </fieldset>
@@ -76,7 +81,7 @@
       <h2 id="pg-result-title">Result</h2>
       <p id="pg-status" class="pg-status" role="status" aria-live="polite"></p>
       <ul id="pg-messages" class="pg-messages" aria-label="Messages"></ul>
-      <div class="pg__outputs" data-mode="xslt">
+      <div class="pg__outputs" data-mode="xslt xslt3">
         <div class="pg__output">
           <h3 id="pg-output-title">transformToString() output</h3>
           <pre class="pg-code" tabindex="0" aria-labelledby="pg-output-title"><code id="pg-output"></code></pre>
@@ -85,6 +90,11 @@
           <h3>Preview</h3>
           <iframe id="pg-preview" class="pg-preview" title="Preview of the transformation result" sandbox=""></iframe>
         </div>
+      </div>
+      <div class="pg__secondary" data-mode="xslt3" hidden>
+        <h3 id="pg-secondary-title">xsl:result-document outputs</h3>
+        <p id="pg-secondary-none" class="hint">This stylesheet wrote no secondary result documents.</p>
+        <ul id="pg-secondary" class="pg-items" aria-labelledby="pg-secondary-title"></ul>
       </div>
       <div data-mode="xpath" hidden>
         <h3 id="pg-items-title">Result sequence</h3>

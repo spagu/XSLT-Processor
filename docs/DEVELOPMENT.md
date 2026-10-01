@@ -184,16 +184,25 @@ in `site/templates/xslt-site/images/blog/` as SVG with light and dark colours,
 referenced relative to the post (`../../images/blog/chart.svg`). Don't add
 `tags:` to posts: the theme has no tag archive template.
 
-The playground has two modes, kept in the address (`?mode=xpath`) and
-remembered in localStorage. XSLT 1.0 uses `dist/xslt-processor.browser.min.js`
-(copied to `site/static/vendor/`, so run `npm run build` first). XPath 3.1 uses
-`@tradik/xslt3`, which `site/scripts/vendor.mjs` bundles with esbuild from
-`packages/xslt3/src/` into `site/static/vendor/xslt3.browser.min.js` (a
-minified ES module; `npm run site:content` prints its size). The page loads it
-with `import()` only when XPath 3.1 mode is opened. The mode logic lives in
-`site/templates/xslt-site/js/` (`playground-modes.js`, `xpath-core.js`,
-`xpath-items.js`, `xpath-presets.js`) and is tested by
-`site/scripts/xpath.test.mjs` and `vendor.test.mjs`, which run every example.
+The playground has three modes, kept in the address (`?mode=xslt3`,
+`?mode=xpath`; XSLT 1.0 has no parameter) and remembered in localStorage.
+XSLT 1.0 uses `dist/xslt-processor.browser.min.js` (copied to
+`site/static/vendor/`, so run `npm run build` first). XSLT 3.0 and XPath 3.1
+use `@tradik/xslt3`, which `site/scripts/vendor.mjs` bundles with esbuild from
+`packages/xslt3/src/` into `site/static/vendor/xslt3.browser.min.js` (one
+minified ES module for both modes; `npm run site:content` prints its size).
+The page loads it with `import()` the first time one of those two modes runs
+(`playground-library.js`). XSLT 1.0 and 3.0 share the XML, stylesheet and
+parameter editors (`playground-stylesheet.js`), and a link runs the current
+stylesheet with the other engine. The mode logic lives in
+`site/templates/xslt-site/js/`: `playground-modes.js`, `xslt3-core.js` (compile,
+transform and serialize with `xsl:output`, `xsl:result-document` outputs,
+`xsl:message`, errors with their code and a line guess), `xslt3-presets*.js`,
+`xpath-core.js`, `xpath-items.js` and `xpath-presets.js`. Tests:
+`site/scripts/xslt3.test.mjs`, `xpath.test.mjs` and `vendor.test.mjs` run
+every example under jsdom; `playground-ui.test.mjs` covers the shared page
+helpers. A new XSLT 3.0 example goes in one of the `xslt3-presets*.js` files
+with a test of its output.
 
 **Cookie consent** comes from ssg's cookie-consent worker in
 `site/workers/cookie-consent/` (scaffolded with `ssg new worker

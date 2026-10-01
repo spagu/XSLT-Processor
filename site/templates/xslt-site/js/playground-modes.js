@@ -7,7 +7,11 @@
  */
 
 /** Mode ids, as used in ?mode= and in localStorage. */
-export const MODES = Object.freeze({ xslt: "xslt", xpath: "xpath" });
+export const MODES = Object.freeze({
+  xslt: "xslt",
+  xslt3: "xslt3",
+  xpath: "xpath",
+});
 
 /** localStorage key of the last mode. */
 export const MODE_KEY = "xslt-playground-mode";
@@ -16,9 +20,21 @@ export const MODE_KEY = "xslt-playground-mode";
  * Whether a value is a known mode id.
  *
  * @param {*} value - Candidate
- * @returns {boolean} True for "xslt" and "xpath"
+ * @returns {boolean} True for "xslt", "xslt3" and "xpath"
  */
 export const isMode = (value) => Object.values(MODES).includes(value);
+
+/**
+ * The mode that runs the same stylesheet with the other engine, for the
+ * "compare" link: XSLT 1.0 and XSLT 3.0 point at each other.
+ *
+ * @param {string} mode - Mode id
+ * @returns {string|null} The other stylesheet mode, null for XPath 3.1
+ */
+export function compareMode(mode) {
+  if (mode === MODES.xslt) return MODES.xslt3;
+  return mode === MODES.xslt3 ? MODES.xslt : null;
+}
 
 /**
  * The mode to open with.
@@ -34,7 +50,7 @@ export function resolveMode(search, stored) {
 }
 
 /**
- * The page address for a mode: ?mode=xpath for XPath 3.1, no parameter for
+ * The page address for a mode: ?mode=xslt3 or ?mode=xpath, no parameter for
  * XSLT 1.0 (the default), other query parameters and the hash kept.
  *
  * @param {string} href - Current address

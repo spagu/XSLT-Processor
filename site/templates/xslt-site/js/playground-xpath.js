@@ -3,12 +3,13 @@
  * and namespace editors, and the result list (one row per item with its
  * type and value). The evaluation itself is in xpath-core.js.
  *
- * @tradik/xslt3 is loaded with import() on the first evaluation, so the
- * XSLT 1.0 mode never downloads it.
+ * @tradik/xslt3 is loaded on the first evaluation (playground-library.js),
+ * so the XSLT 1.0 mode never downloads it.
  *
  * @module playground-xpath
  */
 
+import { libraryRunner } from "./playground-library.js";
 import { evaluate } from "./xpath-core.js";
 import { xpathPresets } from "./xpath-presets.js";
 
@@ -16,7 +17,8 @@ import { xpathPresets } from "./xpath-presets.js";
  * Build the XPath 3.1 mode.
  *
  * @param {object} page - Elements and helpers shared with the page
- * @param {string} page.libraryUrl - Address of the @tradik/xslt3 bundle
+ * @param {ReturnType<import("./playground-library.js").lazyImport>} page.library
+ *   - Loads @tradik/xslt3
  * @param {HTMLTextAreaElement} page.xmlInput - The XML source editor
  * @param {HTMLElement} page.statusLine - Status line (a live region)
  * @param {(messages: { level: string, text: string, code?: string }[]) => void} page.showMessages
@@ -27,7 +29,7 @@ import { xpathPresets } from "./xpath-presets.js";
  *   The mode
  */
 export function createXPathMode({
-  libraryUrl,
+  library,
   xmlInput,
   statusLine,
   showMessages,
@@ -38,21 +40,12 @@ export function createXPathMode({
   const varsInput = $("pg-vars");
   const nsInput = $("pg-ns");
   const itemList = $("pg-items");
-  let library = null;
-  let runs = 0;
-
-  /**
-   * The library, imported once.
-   *
-   * @returns {Promise<object>} @tradik/xslt3
-   */
-  function loadLibrary() {
-    library ??= import(libraryUrl).catch((error) => {
-      library = null;
-      throw error;
-    });
-    return library;
-  }
+  const withLibrary = libraryRunner({
+    library,
+    statusLine,
+    showMessages,
+    isActive,
+  });
 
   /**
    * Show an evaluation result: the item list and a status line with the
@@ -98,29 +91,20 @@ export function createXPathMode({
   }
 
   /** Evaluate the current expression and show the result. */
-  async function run() {
-    const ticket = ++runs;
-    let lib;
-    try {
-      if (!library) statusLine.textContent = "Loading @tradik/xslt3…";
-      lib = await loadLibrary();
-    } catch (error) {
-      statusLine.textContent = "@tradik/xslt3 could not be loaded.";
-      showMessages([{ level: "error", text: String(error.message) }]);
-      return;
-    }
-    if (ticket !== runs || !isActive()) return;
-    show(
-      evaluate(
-        {
-          xml: xmlInput.value,
-          expression: exprInput.value,
-          variables: varsInput.value,
-          namespaces: nsInput.value,
-        },
-        { lib, DOMParser, XMLSerializer, now: () => performance.now() },
+  function run() {
+    return withLibrary((lib) =>
+      show(
+        evaluate(
+          {
+            xml: xmlInput.value,
+            expression: exprInput.value,
+            variables: varsInput.value,
+            namespaces: nsInput.value,
+          },
+          { lib, DOMParser, XMLSerializer, now: () => performance.now() },
+        ),
+        lib,
       ),
-      lib,
     );
   }
 

@@ -132,6 +132,15 @@ serialization parameters of `xsl:output`. Recursion runs on an explicit work
 stack, so templates nested 10,000 deep work (`maxDepth` sets the limit). An
 `XSLTProcessor` class with the browser's method names is also exported.
 
+The website's [playground](https://xslt-processor.tradik.com/playground/?mode=xslt3)
+has an XSLT 3.0 mode that runs `compileStylesheet`, `transform` and
+`serialize` in the browser. Its examples cover `xsl:for-each-group`
+(`group-by`, `group-adjacent`), `xsl:analyze-string`, typed `xsl:function`s,
+text value templates, `xsl:iterate`, maps written as JSON, `xsl:try`,
+`xsl:merge`, accumulators, `xsl:result-document` and a Muenchian 1.0
+grouping rewritten; a link runs the same stylesheet with the 1.0 package for
+comparison.
+
 Two XSLT 3.0 features are on by default, as the specification intends, and can
 be turned off per transformation:
 
@@ -182,7 +191,7 @@ evaluateXPath("json-doc('file:///srv/data/config.json')?name", null, {
 The website's [playground](https://xslt-processor.tradik.com/playground/?mode=xpath)
 has an XPath 3.1 mode that runs this function in the browser, with examples
 of `for`/`let`, `sort`, maps, regular expressions, formatting, `=>` and
-`fold-left`. XSLT 2.0 and 3.0 stylesheets join it once the XSLT part is ready.
+`fold-left`.
 
 `evaluateXPath` keeps the 64 most recently compiled expressions (keyed by the
 expression text and the variable names; used only when no other static option

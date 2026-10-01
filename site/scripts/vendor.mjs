@@ -1,10 +1,11 @@
 /**
- * Browser bundle of @tradik/xslt3 for the playground's XPath 3.1 mode.
+ * Browser bundle of @tradik/xslt3 for the playground's XSLT 3.0 and XPath 3.1
+ * modes (one bundle for both).
  *
  * The package has no build of its own yet, so the site bundles its source
  * (packages/xslt3/src/index.js) into one minified ES module with esbuild.
- * The playground loads it with import() only when XPath 3.1 mode is opened,
- * so visitors who stay with XSLT 1.0 never download it.
+ * The playground loads it with import() only when one of those modes is
+ * opened, so visitors who stay with XSLT 1.0 never download it.
  *
  * @module vendor
  */

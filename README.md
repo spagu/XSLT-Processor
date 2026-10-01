@@ -40,7 +40,7 @@ This library ensures your XSLT-based applications continue to work regardless of
 
 ## Documentation
 
-The documentation is also published as a website with an interactive playground: <https://xslt-processor.tradik.com/> ([playground](https://xslt-processor.tradik.com/playground/): XSLT 1.0 transformations, and XPath 3.1 expressions with the in-development `@tradik/xslt3` at [?mode=xpath](https://xslt-processor.tradik.com/playground/?mode=xpath); [blog](https://xslt-processor.tradik.com/blog/) with an [RSS feed](https://xslt-processor.tradik.com/blog/rss.xml)).
+The documentation is also published as a website with an interactive playground: <https://xslt-processor.tradik.com/> ([playground](https://xslt-processor.tradik.com/playground/): XSLT 1.0 transformations, and with the in-development `@tradik/xslt3` XSLT 3.0 stylesheets at [?mode=xslt3](https://xslt-processor.tradik.com/playground/?mode=xslt3) and XPath 3.1 expressions at [?mode=xpath](https://xslt-processor.tradik.com/playground/?mode=xpath); [blog](https://xslt-processor.tradik.com/blog/) with an [RSS feed](https://xslt-processor.tradik.com/blog/rss.xml)).
 
 | Guide | Contents |
 |-------|----------|

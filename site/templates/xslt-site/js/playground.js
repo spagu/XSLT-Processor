@@ -1,23 +1,29 @@
 /**
  * Playground page wiring: the mode switch, the example menu, the shared XML
- * editor, the Run button, live runs while typing and the message list. Each
- * mode brings its own editors and result panel: playground-xslt.js (XSLT
- * 1.0) and playground-xpath.js (XPath 3.1).
+ * and stylesheet editors, the Run button, live runs while typing, the
+ * message list and the link that runs the same stylesheet with the other
+ * engine. Each mode brings its own result handling: playground-xslt.js
+ * (XSLT 1.0), playground-xslt3.js (XSLT 3.0) and playground-xpath.js
+ * (XPath 3.1).
  *
  * Needs the browser bundle (global XsltProcessorLib) loaded before it.
  *
  * @module playground
  */
 
+import { lazyImport } from "./playground-library.js";
 import {
+  compareMode,
   loadMode,
   MODES,
   modeUrl,
   resolveMode,
   saveMode,
 } from "./playground-modes.js";
+import { createStylesheetEditor } from "./playground-stylesheet.js";
 import { createXPathMode } from "./playground-xpath.js";
 import { createXsltMode } from "./playground-xslt.js";
+import { createXslt3Mode } from "./playground-xslt3.js";
 
 const DEBOUNCE_MS = 300;
 
@@ -37,11 +43,12 @@ const xmlInput = $("pg-xml");
 const live = $("pg-live");
 const statusLine = $("pg-status");
 const messageList = $("pg-messages");
+const compareLink = $("pg-compare");
 const storage = () => window.localStorage;
 
 /**
- * Fill the message list. A message with a code (an XPath error) shows the
- * code in place of the level.
+ * Fill the message list. A message with a code (an XPath or XSLT error)
+ * shows the code in place of the level.
  *
  * @param {{ level: string, text: string, code?: string }[]} messages - Messages
  */
@@ -58,21 +65,46 @@ function showMessages(messages) {
   );
 }
 
-const shared = { xmlInput, statusLine, showMessages };
+let mode = MODES.xslt;
+const editor = createStylesheetEditor({
+  xmlInput,
+  xslInput: $("pg-xsl"),
+  paramList: $("pg-params"),
+  addButton: $("pg-add-param"),
+  onChange: () => run(),
+});
+const library = lazyImport(() => import(app.dataset.xslt3));
+const shared = { xmlInput, editor, statusLine, showMessages };
+/** Each mode with the texts the page shows for it. */
 const modes = {
-  [MODES.xslt]: { ...createXsltMode(shared), runLabel: "Transform" },
+  [MODES.xslt]: {
+    ...createXsltMode(shared),
+    name: "XSLT 1.0",
+    runLabel: "Transform",
+    outputTitle: "transformToString() output",
+  },
+  [MODES.xslt3]: {
+    ...createXslt3Mode({
+      ...shared,
+      library,
+      isActive: () => mode === MODES.xslt3,
+    }),
+    name: "XSLT 3.0",
+    runLabel: "Transform",
+    outputTitle: "serialize() output",
+  },
   [MODES.xpath]: {
     ...createXPathMode({
       ...shared,
-      libraryUrl: app.dataset.xslt3,
+      library,
       isActive: () => mode === MODES.xpath,
     }),
+    name: "XPath 3.1",
     runLabel: "Evaluate",
   },
 };
-/** The XML each mode had when the visitor left it, and its example. */
+/** The editors of each mode when the visitor left it, and its example. */
 const saved = {};
-let mode = MODES.xslt;
 
 /** Run the current mode. */
 function run() {
@@ -80,30 +112,50 @@ function run() {
 }
 
 /**
- * Switch to a mode: show its editors and result panel, restore its XML or
- * load its first example, and remember the choice in the URL and storage.
+ * Switch to a mode: show its editors and result panel, restore what it had
+ * or load its first example, and remember the choice in the URL and storage.
+ * With `carry`, the XML, stylesheet and parameters stay as they are, so the
+ * same stylesheet runs with the other engine.
  *
  * @param {string} next - Mode id
+ * @param {{ carry?: boolean }} [options] - Keep the current input
  */
-function setMode(next) {
+function setMode(next, { carry = false } = {}) {
+  const from = mode;
   if (presetSelect.options.length > 0) {
-    saved[mode] = { xml: xmlInput.value, preset: presetSelect.value };
+    saved[from] = { ...editor.read(), preset: presetSelect.value };
   }
   mode = next;
   $(`pg-mode-${next}`).checked = true;
   for (const el of app.querySelectorAll("[data-mode]")) {
-    el.hidden = el.dataset.mode !== next;
+    el.hidden = !el.dataset.mode.split(" ").includes(next);
   }
   runButton.textContent = modes[next].runLabel;
+  $("pg-xsl-label").textContent = `${modes[next].name} stylesheet`;
+  $("pg-output-title").textContent = modes[next].outputTitle ?? "";
+  const other = compareMode(next);
+  if (other) {
+    compareLink.href = modeUrl(location.href, other);
+    compareLink.textContent = `Run this stylesheet with ${modes[other].name}`;
+  }
   presetSelect.replaceChildren(
     ...modes[next].presets.map(({ id, label }) => new Option(label, id)),
   );
   showMessages([]);
   history.replaceState(null, "", modeUrl(location.href, next));
   saveMode(storage, next);
-  if (saved[next]) {
+  if (carry) {
+    presetSelect.prepend(new Option(`Your ${modes[from].name} input`, ""));
+    presetSelect.value = "";
+    run();
+  } else if (saved[next]) {
     presetSelect.value = saved[next].preset;
-    xmlInput.value = saved[next].xml;
+    if (presetSelect.value !== saved[next].preset) {
+      presetSelect.prepend(new Option("Your earlier input", ""));
+      presetSelect.value = "";
+    }
+    if (other) editor.load(saved[next]);
+    else xmlInput.value = saved[next].xml;
     run();
   } else {
     modes[next].loadPreset(modes[next].presets[0].id);
@@ -121,9 +173,13 @@ function scheduleRun() {
 for (const radio of document.querySelectorAll('input[name="pg-mode"]')) {
   radio.addEventListener("change", () => setMode(radio.value));
 }
-presetSelect.addEventListener("change", () =>
-  modes[mode].loadPreset(presetSelect.value),
-);
+compareLink.addEventListener("click", (event) => {
+  event.preventDefault();
+  setMode(compareMode(mode), { carry: true });
+});
+presetSelect.addEventListener("change", () => {
+  if (presetSelect.value) modes[mode].loadPreset(presetSelect.value);
+});
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   run();

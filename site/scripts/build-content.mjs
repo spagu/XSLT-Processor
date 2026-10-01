@@ -10,7 +10,8 @@
  *   documentation sidebar;
  * - the browser bundle dist/xslt-processor.browser.min.js (run `npm run
  *   build` first) is copied to site/static/vendor/ for the playground, and
- *   @tradik/xslt3 is bundled beside it for the XPath 3.1 mode (vendor.mjs).
+ *   @tradik/xslt3 is bundled beside it for the XSLT 3.0 and XPath 3.1 modes
+ *   (vendor.mjs).
  *
  * Everything written here is generated and ignored by git; edit the sources.
  *
@@ -137,5 +138,5 @@ const xslt3 = await buildXslt3Bundle({
 
 console.log(`Site content: ${sources.length} documents, version ${version}.`);
 console.log(
-  `XPath 3.1 bundle: ${formatSize(xslt3.raw)} (${formatSize(xslt3.gzip)} gzip).`,
+  `@tradik/xslt3 bundle (XSLT 3.0 and XPath 3.1): ${formatSize(xslt3.raw)} (${formatSize(xslt3.gzip)} gzip).`,
 );
