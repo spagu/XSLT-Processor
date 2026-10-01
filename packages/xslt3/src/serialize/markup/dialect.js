@@ -28,7 +28,8 @@ import {
 } from "./htmlData.js";
 
 /** escape-html-uri: %-escapes all but printable ASCII. */
-const escapeUri = (value) => percentEncode(value, (cp) => cp >= 32 && cp < 127);
+const escapeUri = (value) =>
+  percentEncode(value.normalize("NFC"), (cp) => cp >= 32 && cp < 127);
 
 /**
  * Lower-cases the local names of a set of Clark names.

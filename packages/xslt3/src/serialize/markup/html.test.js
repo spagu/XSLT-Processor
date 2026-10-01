@@ -77,6 +77,8 @@ describe("the html output method", () => {
       '<a href="file:///My Docs/b%C3%A9b%C3%A9.xml" name="%C3%A9" title="é">x</a>',
     );
     assert.equal(html(link, 5, { escapeUriAttributes: false }), link);
+    // the URI is normalized to NFC before it is escaped
+    assert.equal(html('<a href="a\u030A"/>', 5), '<a href="%C3%A5"></a>');
   });
 
   it("writes processing instructions and checks characters", () => {

@@ -87,16 +87,19 @@ export function compileAnalyzeString(element, cx, scope) {
     : () => "";
   let matching = null;
   let nonMatching = null;
+  let fallback = false;
   for (const child of cx.children(element)) {
+    if (fallback && !isXsl(child, "fallback")) {
+      throw xsltError("XTSE0010", "xsl:fallback must come last");
+    }
     if (isXsl(child, "matching-substring") && !matching && !nonMatching) {
       checkAttributes(child);
       matching = compileBody(child, cx, scope);
     } else if (isXsl(child, "non-matching-substring") && !nonMatching) {
       checkAttributes(child);
       nonMatching = compileBody(child, cx, scope);
-    } else if (!isXsl(child, "fallback")) {
-      throw xsltError("XTSE0010", "Invalid content of xsl:analyze-string");
-    }
+    } else if (isXsl(child, "fallback")) fallback = true;
+    else throw xsltError("XTSE0010", "Invalid content of xsl:analyze-string");
   }
   if (!matching && !nonMatching) {
     throw xsltError("XTSE1130", "xsl:analyze-string needs a substring child");

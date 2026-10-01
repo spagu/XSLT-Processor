@@ -9,6 +9,7 @@ import { compileBody } from "../compiler/body.js";
 import { required } from "../compiler/attributes.js";
 import { infoOf } from "../compiler/elementInfo.js";
 import { evaluate } from "../runtime/context.js";
+import { markConstructed } from "../runtime/baseUri.js";
 import { BodyFrame } from "../runtime/machine.js";
 import {
   avtEvaluator,
@@ -82,9 +83,11 @@ export function compileElement(element, cx, scope) {
     cx,
   );
   const body = compileBody(element, cx, scope);
+  const base = infoOf(element).baseUri;
   return (xc, out, machine) => {
     const { uri, qname } = name(xc);
     const content = out.element(uri, qname);
+    markConstructed(content, base);
     if (sets.length > 0) applyAttributeSets(sets, xc, content, machine, cx);
     if (body.length > 0) machine.push(new BodyFrame(body, xc, content));
   };

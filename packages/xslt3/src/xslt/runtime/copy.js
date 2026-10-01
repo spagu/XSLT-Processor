@@ -11,6 +11,7 @@ import {
   isNamespaceDeclaration,
 } from "../../xpath/eval/domNodes.js";
 import { inScopeNamespaces } from "../../xpath/eval/namespaceNodes.js";
+import { markCopied } from "./baseUri.js";
 
 /**
  * Copies the namespace nodes of an element into a receiver.
@@ -42,6 +43,7 @@ export function startElementCopy(
     element.namespaceURI ?? "",
     element.nodeName,
   );
+  if (top) markCopied(element, content.parent);
   if (copyNamespaces && top) copyNamespaceNodes(element, content);
   else if (copyNamespaces) {
     for (const attribute of element.attributes) {

@@ -83,7 +83,10 @@ function compileInstruction(element, cx, scope) {
     checkAttributes(element, cx);
     return compiler(element, cx, scope);
   }
-  if (name === "fallback") return null;
+  if (name === "fallback") {
+    checkAttributes(element, cx);
+    return null;
+  }
   if (infoOf(element).version > 3) return compileFallback(element, cx, scope);
   if (name === "include" || name === "import") {
     throw xsltError(

@@ -114,7 +114,7 @@ describe("xsl:result-document", () => {
       "item-separator": " | ",
       "use-character-maps": new Map([["x", "y"]]),
     });
-    assert.deepEqual(result("<out/>").output, {});
+    assert.deepEqual(result("<out/>").output, { method: "xml" });
   });
 
   it("raises its errors", () => {

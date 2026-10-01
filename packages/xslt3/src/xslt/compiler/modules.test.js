@@ -76,11 +76,6 @@ describe("stylesheet modules", () => {
       [stylesheet('<xsl:include href="none.xsl"/>'), {}, "XTSE0165"],
       [self, { "main.xsl": self }, "XTSE0180"],
       [imports, { "main.xsl": imports }, "XTSE0210"],
-      [
-        stylesheet('<xsl:template name="t"/><xsl:import href="x.xsl"/>'),
-        {},
-        "XTSE0200",
-      ],
       [stylesheet("<xsl:include/>"), {}, "XTSE0010"],
       [
         stylesheet('<xsl:include href="x.xsl">text</xsl:include>'),

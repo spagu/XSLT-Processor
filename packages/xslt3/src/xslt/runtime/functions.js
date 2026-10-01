@@ -53,7 +53,13 @@ function key([[name], values, top], context) {
       throw xsltError("XTDE1270", "key() needs a node in a document");
     }
   }
-  const nodes = keyLookup(context.xc, `{${uri}}${local}`, values, rootOf(root));
+  const nodes = keyLookup(
+    context.xc,
+    `{${uri}}${local}`,
+    values,
+    rootOf(root),
+    context.sc?.owner,
+  );
   return root === rootOf(root) ? nodes : nodes.filter((n) => within(n, root));
 }
 
@@ -100,13 +106,26 @@ export const xsltFunctions = [
     local: "current-group",
     params: [],
     returns: "item()*",
-    impl: (_, context) => context.xc.group ?? [],
+    impl: (_, context) => {
+      if (context.xc.group === undefined) {
+        throw xsltError(
+          "XTDE1061",
+          "current-group(): there is no current group",
+        );
+      }
+      return context.xc.group;
+    },
   },
   {
     local: "current-grouping-key",
     params: [],
     returns: "xs:anyAtomicType*",
-    impl: (_, context) => context.xc.groupKey ?? [],
+    impl: (_, context) => {
+      if (context.xc.groupKey === undefined) {
+        throw xsltError("XTDE1071", "current-grouping-key(): there is no key");
+      }
+      return context.xc.groupKey;
+    },
   },
   {
     local: "regex-group",

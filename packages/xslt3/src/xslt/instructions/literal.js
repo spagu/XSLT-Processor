@@ -10,6 +10,7 @@
 import { compileBody } from "../compiler/body.js";
 import { infoOf } from "../compiler/elementInfo.js";
 import { isNamespaceDeclaration } from "../../xpath/eval/domNodes.js";
+import { markConstructed } from "../runtime/baseUri.js";
 import { BodyFrame } from "../runtime/machine.js";
 import { avtEvaluator } from "../runtime/values.js";
 import { XSL_NS, xslAttr, xsltError } from "../names.js";
@@ -95,6 +96,17 @@ export function compileLiteralElement(element, cx, scope) {
           `Unknown attribute ${attribute.name} on a literal result element`,
         );
       }
+      // a non-schema-aware processor (XTSE1660)
+      const local = attribute.localName;
+      if (
+        local === "type" ||
+        (local === "validation" && attribute.value.trim() === "strict")
+      ) {
+        throw xsltError(
+          "XTSE1660",
+          `xsl:${local} needs a schema-aware processor`,
+        );
+      }
       continue;
     }
     const name = aliasedName(
@@ -112,8 +124,12 @@ export function compileLiteralElement(element, cx, scope) {
     cx,
   );
   const body = compileBody(element, cx, scope);
+  // its own xml:base is copied: the base URI it applies to is the parent's
+  const parent = element.parentNode;
+  const base = infoOf(parent?.nodeType === 1 ? parent : element).baseUri;
   return (xc, out, machine) => {
     const content = out.element(uri, qname);
+    markConstructed(content, base);
     for (const [prefix, namespace] of namespaces) {
       content.declareExplicit(prefix, namespace);
     }

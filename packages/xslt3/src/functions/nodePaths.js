@@ -90,18 +90,18 @@ function pathOf(node) {
 
 /**
  * Base URI of a node: its xml:base attributes resolved against the
- * document URI.
+ * document URI, or against the base URI recorded for a constructed node.
  * @param {Node} node
  * @returns {string|undefined}
  */
-function baseUriOf(node) {
+export function nodeBaseUri(node) {
   const chain = [];
   for (let n = node; n; n = parentOf(n)) chain.unshift(n);
-  const document = chain[0];
-  let base = isDocument(document)
-    ? (recordedBaseUri(document) ?? documentUriOf(document))
-    : undefined;
+  let base;
   for (const n of chain) {
+    const own =
+      recordedBaseUri(n) ?? (isDocument(n) ? documentUriOf(n) : undefined);
+    if (own !== undefined) base = own;
     if (n.nodeType === 1 && n.hasAttributeNS(XML_NAMESPACE, "base")) {
       base = resolveUri(n.getAttributeNS(XML_NAMESPACE, "base"), base);
     }
@@ -161,13 +161,13 @@ export const nodePathFunctions = [
     params: [],
     returns: "xs:anyURI?",
     focus: true,
-    impl: (_, context) => anyUri(baseUriOf(focusNode(context))),
+    impl: (_, context) => anyUri(nodeBaseUri(focusNode(context))),
   },
   {
     local: "base-uri",
     params: ["node()?"],
     returns: "xs:anyURI?",
-    impl: ([arg]) => (arg.length ? anyUri(baseUriOf(arg[0])) : []),
+    impl: ([arg]) => (arg.length ? anyUri(nodeBaseUri(arg[0])) : []),
   },
   {
     local: "document-uri",

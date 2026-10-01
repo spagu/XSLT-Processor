@@ -36,7 +36,6 @@ describe("xsl:value-of and xsl:text", () => {
     checkBodies(
       [
         ['<xsl:value-of select="1">x</xsl:value-of>', "XTSE0870"],
-        ["<xsl:value-of/>", "XTSE0870"],
         ["<xsl:text><b/></xsl:text>", "XTSE0010"],
       ],
       { version: "2.0" },
@@ -70,7 +69,7 @@ describe("xsl:sequence", () => {
       ['<xsl:sequence select="1"><b/></xsl:sequence>', "XTSE3185"],
       ['<out><xsl:sequence select="map{}"/></out>', "XTDE0450"],
     ]);
-    checkBodies([["<xsl:sequence/>", "XTSE0010"]], { version: "2.0" });
+    checkBodies([["<out><xsl:sequence/></out>", "<out/>"]], { version: "2.0" });
   });
 });
 

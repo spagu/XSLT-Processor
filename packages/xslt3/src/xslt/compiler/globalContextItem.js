@@ -24,7 +24,12 @@ const USES = new Set(["required", "optional", "absent"]);
 export function declareGlobalContextItem(declarations, cx) {
   cx.globalContextItem = { use: "optional", type: null };
   const seen = new Set();
+  const modules = new Set();
   for (const { element } of declarations) {
+    if (modules.has(element.parentNode)) {
+      throw xsltError("XTSE3087", "Two xsl:global-context-item in a module");
+    }
+    modules.add(element.parentNode);
     const use = (attr(element, "use") ?? "optional").trim();
     if (!USES.has(use)) throw xsltError("XTSE0020", `Invalid use "${use}"`);
     const asText = attr(element, "as");

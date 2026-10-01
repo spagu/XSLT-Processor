@@ -13,6 +13,7 @@ import { parentOf } from "../../xpath/eval/domNodes.js";
 import { derive } from "../runtime/context.js";
 import { compileGeneralPath } from "./general.js";
 import { checkPattern, isPredicatePattern } from "./grammar.js";
+import { checkGroupingCalls } from "./patternChecks.js";
 import { compilePathPattern } from "./paths.js";
 
 /**
@@ -125,6 +126,7 @@ export function compilePattern(text, element, cx, vars) {
       : error;
   }
   checkPattern(ast, text);
+  checkGroupingCalls(ast);
   const env = {
     cx,
     sc: cx.exprs.staticContext(element),

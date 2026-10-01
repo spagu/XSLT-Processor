@@ -21,8 +21,12 @@ import { URL } from "node:url";
 
 const WORKER_URL = new URL("./caseWorker.mjs", import.meta.url);
 
-/** Default time limit per test case, in milliseconds. */
-export const DEFAULT_TIMEOUT = 10000;
+/**
+ * Default time limit per test case, in milliseconds: 30 s, so that the
+ * slowest cases (catalog-007 reads the whole suite, about 10 s) pass on
+ * a loaded machine; a looping case still fails alone.
+ */
+export const DEFAULT_TIMEOUT = 30000;
 
 /** Time a worker may take to load the engine, in milliseconds. */
 const STARTUP_TIMEOUT = 60000;

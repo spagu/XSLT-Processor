@@ -9,10 +9,9 @@ describe("XSLT functions", () => {
     checkBodies(
       [
         ["<out>{name(current()/*)}</out>", "<out>doc</out>"],
-        [
-          "<out>{count(current-group())}{count(current-grouping-key())}{regex-group(1)}</out>",
-          "<out>00</out>",
-        ],
+        ["<out>{regex-group(1)}</out>", "<out/>"],
+        ["<out>{current-group()}</out>", "XTDE1061"],
+        ["<out>{current-grouping-key()}</out>", "XTDE1071"],
       ],
       options,
     );

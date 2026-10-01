@@ -12,6 +12,7 @@ import { getCollation } from "../../functions/collations.js";
 import { resolveUri } from "../../xpath/eval/uris.js";
 import {
   clarkOf,
+  RESERVED_NAMESPACES,
   resolveQName,
   standardAttr,
   tokens,
@@ -134,7 +135,7 @@ function chooseCollation(text, base) {
  * @returns {number}
  */
 function parseVersion(text) {
-  if (!/^\s*(\d+(\.\d*)?|\.\d+)\s*$/.test(text)) {
+  if (!/^\s*\+?(\d+(\.\d*)?|\.\d+)\s*$/.test(text)) {
     throw xsltError("XTSE0110", `Invalid version "${text}"`);
   }
   return Number(text);
@@ -171,6 +172,11 @@ function computeInfo(element, parent) {
   if (extension !== undefined) {
     info.extension = new Set(parent.extension);
     addPrefixUris(extension, info.namespaces, info.extension, "XTSE1430");
+    for (const uri of info.extension) {
+      if (RESERVED_NAMESPACES.has(uri)) {
+        throw xsltError("XTSE0085", `${uri} cannot be an extension namespace`);
+      }
+    }
     for (const uri of info.extension) info.excluded.add(uri);
   }
   const defaultMode = own("default-mode");

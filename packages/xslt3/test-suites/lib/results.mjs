@@ -89,19 +89,24 @@ export function buildBaseline(results, meta) {
  * @param {string[]} passing - Baseline ids
  * @param {boolean} [filtered] - A filter was used: baseline ids that were
  *   not run are not regressions
- * @returns {{regressions: string[], fixed: string[]}} Ids that passed and no
- *   longer do, and ids that pass and are not in the baseline
+ * @returns {{regressions: string[], fixed: string[], inapplicable:
+ *   string[]}} Ids that passed and no longer do, ids that pass and are not
+ *   in the baseline, and baseline ids whose dependencies the configuration
+ *   no longer meets (skipped: not regressions)
  */
 export function compareWithBaseline(results, passing, filtered = false) {
   const known = new Set(passing);
   const byId = new Map(results.map((r) => [r.id, r.status]));
+  const inapplicable = passing.filter((id) => byId.get(id) === "skipped");
   const regressions = passing.filter((id) =>
-    byId.has(id) ? byId.get(id) !== "pass" : !filtered,
+    byId.has(id)
+      ? byId.get(id) !== "pass" && byId.get(id) !== "skipped"
+      : !filtered,
   );
   const fixed = results
     .filter((r) => r.status === "pass" && !known.has(r.id))
     .map((r) => r.id);
-  return { regressions, fixed };
+  return { regressions, fixed, inapplicable };
 }
 
 /**

@@ -76,7 +76,7 @@ function convert(params) {
 
 /**
  * The HTML version requested for the html and xhtml methods: html-version,
- * else (html method) version, else 5.
+ * else (html method) version, else 5 for html and 4 (XHTML 1.0) for xhtml.
  * @param {Record<string, *>} values - Converted values
  * @returns {number} 4 or 5
  * @throws {XPathError} SESU0013 for other versions
@@ -86,7 +86,8 @@ function htmlVersionOf(values) {
   if (version === undefined && values.method === "html" && values.version) {
     version = CONVERTERS.decimal("version", values.version);
   }
-  if (version === undefined || version === 5) return 5;
+  if (version === undefined) return values.method === "xhtml" ? 4 : 5;
+  if (version === 5) return 5;
   if (version === 4 || version === 4.01) return 4;
   throw new XPathError("SESU0013", `Unsupported HTML version ${version}`);
 }

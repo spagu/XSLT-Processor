@@ -177,10 +177,18 @@ describe("results", () => {
     assert.deepEqual(compareWithBaseline(results, ["s/b", "x/gone"]), {
       regressions: ["s/b", "x/gone"],
       fixed: ["s/a"],
+      inapplicable: [],
     });
     assert.deepEqual(compareWithBaseline(results, ["s/a", "x/gone"], true), {
       regressions: [],
       fixed: [],
+      inapplicable: [],
+    });
+    const skipped = [{ id: "s/c", status: "skipped" }];
+    assert.deepEqual(compareWithBaseline(skipped, ["s/c"]), {
+      regressions: [],
+      fixed: [],
+      inapplicable: ["s/c"],
     });
   });
 });

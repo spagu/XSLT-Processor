@@ -53,6 +53,10 @@ describe("assertion text helpers", () => {
   it("compares serializations ignoring line endings and outer space", () => {
     assert.equal(serializationEquals("a\r\nb\n", "a\nb"), true);
     assert.equal(serializationEquals("a", "b"), false);
+    const declaration = '<?xml version="1.0"?>\n<a/>';
+    assert.equal(serializationEquals(declaration, "<a/>"), true);
+    assert.equal(serializationEquals(declaration, declaration), true);
+    assert.equal(serializationEquals("<a/>", declaration), false);
   });
 
   it("builds the XPath expression of value assertions", () => {

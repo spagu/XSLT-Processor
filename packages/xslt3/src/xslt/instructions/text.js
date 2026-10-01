@@ -21,15 +21,8 @@ import { compileSimpleContent } from "./elements.js";
  * @returns {Function}
  */
 export function compileValueOf(element, cx, scope) {
+  // XSLT 3.0: neither select nor content makes a zero-length text node
   const value = compileSimpleContent(element, cx, scope, "", "XTSE0870");
-  if (
-    attr(element, "select") === undefined &&
-    cx.children(element).length === 0
-  ) {
-    if (cx.versionOf(element) < 3) {
-      throw xsltError("XTSE0870", "xsl:value-of needs select or content");
-    }
-  }
   return (xc, out, machine) => out.text(value(xc, machine));
 }
 
@@ -67,9 +60,6 @@ export function compileSequence(element, cx, scope) {
     children.filter((child) => !isXsl(child, "fallback")),
   );
   if (select === undefined) {
-    if (cx.versionOf(element) < 3) {
-      throw xsltError("XTSE0010", "xsl:sequence requires select");
-    }
     return (xc, out, machine) => machine.runBody(body, xc, out);
   }
   if (body.length > 0) {

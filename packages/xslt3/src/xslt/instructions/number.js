@@ -31,7 +31,11 @@ import { compilePattern, patternMatches } from "../patterns/compile.js";
  */
 function integersOf(values, compatible) {
   const result = [];
-  for (const value of atomize(values)) {
+  const items = atomize(values);
+  // XSLT 1.0 behaviour: number(()) is NaN
+  if (compatible && items.length === 0) return "NaN";
+  // XSLT 1.0 behaviour: the first item only
+  for (const value of compatible ? items.slice(0, 1) : items) {
     if (typeof value.value === "bigint" && value.value >= 0n) {
       result.push(value.value);
       continue;
@@ -44,6 +48,35 @@ function integersOf(values, compatible) {
     result.push(BigInt(Math.round(n)));
   }
   return result;
+}
+
+/**
+ * Checks a lang value: a language tag (xs:language).
+ * @param {string} text
+ * @param {string} code - XTSE0020 when static, XTDE0030 when evaluated
+ */
+function checkLanguage(text, code) {
+  if (!/^\s*[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*\s*$/.test(text)) {
+    throw xsltError(code, `Invalid lang "${text}"`);
+  }
+}
+
+/**
+ * Re-bases the numbers by the start-at attribute (XSLT 3.0 section 12.1).
+ * @param {bigint[]} numbers
+ * @param {string} text - Effective value of start-at
+ * @returns {bigint[]}
+ * @throws {import("../../errors.js").XPathError} XTDE0030 for a value
+ *   that is not a list of integers
+ */
+function rebase(numbers, text) {
+  if (!/^\s*-?\d+(\s+-?\d+)*\s*$/.test(text)) {
+    throw xsltError("XTDE0030", `Invalid start-at "${text}"`);
+  }
+  const starts = text.trim().split(/\s+/).map(BigInt);
+  return numbers.map(
+    (number, i) => number + starts[Math.min(i, starts.length - 1)] - 1n,
+  );
 }
 
 /**
@@ -96,6 +129,13 @@ export function compileNumber(element, cx, scope) {
   const separator = avt("grouping-separator", "");
   const size = avt("grouping-size", "");
   const compatible = infoOf(element).version < 2;
+  const startAt =
+    attr(element, "start-at") === undefined ? null : avt("start-at");
+  const langText = attr(element, "lang");
+  if (langText !== undefined && !langText.includes("{")) {
+    checkLanguage(langText, "XTSE0020");
+  }
+  const lang = langText === undefined ? null : avt("lang");
   return (xc, out) => {
     let numbers;
     if (value) {
@@ -123,6 +163,8 @@ export function compileNumber(element, cx, scope) {
           : numberHierarchy(node, countTest, fromTest, level === "multiple");
       numbers = places.map(BigInt);
     }
+    if (startAt) numbers = rebase(numbers, startAt(xc));
+    if (lang) checkLanguage(lang(xc), "XTDE0030");
     const ordinalText = ordinal(xc).trim();
     out.text(
       formatNumbers(numbers, format(xc), {

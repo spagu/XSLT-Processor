@@ -6,6 +6,7 @@
  * @module @tradik/xslt3/xslt/instructions/variables
  */
 
+import { setBaseUri } from "../../functions/baseUris.js";
 import { stringItem } from "../../xpath/eval/atomics.js";
 import { coerce } from "../../xpath/eval/coercion.js";
 import { compileBody } from "../compiler/body.js";
@@ -76,9 +77,10 @@ export function compileValue(element, cx, scope, code) {
   }
   if (children.length > 0) {
     const body = compileBody(element, cx, scope, children);
+    const base = infoOf(element).baseUri;
     const value = type
       ? (xc, machine) => convert(bodySequence(body, xc, machine))
-      : (xc, machine) => [temporaryTree(body, xc, machine)];
+      : (xc, machine) => [setBaseUri(temporaryTree(body, xc, machine), base)];
     return { value, type, hasDefault };
   }
   const empty = type ? [] : [stringItem("")];

@@ -187,3 +187,7 @@ export const clarkOf = (name) => `{${name.uri}}${name.local}`;
  * @returns {string[]}
  */
 export const tokens = (text) => (text ?? "").split(/\s+/).filter(Boolean);
+
+/** The name xsl:original, by which an overriding component reaches the
+ * overridden one (XSLT 3.0 section 3.5.3.4), in Clark notation. */
+export const ORIGINAL = `{${XSL_NS}}original`;

@@ -8,14 +8,20 @@
 
 import { isNode } from "../../xdm/atomic.js";
 import { required } from "../compiler/attributes.js";
-import { infoOf } from "../compiler/elementInfo.js";
 import { derive, evaluate } from "../runtime/context.js";
 import {
   applyBuiltIn,
   applyTemplates,
   invokeTemplate,
 } from "../runtime/apply.js";
-import { attr, declaredName, isXsl, XSL_NS, xsltError } from "../names.js";
+import {
+  attr,
+  clarkOf,
+  declaredName,
+  isXsl,
+  XSL_NS,
+  xsltError,
+} from "../names.js";
 import { compileSorts } from "./sort.js";
 import { compileWithParams } from "./params.js";
 
@@ -63,7 +69,6 @@ export function compileApplyTemplates(element, cx, scope) {
     scope,
   );
   const params = compileWithParams(children, cx, scope);
-  const strict = infoOf(element).version < 3;
   return (xc, out, machine) => {
     if (selectText === undefined && !isNode(xc.item)) {
       throw xsltError(
@@ -71,11 +76,8 @@ export function compileApplyTemplates(element, cx, scope) {
         "xsl:apply-templates without select needs a context node",
       );
     }
-    let items = evaluate(select, xc);
-    if (strict && !items.every(isNode)) {
-      throw xsltError("XTTE0520", "xsl:apply-templates selects only nodes");
-    }
-    items = sort(items, xc, machine);
+    // XSLT 3.0 applies templates to atomic values too (no XTTE0520)
+    const items = sort(evaluate(select, xc), xc, machine);
     const target = mode.current ? xc.mode : cx.mode(mode.name);
     applyTemplates(
       items,
@@ -98,11 +100,10 @@ export function compileApplyTemplates(element, cx, scope) {
 export function compileCallTemplate(element, cx, scope) {
   const children = cx.children(element);
   checkChildren(element, children, ["with-param"]);
-  const name = declaredName(
-    cx.exprs.qname(required(element, "name"), element),
-    `{${XSL_NS}}initial-template`,
-  );
-  const key = `{${name.uri}}${name.local}`;
+  const qname = cx.exprs.qname(required(element, "name"), element);
+  const key =
+    cx.originalName("template", clarkOf(qname)) ??
+    clarkOf(declaredName(qname, `{${XSL_NS}}initial-template`));
   const params = compileWithParams(children, cx, scope);
   cx.deferred.push(() => cx.checkCall(key, params, element));
   return (xc, out, machine) => {
@@ -120,9 +121,14 @@ export function compileCallTemplate(element, cx, scope) {
  */
 export function compileApplyImports(element, cx, scope) {
   const children = cx.children(element);
-  checkChildren(element, children, ["with-param"]);
-  const params = compileWithParams(children, cx, scope);
   const next = element.localName === "next-match";
+  // xsl:next-match may have xsl:fallback children (ignored: it exists)
+  checkChildren(
+    element,
+    children,
+    next ? ["with-param", "fallback"] : ["with-param"],
+  );
+  const params = compileWithParams(children, cx, scope);
   return (xc, out, machine) => {
     const current = xc.rule;
     if (!current) {

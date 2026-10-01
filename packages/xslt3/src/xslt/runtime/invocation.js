@@ -7,6 +7,7 @@
  */
 
 import { toSequence } from "../../xpath/eval/values.js";
+import { isEntryPoint } from "../compiler/packageChecks.js";
 import { xsltError } from "../names.js";
 import { applyTemplates, invokeTemplate, NO_ARGS } from "./apply.js";
 import { callFunction } from "./functionCall.js";
@@ -57,8 +58,11 @@ function initialStep(tx, options, source) {
     options.initialMatchSelection !== undefined;
   if (name === undefined && !fromItems) name = INITIAL_TEMPLATE;
   if (name !== undefined) {
-    const template = stylesheet.namedTemplates.get(clarkName(name));
-    if (!template) throw xsltError("XTDE0040", `No template named ${name}`);
+    const key = clarkName(name);
+    const template = stylesheet.namedTemplates.get(key);
+    if (!template || !isEntryPoint(stylesheet, "template", key)) {
+      throw xsltError("XTDE0040", `No public template named ${name}`);
+    }
     const supplied = args.params.size || args.tunnel.size ? args : NO_ARGS;
     return (xc, out, machine) =>
       invokeTemplate(template, xc, out, machine, supplied);
@@ -88,7 +92,9 @@ function initialStep(tx, options, source) {
 function callInitialFunction(tx, { name, args }) {
   const key = `${clarkName(name)}#${args.length}`;
   const compiled = tx.stylesheet.functionBodies.get(key);
-  if (!compiled) throw xsltError("XTDE0041", `No function ${key}`);
+  if (!compiled || !isEntryPoint(tx.stylesheet, "function", key)) {
+    throw xsltError("XTDE0041", `No public function ${key}`);
+  }
   return callFunction(compiled, args.map(toSequence), { xc: tx.globalContext });
 }
 

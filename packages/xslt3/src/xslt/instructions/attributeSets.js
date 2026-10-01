@@ -20,9 +20,10 @@ import { clarkOf, isXsl, tokens, xsltError } from "../names.js";
  * @returns {string[]} Clark names
  */
 export function attributeSetNames(text, element, cx) {
-  const names = tokens(text).map((token) =>
-    clarkOf(cx.exprs.qname(token, element, { code: "XTSE0710" })),
-  );
+  const names = tokens(text).map((token) => {
+    const name = clarkOf(cx.exprs.qname(token, element, { code: "XTSE0710" }));
+    return cx.originalName("attribute-set", name) ?? name;
+  });
   for (const name of names) {
     cx.deferred.push(() => {
       if (!cx.attributeSets.has(name)) {
@@ -57,6 +58,7 @@ export function declareAttributeSet(element, cx) {
     ),
     body: compileBody(element, cx, cx.globalScope()),
     precedence: cx.precedenceOf(element),
+    cx,
   };
   const parts = cx.attributeSets.get(name) ?? [];
   parts.push(part);
@@ -82,7 +84,7 @@ export function applyAttributeSets(names, xc, out, machine, cx, active) {
     }
     applying.add(name);
     for (const part of cx.attributeSets.get(name)) {
-      applyAttributeSets(part.uses, xc, out, machine, cx, applying);
+      applyAttributeSets(part.uses, xc, out, machine, part.cx, applying);
       machine.runBody(part.body, context, out);
     }
     applying.delete(name);

@@ -1,14 +1,15 @@
 /**
  * Other declarations: xsl:strip-space and xsl:preserve-space (XSLT 3.0
- * section 4.3), xsl:namespace-alias (11.1.3), xsl:key (20.2.1), xsl:mode
- * (6.7.1) and xsl:import-schema (XTSE1650: this processor is not schema
- * aware).
+ * section 4.3), xsl:namespace-alias (11.1.3) and xsl:key (20.2.1);
+ * xsl:mode is in modeDecl.js.
  *
  * @module @tradik/xslt3/xslt/compiler/miscDecl
  */
 
 import { compileBody } from "./body.js";
-import { required } from "./attributes.js";
+import { getCollation } from "../../functions/collations.js";
+import { resolveUri } from "../../xpath/eval/uris.js";
+import { required, yesNo } from "./attributes.js";
 import { infoOf } from "./elementInfo.js";
 import { attr, clarkOf, tokens, xsltError } from "../names.js";
 import { compilePattern } from "../patterns/compile.js";
@@ -116,6 +117,19 @@ export function collectAliases(declarations) {
 }
 
 /**
+ * XTSE1210: the collation of a key must be known.
+ * @param {string} uri - The collation attribute
+ * @param {Element} element
+ */
+function knownCollation(uri, element) {
+  try {
+    getCollation(resolveUri(uri.trim(), infoOf(element).baseUri));
+  } catch {
+    throw xsltError("XTSE1210", `Unknown collation ${uri}`);
+  }
+}
+
+/**
  * Compiles an xsl:key into the key registry.
  * @param {object} declaration
  * @param {object} cx
@@ -139,45 +153,15 @@ export function declareKey({ element }, cx) {
     collation: collation ?? infoOf(element).defaultCollation,
     compatible: infoOf(element).version < 2,
   };
+  if (collation !== undefined) knownCollation(collation, element);
+  definition.composite = yesNo(element, "composite", false);
   const list = cx.keys.get(name) ?? [];
   if (list.length > 0 && list[0].collation !== definition.collation) {
     throw xsltError("XTSE1220", `The key ${name} has different collations`);
   }
+  if (list.length > 0 && list[0].composite !== definition.composite) {
+    throw xsltError("XTSE1222", `The key ${name} is composite and not`);
+  }
   list.push(definition);
   cx.keys.set(name, list);
-}
-
-const ON_NO_MATCH = new Set([
-  "deep-copy",
-  "shallow-copy",
-  "deep-skip",
-  "shallow-skip",
-  "text-only-copy",
-  "fail",
-]);
-
-/**
- * Applies an xsl:mode declaration.
- * @param {object} declaration
- * @param {object} cx
- */
-export function declareMode({ element }, cx) {
-  if (cx.children(element).length > 0) {
-    throw xsltError("XTSE0010", "xsl:mode must be empty");
-  }
-  const nameText = attr(element, "name");
-  const name =
-    nameText === undefined || nameText.trim() === "#unnamed"
-      ? ""
-      : clarkOf(cx.exprs.qname(nameText, element));
-  const mode = cx.mode(name);
-  const onNoMatch = attr(element, "on-no-match");
-  if (onNoMatch !== undefined) {
-    if (!ON_NO_MATCH.has(onNoMatch.trim())) {
-      throw xsltError("XTSE0020", `Invalid on-no-match ${onNoMatch}`);
-    }
-    mode.onNoMatch = onNoMatch.trim();
-  }
-  const onMultiple = attr(element, "on-multiple-match");
-  if (onMultiple !== undefined) mode.onMultipleMatch = onMultiple.trim();
 }

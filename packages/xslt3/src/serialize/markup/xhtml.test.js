@@ -57,6 +57,9 @@ describe("the xhtml output method", () => {
       xhtml("<html/>", 5, { doctypePublic: "p" }),
       "<!DOCTYPE html>\n<html></html>",
     );
+    // without html-version, no HTML5 document type; the name as written
+    assert.equal(out("<html/>", { method: "xhtml" }), "<html></html>");
+    assert.equal(xhtml("<HtMl/>"), "<!DOCTYPE HtMl>\n<HtMl></HtMl>");
     assert.equal(
       xhtml("<html/>", 5, { doctypeSystem: "about:legacy-compat" }),
       '<!DOCTYPE html SYSTEM "about:legacy-compat">\n<html></html>',

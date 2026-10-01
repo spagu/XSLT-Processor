@@ -72,7 +72,7 @@ Pass rates per feature are published here as they come in.
 |---|---|---:|---:|---:|
 | qt3tests (XPath 3.1) | parsing and static analysis | 21,787 | 21,759 | 99.9% |
 | qt3tests (XPath 3.1) | evaluation, all families | 21,787 | 21,767 | 99.9% |
-| xslt30-test (XSLT 3.0 and 2.0) | transformation, all families | 7,787 | 6,759 | 86.8% |
+| xslt30-test (XSLT 3.0 and 2.0) | transformation, all families | 7,901 | 7,522 | 95.2% |
 
 The 20 remaining evaluation failures are `collation-key` with UCA collations
 (JavaScript's `Intl` exposes no sort keys), `fn:transform` and
@@ -83,21 +83,19 @@ The parse stage misses only XQuery-only errors and static typing (XPST0005).
 
 XSLT per family:
 
-| Family | Pass |
-|---|---:|
-| expr (expressions in stylesheets) | 624 |
-| misc | 1,749 |
-| type (types and conversions) | 748 |
-| fn (XSLT functions) | 956 |
-| attr (attributes and AVTs) | 857 |
-| insn (instructions) | 1,257 |
-| decl (declarations) | 568 |
+| Family | Applicable | Pass | Rate |
+|---|---:|---:|---:|
+| expr (expressions in stylesheets) | 659 | 649 | 98.5% |
+| misc | 1,884 | 1,852 | 98.3% |
+| type (types and conversions) | 777 | 758 | 97.6% |
+| attr (attributes and AVTs) | 1,002 | 958 | 95.6% |
+| insn (instructions) | 1,410 | 1,334 | 94.6% |
+| decl (declarations, packages) | 1,053 | 987 | 93.7% |
+| fn (XSLT functions) | 1,116 | 984 | 88.2% |
 
-XSLT 3.0 instructions: `xsl:iterate` 44 of 44 tests, `xsl:merge` 74 of 77,
-`xsl:on-empty` 72 of 72, `xsl:where-populated` 26 of 27, `xsl:evaluate` 39 of
-42, patterns 178 of 179, text value templates 59 of 59. Not done yet:
-packages (`xsl:use-package`; most of the 371 tests not run, and 40 of the
-accumulator tests use a package as their root).
+Streaming (2,542 tests) and schema awareness are out of scope; stylesheets
+that ask for streaming run without it. Five tests are not run because they
+check warnings (`assert-warning`), which the runner does not support.
 
 ## Using XSLT 3.0
 
@@ -142,6 +140,18 @@ be turned off per transformation:
   `transform({ dynamicEvaluation: false })`: `xsl:evaluate` then runs its
   `xsl:fallback` children or raises XTDE3175.
 - `xsl:assert`: `transform({ assertions: false })` skips the assertions.
+
+Packages (`xsl:use-package`) are found through a resolver you pass to
+`compileStylesheet`; it returns the package as a document, a string or
+`{ source, baseUri }`, and `versionMatches(version, range)` (exported) helps it
+pick a version:
+
+```js
+const stylesheet = compileStylesheet(text, {
+  parseXml,
+  resolvePackage: (name, versionRange) => packages.get(name),
+});
+```
 
 ## Using XPath 3.1
 

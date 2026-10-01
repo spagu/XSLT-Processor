@@ -13,8 +13,8 @@
  *   --summary <file>    write the Markdown summary there instead of stdout
  *   --results <file>    JSON results (default <tmpdir>/xslt3-suites/results-*.json)
  *   --adapter <module>  engine adapter module (default: the xslt3 parser if present)
- *   --xpath10-compat    also run XPath 1.0 compatibility / backwards-compatible tests
- *   --timeout <ms>      time limit per test case (default 10000)
+ *   --xpath10-compat    qt3: also run the XPath 1.0 compatibility mode tests
+ *   --timeout <ms>      time limit per test case (default 30000)
  *   --no-isolate        run the cases in this thread, without time limit
  *
  * Each test case runs in a worker thread under the time limit (see
@@ -179,6 +179,10 @@ async function main() {
   printList(
     "Newly passing, record them with --update-baseline",
     comparison.fixed,
+  );
+  printList(
+    "No longer applicable (dependencies not met), refresh with --update-baseline",
+    comparison.inapplicable,
   );
   printList(
     "REGRESSIONS (passed in the baseline, not now)",

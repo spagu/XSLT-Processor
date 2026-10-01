@@ -221,8 +221,12 @@ describe("xsl:analyze-string", () => {
           "a",
         ],
         [
-          '<xsl:analyze-string select="1" regex="x"><xsl:fallback/><xsl:matching-substring/></xsl:analyze-string>',
+          '<xsl:analyze-string select="1" regex="x"><xsl:matching-substring/><xsl:fallback/></xsl:analyze-string>',
           "XPTY0004",
+        ],
+        [
+          '<xsl:analyze-string select="1" regex="x"><xsl:fallback/><xsl:matching-substring/></xsl:analyze-string>',
+          "XTSE0010",
         ],
         [
           "<xsl:analyze-string select=\"('a', 'b')\" regex=\"x\"><xsl:matching-substring/></xsl:analyze-string>",

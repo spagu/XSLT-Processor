@@ -15,7 +15,11 @@ const runWith = (declaration, xml = "<doc/>") =>
         '<xsl:template name="main"><xsl:sequence select="$v"/></xsl:template>',
     ),
     xml,
-    { initialTemplate: "main" },
+    {
+      initialTemplate: "main",
+      loadStylesheet: () =>
+        stylesheet('<xsl:global-context-item use="required"/>'),
+    },
   );
 
 describe("xsl:global-context-item", () => {
@@ -33,15 +37,21 @@ describe("xsl:global-context-item", () => {
         "XTSE3089",
       ],
       ['<xsl:global-context-item use="sometimes"/>', "<doc/>", "XTSE0020"],
+      // one per module (XTSE3087), the same in every module
       [
-        '<xsl:global-context-item use="required"/><xsl:global-context-item use="optional"/>',
+        '<xsl:global-context-item use="required"/><xsl:global-context-item use=" required"/>',
         "<doc/>",
         "XTSE3087",
       ],
       [
-        '<xsl:global-context-item use="required"/><xsl:global-context-item use=" required"/>',
+        '<xsl:include href="inc.xsl"/><xsl:global-context-item use=" required"/>',
         "<doc/>",
         "true",
+      ],
+      [
+        '<xsl:include href="inc.xsl"/><xsl:global-context-item use="optional"/>',
+        "<doc/>",
+        "XTSE3087",
       ],
     ];
     for (const [declaration, xml, expected] of cases) {

@@ -62,6 +62,12 @@ describe("the xml output method", () => {
       '<!DOCTYPE r PUBLIC "p" "s">\n<r/>',
     );
     assert.equal(xml("<r/>", { doctypePublic: "p" }), "<r/>");
+    // a quote picks the other quotes; empty identifiers are absent (E31)
+    assert.equal(
+      xml("<r/>", { doctypeSystem: 'a"b', doctypePublic: "p'q" }),
+      `<!DOCTYPE r PUBLIC "p'q" 'a"b'>\n<r/>`,
+    );
+    assert.equal(xml("<r/>", { doctypeSystem: "", doctypePublic: "" }), "<r/>");
     assert.equal(
       code(() => serialize(evaluateXPath("'a'"), { doctypeSystem: "s" })),
       "SEPM0004",

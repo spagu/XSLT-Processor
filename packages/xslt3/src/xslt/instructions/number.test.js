@@ -112,6 +112,21 @@ describe("xsl:number", () => {
   });
 });
 
+describe("xsl:number start-at and lang", () => {
+  it("re-bases the numbers", () => {
+    checkBodies([
+      ['<xsl:number value="1, 2, 3" start-at="0 10"/>', "0.11.12"],
+      ['<xsl:number value="1" start-at="{\'-1\'}" format="1"/>', "-1"],
+      ['<xsl:number value="1" start-at="{\'x\'}"/>', "XTDE0030"],
+      ['<xsl:number value="1" lang="#####"/>', "XTSE0020"],
+      ['<xsl:number value="1" lang="{\'#\'}"/>', "XTDE0030"],
+      ['<xsl:number value="1" lang="{\'en\'}"/>', "1"],
+      ['<xsl:number value="()"/>', ""],
+    ]);
+    checkBodies([['<xsl:number value="()"/>', "NaN"]], { version: "1.0" });
+  });
+});
+
 describe("number format strings", () => {
   it("parse prefix, tokens, separators and suffix", () => {
     assert.deepEqual(parseFormat("[1.a]"), {

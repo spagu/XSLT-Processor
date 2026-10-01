@@ -164,16 +164,14 @@ describe("template rules", () => {
   });
 
   it("check the items selected", () => {
-    const xslt2 = { version: "2.0" };
+    // a 3.0 processor runs version="2.0" stylesheets by the 3.0 rules
     assert.equal(
-      errorCode(() =>
-        runDeclarations(
-          '<xsl:template match="/"><xsl:apply-templates select="1"/></xsl:template>',
-          xml,
-          xslt2,
-        ),
+      runDeclarations(
+        '<xsl:template match="/"><xsl:apply-templates select="1"/></xsl:template>',
+        xml,
+        { version: "2.0" },
       ),
-      "XTTE0520",
+      "1",
     );
     assert.equal(
       runDeclarations(

@@ -80,6 +80,9 @@ export function compileCopy(element, cx, scope) {
  * @returns {Function}
  */
 export function compileCopyOf(element, cx, scope) {
+  if (cx.children(element).some((child) => !isXsl(child, "fallback"))) {
+    throw xsltError("XTSE0260", "xsl:copy-of must be empty");
+  }
   const select = cx.exprs.xpath(
     required(element, "select"),
     element,

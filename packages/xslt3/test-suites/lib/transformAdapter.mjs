@@ -33,6 +33,44 @@ export function catalogName(name) {
 }
 
 /**
+ * The `resolvePackage` option of compileStylesheet: the packages of the
+ * test case and its environment, by the name and version in the catalog
+ * or else in the package itself; the highest matching version wins.
+ *
+ * @param {object} engine - The @tradik/xslt3 module (versionMatches)
+ * @param {object[]} packages - Catalog `<package>` entries
+ * @param {(path: string) => Document} loadFile - Parses a file
+ * @returns {(name: string, range: string) => object|undefined} The option
+ */
+export function packageResolver(engine, packages, loadFile) {
+  const describe = (entry) => {
+    const root = loadFile(entry.file).documentElement;
+    return {
+      file: entry.file,
+      name: root.getAttribute("name") || entry.uri,
+      version:
+        root.getAttribute("package-version") || entry.packageVersion || "1",
+    };
+  };
+  return (name, range) => {
+    const found = packages
+      .map(describe)
+      .filter((p) => p.name === name && engine.versionMatches(p.version, range))
+      // ascending versions: the highest last
+      .sort((a, b) =>
+        engine.versionMatches(b.version, `${a.version}+`) ? -1 : 1,
+      )
+      .at(-1);
+    return (
+      found && {
+        source: loadFile(found.file),
+        baseUri: pathToFileURL(found.file).href,
+      }
+    );
+  };
+}
+
+/**
  * Builds the transform function of the adapter.
  *
  * @param {object} engine - The @tradik/xslt3 module
@@ -47,9 +85,9 @@ export function createTransform(engine, helpers) {
     new DOMImplementation().createDocument(null, null);
   const fromUrl = (uri) => loadFile(confinePath(fileURLToPath(uri)));
   return (stylesheet, input, params) => {
-    if (stylesheet.packages.length > 0) throw new NotRunError("packages");
     const principal =
       stylesheet.stylesheets.find((s) => s.role !== "secondary") ??
+      stylesheet.packages.find((p) => p.role === "principal") ??
       stylesheet.stylesheets[0];
     if (!principal?.file) throw new NotRunError("no stylesheet file");
     const environment = input.environment;
@@ -80,6 +118,11 @@ export function createTransform(engine, helpers) {
       baseUri: pathToFileURL(principal.file).href,
       loadStylesheet: fromUrl,
       staticParams: values(params.filter((param) => param.static)),
+      resolvePackage: packageResolver(
+        engine,
+        stylesheet.packages.filter((p) => p !== principal),
+        loadFile,
+      ),
     });
     const entry =
       input.initialTemplate ?? input.initialMode ?? input.initialFunction;

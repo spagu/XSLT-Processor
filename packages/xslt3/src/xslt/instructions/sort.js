@@ -82,6 +82,11 @@ export function compileSortKey(element, cx, scope) {
  *   `prepare(focusContext, index)` adjusts the context of each key
  */
 export function compileSorts(elements, cx, scope) {
+  if (
+    elements.slice(1).some((element) => attr(element, "stable") !== undefined)
+  ) {
+    throw xsltError("XTSE1017", "Only the first xsl:sort can have stable");
+  }
   const keys = elements.map((element) => compileSortKey(element, cx, scope));
   const order = (items, xc, machine, prepare) => {
     const indices = items.map((_, i) => i);

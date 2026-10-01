@@ -16,6 +16,7 @@
 
 import { StylesheetCompiler } from "./compiler/stylesheet.js";
 import { normalizeParams } from "./runtime/params.js";
+import { withDefaultMethod } from "./runtime/defaultMethod.js";
 import { runTransformation } from "./runtime/transformation.js";
 import { xsltError } from "./names.js";
 
@@ -91,7 +92,14 @@ export class CompiledStylesheet {
       this.compiled,
       options,
     );
-    return { ...result, output: principalOutput ?? this.output };
+    const output =
+      principalOutput ??
+      withDefaultMethod(
+        this.output,
+        result.principal,
+        this.compiled.versionOf(this.compiled.tree.root) === 1,
+      );
+    return { ...result, output };
   }
 }
 

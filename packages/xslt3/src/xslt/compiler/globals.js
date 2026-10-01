@@ -61,35 +61,33 @@ export function collectGlobals(declarations, cx) {
 }
 
 /**
- * Compiles the winning global declarations.
- * @param {Map<string, object>} globals
+ * Compiles a global variable or parameter.
+ * @param {{element: Element, key: string}} declaration
  * @param {object} cx
- * @returns {object[]} `{key, isParam, required, value, convert}`
+ * @param {object} [scope] - Default: the global scope of the package
+ * @returns {object} `{key, isParam, required, value, convert}`
  */
-export function compileGlobals(globals, cx) {
-  const scope = cx.globalScope();
-  return [...globals.values()].map(({ element, key }) => {
-    const isParam = isXsl(element, "param");
-    if (isParam && yesNo(element, "tunnel", false)) {
-      throw xsltError(
-        "XTSE0020",
-        "A global parameter cannot be a tunnel parameter",
-      );
-    }
-    const compiled = compileValue(
-      element,
-      cx,
-      scope,
-      isParam ? "XTTE0590" : "XTTE0570",
+export function compileGlobal({ element, key }, cx, scope = cx.globalScope()) {
+  const isParam = isXsl(element, "param");
+  if (isParam && yesNo(element, "tunnel", false)) {
+    throw xsltError(
+      "XTSE0020",
+      "A global parameter cannot be a tunnel parameter",
     );
-    return {
-      key,
-      isParam,
-      required: isParam && yesNo(element, "required", false),
-      value: compiled.value,
-      convert: typeConverter(compiled.type, "XTTE0590", `parameter $${key}`),
-    };
-  });
+  }
+  const compiled = compileValue(
+    element,
+    cx,
+    scope,
+    isParam ? "XTTE0590" : "XTTE0570",
+  );
+  return {
+    key,
+    isParam,
+    required: isParam && yesNo(element, "required", false),
+    value: compiled.value,
+    convert: typeConverter(compiled.type, "XTTE0590", `parameter $${key}`),
+  };
 }
 
 /**

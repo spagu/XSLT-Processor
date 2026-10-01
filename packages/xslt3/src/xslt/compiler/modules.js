@@ -31,12 +31,19 @@ const simplifiedRoots = new WeakSet();
  * @param {Document|Element} source
  * @returns {{root: Element, simplified: boolean}}
  */
-export function moduleRoot(source) {
+export function moduleRoot(source, principal = false) {
   const root = source.nodeType === 9 ? source.documentElement : source;
   if (!root) throw xsltError("XTSE0150", "The stylesheet is empty");
-  if (isXsl(root, "stylesheet") || isXsl(root, "transform")) {
-    if (attr(root, "version") === undefined) {
-      throw xsltError("XTSE0010", "xsl:stylesheet requires a version");
+  if (isXsl(root, "package") && !principal) {
+    throw xsltError("XTSE0165", "A package cannot be included or imported");
+  }
+  if (
+    isXsl(root, "stylesheet") ||
+    isXsl(root, "transform") ||
+    isXsl(root, "package")
+  ) {
+    if (attr(root, "version") === undefined && !root.hasAttribute("_version")) {
+      throw xsltError("XTSE0010", `xsl:${root.localName} requires a version`);
     }
     return { root, simplified: false };
   }
@@ -63,7 +70,7 @@ export function moduleRoot(source) {
 export function loadModuleTree(source, uri, cx) {
   const active = [];
   const load = (document, moduleUri, imported = false) => {
-    const { root, simplified } = moduleRoot(document);
+    const { root, simplified } = moduleRoot(document, active.length === 0);
     if (moduleUri !== undefined) {
       if (active.includes(moduleUri)) {
         throw imported
@@ -88,7 +95,6 @@ export function loadModuleTree(source, uri, cx) {
     }
     if (!cx.included(root)) return node;
     active.push(moduleUri);
-    let declared = false;
     for (const child of cx.children(root)) {
       if (child.nodeType === 3) {
         throw xsltError("XTSE0120", "Text is not allowed at the top level");
@@ -98,23 +104,16 @@ export function loadModuleTree(source, uri, cx) {
         checkEmpty(child, cx);
         return resolveUri(required(child, "href"), cx.baseUriOf(child));
       };
+      // XSLT 3.0 allows xsl:import anywhere among the declarations
       if (isXsl(child, "import")) {
-        if (declared) {
-          throw xsltError(
-            "XTSE0200",
-            "xsl:import must come before other declarations",
-          );
-        }
         const target = href();
         node.imports.push(load(cx.loadModule(target), target, true));
       } else if (isXsl(child, "include")) {
-        declared = true;
         const target = href();
         const included = load(cx.loadModule(target), target);
         node.imports.push(...included.imports);
         node.declarations.push(...included.declarations);
       } else {
-        declared = true;
         node.declarations.push(child);
       }
     }

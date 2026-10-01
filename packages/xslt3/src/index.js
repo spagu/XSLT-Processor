@@ -32,5 +32,6 @@ export {
 export {
   CompiledStylesheet,
   compileStylesheet,
+  versionMatches,
   XSLTProcessor,
 } from "./xslt/index.js";

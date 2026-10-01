@@ -22,33 +22,49 @@ export function xmlDeclaration(settings) {
 }
 
 /**
+ * A system literal: in double quotes, or single quotes when it holds one.
+ * @param {string} value
+ * @returns {string}
+ */
+const quoted = (value) => (value.includes('"') ? `'${value}'` : `"${value}"`);
+
+/**
  * The document type declaration written before the first element.
  * @param {import("../params/settings.js").Settings} settings
  * @param {string} name - Output name of the first element
  * @returns {string} the declaration, "" for none
  */
 export function doctype(settings, name) {
-  const { method, doctypePublic, doctypeSystem, htmlVersion } = settings;
+  const { method, htmlVersion } = settings;
+  // a zero-length doctype-system or doctype-public is absent (erratum E31)
+  const doctypePublic = settings.doctypePublic || undefined;
+  const doctypeSystem =
+    settings.doctypeSystem === undefined || settings.doctypeSystem === ""
+      ? undefined
+      : quoted(settings.doctypeSystem);
   const html5Default =
     htmlVersion === 5 && name.replace(/^.*:/, "").toLowerCase() === "html";
   if (method === "html") {
     if (doctypePublic !== undefined) {
-      const system = doctypeSystem === undefined ? "" : ` "${doctypeSystem}"`;
+      const system = doctypeSystem === undefined ? "" : ` ${doctypeSystem}`;
       return `<!DOCTYPE html PUBLIC "${doctypePublic}"${system}>`;
     }
     if (doctypeSystem !== undefined) {
-      return `<!DOCTYPE html SYSTEM "${doctypeSystem}">`;
+      return `<!DOCTYPE html SYSTEM ${doctypeSystem}>`;
     }
     return html5Default ? "<!DOCTYPE html>" : "";
   }
   if (doctypeSystem !== undefined) {
     const external =
       doctypePublic === undefined
-        ? `SYSTEM "${doctypeSystem}"`
-        : `PUBLIC "${doctypePublic}" "${doctypeSystem}"`;
+        ? `SYSTEM ${doctypeSystem}`
+        : `PUBLIC "${doctypePublic}" ${doctypeSystem}`;
     return `<!DOCTYPE ${name} ${external}>`;
   }
-  return method === "xhtml" && html5Default ? "<!DOCTYPE html>" : "";
+  // xhtml with HTML5: the element name as written
+  return method === "xhtml" && html5Default
+    ? `<!DOCTYPE ${name.replace(/^.*:/, "")}>`
+    : "";
 }
 
 /**

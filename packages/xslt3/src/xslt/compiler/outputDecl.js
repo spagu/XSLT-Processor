@@ -5,6 +5,8 @@
  * @module @tradik/xslt3/xslt/compiler/outputDecl
  */
 
+import { parametersFromElement } from "../../serialize/params/fromElement.js";
+import { resolveUri } from "../../xpath/eval/uris.js";
 import { clarkOf, isXsl, tokens, xsltError } from "../names.js";
 import { required } from "./attributes.js";
 
@@ -29,7 +31,23 @@ function outputMethod(value, element, cx) {
   if (!method.includes(":")) {
     throw xsltError("XTSE1570", `Unknown output method ${method}`);
   }
-  return clarkOf(cx.exprs.qname(method, element));
+  return clarkOf(cx.exprs.qname(method, element, { code: "XTSE1570" }));
+}
+
+/**
+ * The parameters of the parameter-document of an xsl:output, overridden
+ * by its attributes (Serialization 3.1 section 3.1).
+ * @param {Element} element
+ * @param {object} cx - Stylesheet compiler (`loadModule`, `baseUriOf`)
+ * @returns {Record<string, *>} parameters by name, none without the
+ *   attribute
+ */
+function parameterDocument(element, cx) {
+  const href = element.getAttribute("parameter-document");
+  if (!href) return {};
+  const source = cx.loadModule(resolveUri(href.trim(), cx.baseUriOf(element)));
+  const root = source.nodeType === 9 ? source.documentElement : source;
+  return parametersFromElement(root);
 }
 
 /**
@@ -49,9 +67,21 @@ export function collectOutputs(declarations, cx) {
     const name = nameText ? clarkOf(cx.exprs.qname(nameText, element)) : "";
     const params = outputs.get(name) ?? {};
     const from = sources.get(name) ?? {};
+    const document = parameterDocument(element, cx);
+    for (const [key, value] of Object.entries(document)) {
+      if (!element.hasAttribute(key) && from[key] !== precedence) {
+        params[key] = value;
+        from[key] = precedence;
+      }
+    }
     for (const attribute of element.attributes) {
       const key = attribute.name;
-      if (key === "name" || attribute.namespaceURI || key.startsWith("xmlns")) {
+      if (
+        key === "name" ||
+        key === "parameter-document" ||
+        attribute.namespaceURI ||
+        key.startsWith("xmlns")
+      ) {
         continue;
       }
       let value = attribute.value;
@@ -140,12 +170,14 @@ export function checkCharacterMaps(outputs, maps) {
 
 /**
  * Expands a list of character maps (with the maps they use) into one map.
- * @param {string[]} names
+ * @param {string[]|Map<string, string>} names - Names, or a map already
  * @param {Map<string, object>} maps
  * @param {Set<string>} [active]
  * @returns {Map<string, string>}
  */
 export function expandCharacterMaps(names, maps, active = new Set()) {
+  // a parameter document gives the character map itself
+  if (names instanceof Map) return names;
   const result = new Map();
   for (const name of names) {
     const entry = maps.get(name);

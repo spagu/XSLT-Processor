@@ -16,6 +16,9 @@ const WHITESPACE = /^[ \t\r\n]*$/;
 const ELEMENT_ONLY = new Set([
   "stylesheet",
   "transform",
+  "package",
+  "use-package",
+  "override",
   "apply-templates",
   "apply-imports",
   "next-match",

@@ -51,7 +51,8 @@ const isStaticDeclaration = (element) =>
   (isXsl(element, "variable") || isXsl(element, "param")) &&
   ["yes", "true", "1"].includes(attr(element, "static")?.trim()) &&
   (isXsl(element.parentNode, "stylesheet") ||
-    isXsl(element.parentNode, "transform"));
+    isXsl(element.parentNode, "transform") ||
+    isXsl(element.parentNode, "package"));
 
 /** Module loading and the static stage. */
 export class StaticStage {
@@ -125,6 +126,19 @@ export class StaticStage {
     const name = attr(element, "name");
     if (name === undefined) {
       throw xsltError("XTSE0010", "A static variable needs a name");
+    }
+    if (this.children(element).length > 0) {
+      throw xsltError(
+        attr(element, "select") === undefined ? "XTSE0010" : "XTSE0620",
+        "A static variable has no content",
+      );
+    }
+    if (
+      isXsl(element, "param") &&
+      ["yes", "true", "1"].includes(attr(element, "required")?.trim()) &&
+      attr(element, "select") !== undefined
+    ) {
+      throw xsltError("XTSE0010", "A required static parameter has no select");
     }
     const key = clarkOf(resolveQName(name, infoOf(element).namespaces));
     const supplied = this.options.staticParams?.get?.(key);

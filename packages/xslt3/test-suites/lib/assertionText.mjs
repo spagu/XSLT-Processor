@@ -83,7 +83,9 @@ export function serializationMatches(serialized, pattern, flags) {
 
 /**
  * Whether serialized output equals the expected text of
- * `assert-serialization` (line endings normalized, outer whitespace ignored).
+ * `assert-serialization` (line endings normalized, outer whitespace ignored,
+ * and an XML declaration the expected text does not show: a difference a
+ * conformant serializer may produce).
  *
  * @param {string} serialized - Serialized result
  * @param {string} expected - Expected text
@@ -91,7 +93,12 @@ export function serializationMatches(serialized, pattern, flags) {
  */
 export function serializationEquals(serialized, expected) {
   const normalize = (text) => text.replace(/\r\n?/g, "\n").trim();
-  return normalize(serialized) === normalize(expected);
+  const wanted = normalize(expected);
+  let actual = normalize(serialized);
+  if (!wanted.startsWith("<?xml ")) {
+    actual = actual.replace(/^<\?xml [^?]*\?>\s*/, "");
+  }
+  return actual === wanted;
 }
 
 /**

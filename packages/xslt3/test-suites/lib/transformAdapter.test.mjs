@@ -33,7 +33,7 @@ describe("the transform capability", () => {
           <xsl:message>m</xsl:message><xsl:result-document href="r.xml"><r/></xsl:result-document></xsl:template>
         <xsl:template name="t"><xsl:param name="a"/><xsl:param name="b" tunnel="yes"/><t a="{$a}" b="{$b}"/></xsl:template>
         <xsl:template match="x" mode="m"><m/></xsl:template>
-        <xsl:function name="f:f"><xsl:param name="x"/><xsl:sequence select="$x + 1"/></xsl:function>
+        <xsl:function name="f:f" visibility="public"><xsl:param name="x"/><xsl:sequence select="$x + 1"/></xsl:function>
       </xsl:stylesheet>`,
     );
     writeFileSync(
@@ -101,6 +101,51 @@ describe("the transform capability", () => {
       },
     });
     assert.equal(serializeXml(fn.value), "42");
+  });
+
+  it("resolves the packages of the test case", () => {
+    const pkg = (attributes, value) =>
+      `<xsl:package ${attributes} version="3.0" xmlns:xsl="${XSL}">
+        <xsl:variable name="v" visibility="public" select="'${value}'"/>
+      </xsl:package>`;
+    writeFileSync(
+      join(dir, "p1.xsl"),
+      pkg('name="urn:p" package-version="1.0"', "1"),
+    );
+    writeFileSync(
+      join(dir, "p2.xsl"),
+      pkg('name="urn:p" package-version="2.0"', "2"),
+    );
+    writeFileSync(join(dir, "q.xsl"), pkg("", "q"));
+    const top = (uses) => {
+      const file = join(dir, "top.xsl");
+      writeFileSync(
+        file,
+        `<xsl:package version="3.0" xmlns:xsl="${XSL}">${uses}
+          <xsl:template name="xsl:initial-template" visibility="public">
+            <out><xsl:value-of select="$v"/></out>
+          </xsl:template>
+        </xsl:package>`,
+      );
+      return { file, role: "principal" };
+    };
+    const library = [
+      { file: join(dir, "p1.xsl"), role: "secondary" },
+      { file: join(dir, "p2.xsl"), role: "secondary" },
+      { file: join(dir, "q.xsl"), uri: "urn:q", role: "secondary" },
+    ];
+    const run = (uses) =>
+      createEngineAdapter(engine).transform(
+        { stylesheets: [], packages: [top(uses), ...library] },
+        {},
+        [],
+      ).value;
+    const use = (name, range) =>
+      `<xsl:use-package name="${name}" package-version="${range}"/>`;
+    assert.equal(serializeXml(run(use("urn:p", "1+"))), "<out>2</out>");
+    assert.equal(serializeXml(run(use("urn:p", "1.*"))), "<out>1</out>");
+    assert.equal(serializeXml(run(use("urn:q", "*"))), "<out>q</out>");
+    assert.throws(() => run(use("urn:p", "3")), { code: "XTSE3000" });
   });
 
   it("does not run what it cannot", () => {

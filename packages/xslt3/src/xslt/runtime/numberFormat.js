@@ -76,8 +76,10 @@ export function formatNumbers(numbers, format, options) {
       result += separators[Math.min(i, separators.length) - 1] ?? ".";
     }
     const token = tokens[Math.min(i, tokens.length - 1)];
-    const text = formatToken(n, token, options.ordinal);
-    result += group(text, options.separator, options.size);
+    // a negative number (start-at below 1) gets a minus sign
+    const text = formatToken(n < 0n ? -n : n, token, options.ordinal);
+    result +=
+      (n < 0n ? "-" : "") + group(text, options.separator, options.size);
   });
   return result + suffix;
 }

@@ -54,7 +54,7 @@ function parsePriority(text) {
  * @param {object} cx
  * @returns {string[]} Clark names, "#all" for all modes
  */
-function modesOf(element, cx) {
+export function modesOf(element, cx) {
   const text = attr(element, "mode");
   if (text === undefined) return [infoOf(element).defaultMode];
   const names = tokens(text).map((token) => {

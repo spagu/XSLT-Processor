@@ -16,7 +16,7 @@ const xsl = stylesheet(
     '<xsl:character-map name="m"><xsl:output-character character="a" string="b"/></xsl:character-map>' +
     '<xsl:template match="/"><out p="{$p}" q="{$Q{urn:q}q}"><xsl:copy-of select="*"/></out></xsl:template>' +
     '<xsl:template name="t"><xsl:param name="x" select="1"/><t x="{$x}"/></xsl:template>' +
-    '<xsl:function name="f:f" xmlns:f="urn:f"><xsl:param name="a"/><xsl:sequence select="$a * 2"/></xsl:function>',
+    '<xsl:function name="f:f" xmlns:f="urn:f" visibility="public"><xsl:param name="a"/><xsl:sequence select="$a * 2"/></xsl:function>',
 );
 
 describe("compileStylesheet", () => {
@@ -108,8 +108,12 @@ describe("compileStylesheet", () => {
       "<i>1</i><i>a</i>",
     );
     assert.equal(
-      errorCode(() => compiled.transform({ initialMode: "{}m" })),
+      errorCode(() => compiled.transform({ initialMode: "#unnamed" })),
       "XTDE0044",
+    );
+    assert.equal(
+      errorCode(() => compiled.transform({ initialMode: "{}m" })),
+      "XTDE0045",
     );
   });
 

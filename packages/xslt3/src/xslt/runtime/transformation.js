@@ -9,9 +9,11 @@
 import { createDynamicContext } from "../../xpath/eval/dynamicContext.js";
 import { withinLimits } from "../../xpath/eval/compiler.js";
 import { resolveUri } from "../../xpath/eval/uris.js";
+import { isEligibleMode } from "../compiler/packageChecks.js";
 import { xsltError } from "../names.js";
 import { globalContextItem } from "../compiler/globalContextItem.js";
 import { setInitialAccumulators } from "./accumulators.js";
+import { withDefaultMethod } from "./defaultMethod.js";
 import { finishTree, invoke } from "./invocation.js";
 import { LazyEntry } from "./lazy.js";
 import { Machine } from "./machine.js";
@@ -92,6 +94,25 @@ function transformationContext(stylesheet, options, strip, createDocument) {
 }
 
 /**
+ * The initial mode: `#unnamed`, `#default` or a Clark name of a mode
+ * eligible as initial mode (XTDE0045).
+ * @param {object} stylesheet
+ * @param {string|undefined} requested - Option initialMode
+ * @returns {object} the mode
+ */
+function initialMode(stylesheet, requested) {
+  const token = requested?.replace(/^\{\}(?=#)/, "");
+  if (token === undefined || token === "#default") {
+    return stylesheet.mode(stylesheet.defaultModeName);
+  }
+  const name = token === "#unnamed" ? "" : token;
+  if (!isEligibleMode(stylesheet, name)) {
+    throw xsltError("XTDE0045", `The mode ${requested} is not eligible`);
+  }
+  return stylesheet.mode(name);
+}
+
+/**
  * Runs a transformation.
  * @param {object} stylesheet - Compiled stylesheet (StylesheetCompiler)
  * @param {object} options - See CompiledStylesheet.transform
@@ -116,9 +137,7 @@ export function runTransformation(stylesheet, options) {
     baseOutputUri: options.baseOutputUri,
     secondary: new Map(),
     keyIndexes: new Map(),
-    defaultMode: stylesheet.mode(
-      options.initialMode ?? stylesheet.defaultModeName,
-    ),
+    defaultMode: initialMode(stylesheet, options.initialMode),
     principalOverride: null,
     dynamicEvaluation: options.dynamicEvaluation !== false,
     assertions: options.assertions !== false,
@@ -127,10 +146,11 @@ export function runTransformation(stylesheet, options) {
   };
   tx.addResult = (uri, fragment, output) => {
     const tree = finishTree(fragment, createDocument);
+    const params = withDefaultMethod(output, tree);
     if (uri === "") {
       tx.principalOverride = tree;
-      tx.principalOutput = output;
-    } else tx.secondary.set(uri, { document: tree, output });
+      tx.principalOutput = params;
+    } else tx.secondary.set(uri, { document: tree, output: params });
   };
   tx.globalContext = {
     tx,

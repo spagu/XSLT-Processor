@@ -59,7 +59,8 @@ const SHARED_VALUES = {
  * @param {"qt3"|"xslt30"} suite - Suite name
  * @param {object} [options] - Options
  * @param {boolean} [options.xpath10Compatibility] - Run the XPath 1.0
- *   compatibility mode / XSLT backwards-compatibility tests (default false)
+ *   compatibility mode tests of qt3 (default false; the XSLT
+ *   backwards-compatibility tests always run)
  * @param {Record<string, boolean>} [options.features] - Feature overrides
  * @returns {SuiteConfig} The configuration
  */
@@ -92,7 +93,8 @@ export function createConfig(
             namespace_axis: true,
             "XPath_3.1": true,
             "XSD_1.1": true,
-            backwards_compatibility: xpath10Compatibility,
+            // version="1.0" stylesheets run in backwards-compatible mode
+            backwards_compatibility: true,
             schema_aware: false,
             streaming: false,
             serialization: true,

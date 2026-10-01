@@ -53,7 +53,7 @@ describe("isolated test runs", () => {
       await runner.close();
     }
     await runner.close();
-    assert.equal(DEFAULT_TIMEOUT, 10000);
+    assert.equal(DEFAULT_TIMEOUT, 30000);
   });
 
   it("reports a worker that cannot load its adapter", async () => {

@@ -7,6 +7,7 @@
  */
 
 import { attr, XSL_NS, xsltError } from "../names.js";
+import { checkAttributeValues } from "./attributeValues.js";
 import { infoOf } from "./elementInfo.js";
 
 /** Standard attributes, allowed on every XSLT element. */
@@ -111,6 +112,12 @@ const ALLOWED = {
   "merge-key": "select lang order collation case-order data-type",
   "merge-source":
     "name for-each-item for-each-source select streamable use-accumulators sort-before-merge validation type",
+  package: "id name package-version input-type-annotations declared-modes",
+  "use-package": "name package-version",
+  expose: "component names visibility",
+  accept: "component names visibility",
+  override: "",
+  mode: "name streamable use-accumulators on-no-match on-multiple-match warning-on-no-match warning-on-multiple-match typed visibility",
 };
 
 /** @type {Map<string, Set<string>>} */
@@ -150,6 +157,7 @@ export function checkAttributes(element, _cx) {
       `xsl:${element.localName} cannot have the attribute ${name}`,
     );
   }
+  if (!forwards) checkAttributeValues(element);
 }
 
 /**

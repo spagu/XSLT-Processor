@@ -14,6 +14,7 @@ import { createStaticContext } from "../../xpath/eval/staticContext.js";
 import { parseXPath } from "../../xpath/syntax/index.js";
 import { TokenStream } from "../../xpath/syntax/tokenStream.js";
 import { parseSequenceType } from "../../xpath/syntax/types.js";
+import { XPathError } from "../../errors.js";
 import { resolveQName } from "../names.js";
 import { parseAvt } from "./avt.js";
 import { infoOf } from "./elementInfo.js";
@@ -27,16 +28,42 @@ import { infoOf } from "./elementInfo.js";
  * @property {object} ast - Syntax tree
  */
 
+/** The namespace of the standard functions. */
+const FN_NS = "http://www.w3.org/2005/xpath-functions";
+
+/**
+ * In backwards-compatible mode a call of an unknown extension function
+ * is an error only when evaluated (XSLT 3.0 section 24.1.2, XTDE1425).
+ * @param {Error} error - Raised by the XPath compiler
+ * @param {object} sc - Static context of the expression
+ * @returns {(ctx: object) => Array} an evaluator raising XTDE1425
+ * @throws {Error} the error otherwise
+ */
+function unavailableFunction(error, sc) {
+  const uri = /^XPST0017: Unknown function Q\{([^}]*)\}/.exec(
+    error.message,
+  )?.[1];
+  if (!sc.backwardsCompatible || uri === undefined || uri === FN_NS) {
+    throw error;
+  }
+  return () => {
+    throw new XPathError("XTDE1425", error.message.slice(10));
+  };
+}
+
 /** Compiles the XPath expressions of a stylesheet. */
 export class ExpressionCompiler {
   /**
    * @param {object} options
    * @param {import("../../functions/registry.js").FunctionLibrary} options.library
    * @param {Array<object>} [options.decimalFormats] - Definitions
+   * @param {object} [options.owner] - Package compiler of the expressions
    */
-  constructor({ library, decimalFormats = [] }) {
+  constructor({ library, decimalFormats = [], owner = null }) {
     this.library = library;
     this.decimalFormats = decimalFormats;
+    /** The package compiler whose keys key() reads (null: the stylesheet's) */
+    this.owner = owner;
     /** @type {WeakMap<Map, Map<string, object>>} */
     this.cache = new WeakMap();
   }
@@ -70,6 +97,7 @@ export class ExpressionCompiler {
         },
         this.library,
       );
+      sc.owner = this.owner;
       byKey.set(key, sc);
     }
     return sc;
@@ -85,7 +113,13 @@ export class ExpressionCompiler {
   xpath(text, element, vars) {
     const sc = this.staticContext(element);
     const ast = parseXPath(text);
-    const run = withinLimits(() => compileNode(ast, { sc, vars }));
+    const run = withinLimits(() => {
+      try {
+        return compileNode(ast, { sc, vars });
+      } catch (error) {
+        return unavailableFunction(error, sc);
+      }
+    });
     return { run, text, sc, ast };
   }
 

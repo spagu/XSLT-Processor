@@ -89,14 +89,17 @@ function buildIndex(definitions, root, xc) {
  * @param {string} name - Clark name of the key
  * @param {Array} values - Atomic values sought
  * @param {Node} root - Root of the tree searched
+ * @param {object} [owner] - Package compiler of the call (default: the
+ *   top-level package)
  * @returns {Node[]} nodes in document order
  */
-export function keyLookup(xc, name, values, root) {
+export function keyLookup(xc, name, values, root, owner) {
   const { tx } = xc;
-  const definitions = tx.stylesheet.keys.get(name);
+  // keys are local to the package of the call (XSLT 3.0 section 3.5.5)
+  const definitions = (owner ?? tx.stylesheet).keys.get(name);
   if (!definitions) throw xsltError("XTDE1260", `No key named ${name}`);
-  let byRoot = tx.keyIndexes.get(name);
-  if (!byRoot) tx.keyIndexes.set(name, (byRoot = new Map()));
+  let byRoot = tx.keyIndexes.get(definitions);
+  if (!byRoot) tx.keyIndexes.set(definitions, (byRoot = new Map()));
   let index = byRoot.get(root);
   if (index === "building") {
     throw xsltError("XTDE0640", `The key ${name} depends on itself`);

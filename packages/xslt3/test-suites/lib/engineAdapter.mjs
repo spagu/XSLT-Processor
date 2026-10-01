@@ -12,6 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { DOMImplementation, DOMParser } from "@xmldom/xmldom";
 import { confinePath } from "../../../../scripts/lib/fsSafety.mjs";
 import { serialize } from "../../src/serialize/index.js";
+import { withByteOrderMark } from "./byteOrderMark.mjs";
 import { createTransform, outputParams } from "./transformAdapter.mjs";
 import { decodeXml } from "./xmlUtil.mjs";
 
@@ -196,11 +197,12 @@ export function createEngineAdapter(engine) {
       // assert-serialization uses the stylesheet's output parameters;
       // assert-xml (which sets omit-xml-declaration) compares the tree
       const own = outputParams.get(value);
-      const merged =
-        own && !("omit-xml-declaration" in params)
-          ? { ...params, ...own }
-          : params;
-      return serialize(value, { "omit-xml-declaration": true, ...merged });
+      // the result of a transformation: XSLT's defaults (an XML
+      // declaration unless xsl:output omits it)
+      if (own && !("omit-xml-declaration" in params)) {
+        return withByteOrderMark(serialize(value, { ...params, ...own }), own);
+      }
+      return serialize(value, { "omit-xml-declaration": true, ...params });
     },
   };
 }

@@ -92,7 +92,7 @@ describe("other dependencies", () => {
     );
     assert.equal(
       hasDependency(dep("feature", "backwards_compatibility"), xslt),
-      false,
+      true,
     );
   });
 

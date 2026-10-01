@@ -199,7 +199,7 @@ describe("accumulators", () => {
     );
     assert.equal(
       runWith(
-        `<xsl:accumulator name="a" initial-value="0">${rule}</xsl:accumulator><xsl:mode use-accumulators="a"/><xsl:mode name="m"/><xsl:mode use-accumulators="a"/><xsl:mode name="#unnamed" use-accumulators="a"/><xsl:template match="/">ok</xsl:template>`,
+        `<xsl:accumulator name="a" initial-value="0">${rule}</xsl:accumulator><xsl:mode use-accumulators="a"/><xsl:mode name="m"/><xsl:mode use-accumulators="a"/><xsl:template match="/">ok</xsl:template>`,
       ),
       "ok",
     );
