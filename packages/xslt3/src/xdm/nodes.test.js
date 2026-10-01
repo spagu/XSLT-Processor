@@ -43,6 +43,31 @@ describe("string values and typed values of nodes", () => {
     assert.equal(nodeStringValue(parent(1)), "");
   });
 
+  it("walks firstChild and nextSibling when nodes have them", () => {
+    const linked = (nodeType, nodeValue, ...children) => {
+      children.forEach((child, i) => {
+        child.nextSibling = children[i + 1] ?? null;
+      });
+      return { nodeType, nodeValue, firstChild: children[0] ?? null };
+    };
+    const tree = linked(
+      9,
+      null,
+      linked(
+        1,
+        null,
+        linked(3, "a"),
+        linked(8, "comment"),
+        linked(1, null, linked(3, "b"), linked(4, "c")),
+        linked(7, "pi"),
+      ),
+    );
+    assert.equal(nodeStringValue(tree), "abc");
+    assert.equal(nodeStringValue(linked(1, null, linked(4, "d"))), "d");
+    assert.equal(nodeStringValue(linked(1, null, linked(8, "e"))), "");
+    assert.equal(nodeStringValue(linked(1, null)), "");
+  });
+
   it("uses nodeValue of other nodes", () => {
     assert.equal(nodeStringValue(leaf(2, "attr")), "attr");
     assert.equal(nodeStringValue(leaf(8, "c")), "c");

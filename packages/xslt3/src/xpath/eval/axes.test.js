@@ -70,6 +70,21 @@ describe("axes", () => {
     assert.equal(xs("/r/a/child::*[0]", doc), "");
   });
 
+  it("looks attributes up by name, without namespace declarations", () => {
+    const declared = parse('<r xmlns:p="urn:p" p:a="1" a="2"/>');
+    declared.documentElement.setAttribute("xmlns", "urn:x");
+    assert.equal(xs("/r/@xmlns", declared), "");
+    assert.equal(xs("/r/@a/string()", declared), "2");
+    assert.equal(xs("/r/@Q{urn:p}a/string()", declared), "1");
+    assert.equal(xs("/r/@a[0]", declared), "");
+    assert.equal(xs("/r/@b", declared), "");
+    assert.equal(xs("/@a", declared), "");
+    // A DOM without getAttributeNodeNS: the attribute list is walked
+    const attribute = { nodeType: 2, name: "a", nodeName: "a", nodeValue: "3" };
+    const element = { nodeType: 1, attributes: [attribute] };
+    assert.equal(xs("@a/string()", element), "3");
+  });
+
   it("selects by name, wildcard and kind", () => {
     const options = { namespaces: { q: "urn:p" } };
     assert.equal(xs("//q:f", doc, options), "<p:f>");

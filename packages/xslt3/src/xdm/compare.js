@@ -134,7 +134,8 @@ export function compareAtomic(a, b, options = {}) {
   return { order: equal ? 0 : NaN, ordered: false };
 }
 
-const tests = {
+/** Value comparison operators applied to an order (-1, 0, 1, NaN). */
+export const orderTests = {
   eq: (order) => order === 0,
   ne: (order) => order !== 0,
   lt: (order) => order < 0,
@@ -162,7 +163,7 @@ export function valueCompare(a, op, b, options = {}) {
       `${op} is not defined for ${a.type.prefixedName}`,
     );
   }
-  return tests[op](order);
+  return orderTests[op](order);
 }
 
 /**

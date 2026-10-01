@@ -6,7 +6,12 @@
  */
 
 import { XPathError } from "../../errors.js";
-import { childrenOf, nodeLocalName, nodeNamespace } from "./domNodes.js";
+import {
+  childrenOf,
+  isXdmNode,
+  nodeLocalName,
+  nodeNamespace,
+} from "./domNodes.js";
 import { clark, namespaceOf } from "./staticContext.js";
 import { untypedMatches } from "./typeNames.js";
 
@@ -126,7 +131,8 @@ export function compileKindTest(test, sc) {
  * @param {import("../syntax/typeAst.js").NodeTest} test
  * @param {string} axis
  * @param {import("./staticContext.js").StaticContext} sc
- * @returns {(node: Node) => boolean}
+ * @returns {(node: Node) => boolean} the test, false for the nodes that
+ *   are not XDM nodes
  */
 export function compileNodeTest(test, axis, sc) {
   const nodeType = principal(axis);
@@ -134,10 +140,15 @@ export function compileNodeTest(test, axis, sc) {
     const defaultNs = nodeType === 1 ? sc.defaultElementNamespace : "";
     const uri = namespaceOf(test.name, sc, defaultNs);
     const local = test.name.local;
-    return (node) =>
+    // nodeLocalName() of the principal node kinds, without a second read
+    // of nodeType
+    const matches = (node) =>
       node.nodeType === nodeType &&
-      nodeLocalName(node) === local &&
+      (node.localName ?? node.nodeName) === local &&
       nodeNamespace(node) === uri;
+    // The name, for axes that can look a node up by name (attribute)
+    matches.qname = { uri, local };
+    return matches;
   }
   if (test.type === "Wildcard") {
     const uri = test.prefix !== null ? namespaceOf(test, sc, "") : test.uri;
@@ -147,5 +158,7 @@ export function compileNodeTest(test, axis, sc) {
       (local === null || nodeLocalName(node) === local) &&
       (uri === null || nodeNamespace(node) === uri);
   }
+  // node() on an axis: any XDM node, not a document type node
+  if (test.type === "AnyKindTest") return isXdmNode;
   return compileKindTest(test, sc).matches;
 }

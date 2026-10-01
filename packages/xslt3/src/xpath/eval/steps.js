@@ -13,7 +13,7 @@
 
 import { XPathError } from "../../errors.js";
 import { isNode } from "../../xdm/atomic.js";
-import { parentOf } from "./domNodes.js";
+import { isContainer, parentOf } from "./domNodes.js";
 import { withFocus } from "./scope.js";
 
 const EMPTY = Object.freeze([]);
@@ -27,6 +27,9 @@ const SUBTREE_AXES = new Set([
   "descendant",
   "descendant-or-self",
 ]);
+
+/** Axes that select only children or descendants of the context node. */
+const CHILD_AXES = new Set(["child", "descendant"]);
 
 /**
  * Combines the results of a step applied to each input item.
@@ -71,6 +74,7 @@ function areSiblings(nodes) {
  */
 export function stepper(step, axis) {
   const subtree = SUBTREE_AXES.has(axis);
+  const childless = CHILD_AXES.has(axis);
   return (input, ctx, sorted) => {
     const size = input.length;
     if (size === 0) return EMPTY;
@@ -82,9 +86,12 @@ export function stepper(step, axis) {
           "The left operand of / must contain only nodes",
         );
       }
+      // An axis step finds no children nor descendants of a leaf node (a
+      // shortcut for the text nodes reached by `//`)
+      if (childless && !isContainer(input[i])) continue;
       results.push(step(withFocus(ctx, input[i], i + 1, size)));
     }
-    if (size === 1 && axis !== null) return results[0];
+    if (size === 1 && axis !== null) return results[0] ?? EMPTY;
     if (sorted && subtree && areSiblings(input)) return results.flat();
     return combine(results, ctx);
   };

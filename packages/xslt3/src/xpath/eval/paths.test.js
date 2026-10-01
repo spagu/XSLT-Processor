@@ -72,6 +72,27 @@ describe("path expressions", () => {
     assert.equal(code("//a except 1", doc), "XPTY0004");
   });
 
+  it("applies positional predicates of // to the children of each parent", () => {
+    const nested = parse(
+      "<r><x i='1'><x i='2'/><x i='3'/></x><y><x i='4'/></y><x i='5'/></r>",
+    );
+    const ids = (expr, context = nested) =>
+      xs(`(${expr})/@i/string()`, context);
+    assert.equal(ids("//x[1]"), "1 2 4");
+    assert.equal(ids("//x[last()]"), "3 4 5");
+    assert.equal(ids("//x[position() > 1]"), "3 5");
+    assert.equal(ids("/r/(x | y)//x[1]"), "2 4");
+    assert.equal(ids("(/r, /r/x[1])//x[1]"), "1 2 4");
+    assert.equal(
+      ids("descendant-or-self::node()/x[1]", nested.documentElement),
+      "1 2 4",
+    );
+    assert.equal(xs("/r/text()//x[1]", parse("<r>t</r>")), "");
+    assert.equal(xs("/r/text()/x", parse("<r>t</r>")), "");
+    assert.equal(code("(1, 2)//x[1]", nested), "XPTY0019");
+    assert.equal(code("descendant-or-self::node()/x[1]", 1), "XPTY0020");
+  });
+
   it("works over a jsdom document", () => {
     const { document } = new JSDOM("<r><a/><b><a/></b></r>", {
       contentType: "text/xml",
@@ -79,5 +100,6 @@ describe("path expressions", () => {
     assert.equal(xs("count(//a)", document), "2");
     assert.equal(xs("(//a)[2]/following::node()", document), "");
     assert.equal(xs("(//a)[1]/following::*", document), "<b> <a>");
+    assert.equal(xs("//a[1]/..", document), "<r> <b>");
   });
 });

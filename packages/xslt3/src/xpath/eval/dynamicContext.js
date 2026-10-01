@@ -138,6 +138,8 @@ export function createDynamicContext(sc, options, contextNode) {
       });
     },
     order: options.documentOrder ?? new DocumentOrder(),
+    // Set by the owner of an evaluation (see descendantMemo.js)
+    descendantMemo: null,
     compareOptions,
     compatibleCompareOptions: { ...compareOptions, backwardsCompatible: true },
     lookupFunction(uri, local, arity, ctx) {

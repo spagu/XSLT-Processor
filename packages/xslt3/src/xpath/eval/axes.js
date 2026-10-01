@@ -12,7 +12,13 @@
  * @module @tradik/xslt3/xpath/eval/axes
  */
 
-import { attributesOf, childrenOf, nodeKind, parentOf } from "./domNodes.js";
+import {
+  attributesOf,
+  isContainer,
+  isXdmNode,
+  namedAttributeOf,
+  parentOf,
+} from "./domNodes.js";
 import { namespaceNodesOf } from "./namespaceNodes.js";
 
 /** Axes whose order is reverse document order. */
@@ -27,7 +33,8 @@ export const REVERSE_AXES = new Set([
 /**
  * @callback Axis
  * @param {Node} node - Context node
- * @param {(node: Node) => boolean} test - Node test
+ * @param {(node: Node) => boolean} test - Node test, false for the nodes
+ *   that are not XDM nodes (document types; see nodeTests.js)
  * @param {number} limit - Most nodes to collect
  * @returns {Node[]} the nodes in axis order
  */
@@ -36,20 +43,35 @@ export const REVERSE_AXES = new Set([
 const isAttached = (node) => node.nodeType === 2 || node.nodeType === 13;
 
 /**
- * Collects the descendants of a node in document order.
+ * Collects the descendants of a node in document order, walking
+ * firstChild/nextSibling/parentNode: no child arrays, and each DOM property
+ * read once per node (in jsdom every read goes through a wrapper, and
+ * childNodes through a Proxy).
  * @param {Node} node
- * @param {Function} test
+ * @param {Function} test - Rejects the nodes that are not XDM nodes
  * @param {number} limit
  * @param {Node[]} result - Appended to
  * @returns {boolean} true when the limit is reached
  */
 function descendants(node, test, limit, result) {
-  const stack = childrenOf(node).reverse();
-  while (stack.length > 0) {
-    const current = stack.pop();
+  if (!isContainer(node)) return false;
+  let current = node.firstChild;
+  while (current) {
     if (test(current) && result.push(current) >= limit) return true;
-    const children = childrenOf(current);
-    for (let i = children.length - 1; i >= 0; i--) stack.push(children[i]);
+    if (current.nodeType === 1) {
+      const first = current.firstChild;
+      if (first) {
+        current = first;
+        continue;
+      }
+    }
+    let next = current.nextSibling;
+    while (!next) {
+      current = current.parentNode;
+      if (current === node || !current) return false;
+      next = current.nextSibling;
+    }
+    current = next;
   }
   return false;
 }
@@ -62,7 +84,7 @@ function descendants(node, test, limit, result) {
  */
 function sibling(node, direction) {
   let current = node[direction];
-  while (current && nodeKind(current) === undefined) {
+  while (current && !isXdmNode(current)) {
     current = current[direction];
   }
   return current ?? null;
@@ -109,8 +131,23 @@ function ancestry(node, self) {
 /** @type {Record<string, Axis>} Axis functions by axis name. */
 export const axes = {
   self: (node, test) => (test(node) ? [node] : []),
-  child: (node, test, limit) => collect(childrenOf(node), test, limit),
-  attribute: (node, test, limit) => collect(attributesOf(node), test, limit),
+  child(node, test, limit) {
+    const result = [];
+    if (!isContainer(node)) return result;
+    for (let c = node.firstChild; c; c = c.nextSibling) {
+      if (test(c) && result.push(c) >= limit) break;
+    }
+    return result;
+  },
+  attribute(node, test, limit) {
+    if (test.qname) {
+      const found = namedAttributeOf(node, test.qname.uri, test.qname.local);
+      if (found !== undefined) {
+        return found && limit > 0 && test(found) ? [found] : [];
+      }
+    }
+    return collect(attributesOf(node), test, limit);
+  },
   namespace: (node, test, limit) =>
     node.nodeType === 1 ? collect(namespaceNodesOf(node), test, limit) : [],
   parent(node, test) {

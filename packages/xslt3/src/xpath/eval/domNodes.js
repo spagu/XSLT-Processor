@@ -69,14 +69,31 @@ export function parentOf(node) {
 
 /**
  * @param {Node} node
+ * @returns {boolean} whether the node is an XDM node (not a document type)
+ */
+export const isXdmNode = (node) => KINDS[node.nodeType] !== undefined;
+
+/**
+ * @param {Node} node
+ * @returns {boolean} whether the node can have children (element,
+ *   document, document fragment)
+ */
+export const isContainer = (node) => {
+  const type = node.nodeType;
+  return type === 1 || type === 9 || type === 11;
+};
+
+/**
+ * @param {Node} node
  * @returns {Node[]} the children in XDM terms
  */
 export function childrenOf(node) {
-  const type = node.nodeType;
-  if (type !== 1 && type !== 9 && type !== 11) return [];
+  if (!isContainer(node)) return [];
   const result = [];
-  for (const child of node.childNodes) {
-    if (KINDS[child.nodeType] !== undefined) result.push(child);
+  // firstChild/nextSibling: childNodes is a live list behind a Proxy in
+  // jsdom, several times slower to iterate
+  for (let child = node.firstChild; child; child = child.nextSibling) {
+    if (isXdmNode(child)) result.push(child);
   }
   return result;
 }
@@ -88,11 +105,30 @@ export function childrenOf(node) {
  */
 export function attributesOf(node) {
   if (node.nodeType !== 1) return [];
+  const attributes = node.attributes;
   const result = [];
-  for (const attribute of node.attributes) {
+  for (let i = 0, n = attributes.length; i < n; i++) {
+    const attribute = attributes[i];
     if (!isNamespaceDeclaration(attribute)) result.push(attribute);
   }
   return result;
+}
+
+/**
+ * The attribute of an element with a name, without walking its attribute
+ * list (slow in jsdom).
+ * @param {Node} node
+ * @param {string} uri - Namespace URI, "" for none
+ * @param {string} local - Local name
+ * @returns {Attr|null} the attribute, null when the element has none of
+ *   that name (or the node is not an element); undefined when the DOM
+ *   cannot look attributes up by name
+ */
+export function namedAttributeOf(node, uri, local) {
+  if (node.nodeType !== 1) return null;
+  if (typeof node.getAttributeNodeNS !== "function") return undefined;
+  const attribute = node.getAttributeNodeNS(uri === "" ? null : uri, local);
+  return attribute && !isNamespaceDeclaration(attribute) ? attribute : null;
 }
 
 /** @param {Node} node @returns {string} namespace URI of the name, "" for none */

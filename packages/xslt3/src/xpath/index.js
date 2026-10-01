@@ -22,6 +22,7 @@ import {
   FunctionLibrary,
 } from "../functions/registry.js";
 import { compileNode, withinLimits } from "./eval/compiler.js";
+import { createDescendantMemo } from "./eval/descendantMemo.js";
 import { createDynamicContext } from "./eval/dynamicContext.js";
 import { rootScope } from "./eval/scope.js";
 import { createStaticContext, variableKey } from "./eval/staticContext.js";
@@ -143,24 +144,73 @@ export function compileXPath(expression, options = {}) {
         env,
         dyn: createDynamicContext(sc, dynamicOptions, focus[0]),
       };
+      ctx.dyn.descendantMemo = createDescendantMemo();
       return withinLimits(() => evaluator(ctx));
     },
   };
 }
 
+/** Static options other than `variables`; any of them disables the cache. */
+const STATIC_OPTIONS = [
+  "namespaces",
+  "defaultElementNamespace",
+  "defaultFunctionNamespace",
+  "functions",
+  "backwardsCompatible",
+  "baseUri",
+  "defaultCollation",
+  "decimalFormats",
+];
+
+/** Most compiled expressions kept by evaluateXPath. */
+export const COMPILED_CACHE_SIZE = 64;
+
+/** Compiled expressions of evaluateXPath by key, least recently used first. */
+const compiledCache = new Map();
+
+/**
+ * The compiled expression of evaluateXPath, from a small LRU cache when
+ * the only static option is `variables` (the names are part of the key):
+ * other static options can be objects that change between calls, so their
+ * expressions are compiled every time.
+ * @param {string} expression
+ * @param {StaticOptions} options
+ * @returns {ReturnType<typeof compileXPath>}
+ */
+function compiledFor(expression, options) {
+  const names = variableNames(options.variables);
+  const compile = () =>
+    compileXPath(expression, { ...options, variables: names });
+  if (STATIC_OPTIONS.some((name) => options[name] !== undefined)) {
+    return compile();
+  }
+  const key = JSON.stringify([expression, names]);
+  let compiled = compiledCache.get(key);
+  if (compiled) compiledCache.delete(key);
+  else {
+    compiled = compile();
+    if (compiledCache.size >= COMPILED_CACHE_SIZE) {
+      compiledCache.delete(compiledCache.keys().next().value);
+    }
+  }
+  compiledCache.set(key, compiled);
+  return compiled;
+}
+
 /**
  * Compiles and evaluates an expression; the names of `options.variables`
- * are the external variables.
+ * are the external variables. Without other static options, the compiled
+ * expression is kept in a small LRU cache (COMPILED_CACHE_SIZE
+ * expressions) and reused by the next calls with the same text and
+ * variable names; for repeated evaluations, compileXPath once is still
+ * the faster way.
  * @param {string} expression
  * @param {*} [contextItem] - Context item, undefined or null for none
  * @param {StaticOptions & DynamicOptions} [options]
  * @returns {Array} the result sequence
  */
 export function evaluateXPath(expression, contextItem, options = {}) {
-  return compileXPath(expression, {
-    ...options,
-    variables: variableNames(options.variables),
-  }).evaluate(contextItem, options);
+  return compiledFor(expression, options).evaluate(contextItem, options);
 }
 
 export { createFunctionLibrary, FunctionLibrary, XPathError };

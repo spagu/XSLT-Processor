@@ -165,6 +165,16 @@ has an XPath 3.1 mode that runs this function in the browser, with examples
 of `for`/`let`, `sort`, maps, regular expressions, formatting, `=>` and
 `fold-left`. XSLT 2.0 and 3.0 stylesheets join it once the XSLT part is ready.
 
+`evaluateXPath` keeps the 64 most recently compiled expressions (keyed by the
+expression text and the variable names; used only when no other static option
+is given), so calling it in a loop does not parse the expression each time.
+Use `compileXPath` to control compilation yourself.
+
+An evaluation assumes the trees it reads do not change while it runs: results
+of `//x` and the document order are computed once per evaluation. Built-in
+functions only create new trees; an extension function written in JavaScript
+must not modify the DOM it is evaluated over.
+
 Values are returned as data model items (`{ type, value }` for atomic values,
 DOM nodes, maps, arrays and functions). JavaScript values passed as
 variables are converted: string to `xs:string`, number to `xs:double`,

@@ -49,8 +49,10 @@ export class AtomicValue {
  */
 export function itemKind(item) {
   if (item instanceof AtomicValue) return "atomic";
-  if (item?.[ITEM_KIND]) return item[ITEM_KIND];
+  // Nodes before the symbol: on a DOM node (a jsdom wrapper) the symbol is
+  // looked up along a long prototype chain
   if (typeof item?.nodeType === "number") return "node";
+  if (item?.[ITEM_KIND]) return item[ITEM_KIND];
   throw new XPathError("XPTY0004", `Not an XDM item: ${String(item)}`);
 }
 

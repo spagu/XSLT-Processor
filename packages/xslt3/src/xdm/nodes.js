@@ -3,7 +3,7 @@
  * (atomization) and effective boolean value.
  *
  * Nodes are DOM nodes of any implementation; only `nodeType`, `nodeValue`
- * and `childNodes` are read. Without a schema, elements, attributes, text
+ * and `firstChild`/`nextSibling` (else `childNodes`) are read. Without a schema, elements, attributes, text
  * and document nodes have an xs:untypedAtomic typed value; comments,
  * processing instructions and namespace nodes an xs:string one.
  *
@@ -36,6 +36,19 @@ const containers = new Set([
  * @param {string[]} parts
  */
 function collectText(node, parts) {
+  // firstChild/nextSibling: childNodes is a live list behind a Proxy in
+  // jsdom, several times slower to iterate
+  if (node.firstChild !== undefined) {
+    for (let child = node.firstChild; child; child = child.nextSibling) {
+      const type = child.nodeType;
+      if (type === TEXT_NODE || type === CDATA_SECTION_NODE) {
+        parts.push(child.nodeValue);
+      } else if (type === ELEMENT_NODE) {
+        collectText(child, parts);
+      }
+    }
+    return;
+  }
   for (const child of node.childNodes) {
     if (child.nodeType === TEXT_NODE || child.nodeType === CDATA_SECTION_NODE) {
       parts.push(child.nodeValue);
@@ -52,11 +65,36 @@ function collectText(node, parts) {
  * @returns {string}
  */
 export function nodeStringValue(node) {
-  if (!containers.has(node.nodeType)) return node.nodeValue ?? "";
+  return stringValueOf(node, node.nodeType);
+}
+
+/**
+ * nodeStringValue() of a node whose nodeType was read already.
+ * @param {Node} node
+ * @param {number} type - Its nodeType
+ * @returns {string}
+ */
+function stringValueOf(node, type) {
+  if (!containers.has(type)) return node.nodeValue ?? "";
+  const first = node.firstChild;
+  if (first && first.nextSibling === null) {
+    // A single child, typically the text of a leaf element
+    const type = first.nodeType;
+    if (type === TEXT_NODE || type === CDATA_SECTION_NODE) {
+      return first.nodeValue;
+    }
+  }
   const parts = [];
   collectText(node, parts);
   return parts.join("");
 }
+
+/** Node types whose typed value is an xs:string. */
+const stringTyped = new Set([
+  PROCESSING_INSTRUCTION_NODE,
+  COMMENT_NODE,
+  NAMESPACE_NODE,
+]);
 
 /**
  * Typed value of a node (dm:typed-value) in a non-schema-aware processor.
@@ -64,15 +102,9 @@ export function nodeStringValue(node) {
  * @returns {AtomicValue}
  */
 export function typedValue(node) {
-  const stringTyped = [
-    PROCESSING_INSTRUCTION_NODE,
-    COMMENT_NODE,
-    NAMESPACE_NODE,
-  ];
-  const type = stringTyped.includes(node.nodeType)
-    ? types.string
-    : types.untypedAtomic;
-  return new AtomicValue(type, nodeStringValue(node));
+  const nodeType = node.nodeType;
+  const type = stringTyped.has(nodeType) ? types.string : types.untypedAtomic;
+  return new AtomicValue(type, stringValueOf(node, nodeType));
 }
 
 /**

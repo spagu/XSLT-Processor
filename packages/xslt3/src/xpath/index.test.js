@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { DocumentOrder } from "./eval/documentOrder.js";
 import {
+  COMPILED_CACHE_SIZE,
   compileXPath,
   createFunctionLibrary,
   defaultFunctionLibrary,
@@ -96,6 +97,59 @@ describe("compileXPath and evaluateXPath", () => {
         1,
       ),
     );
+  });
+
+  it("sees the changes made to a document between two evaluations", () => {
+    const doc = parse("<r><a i='1'/><b/><a i='2'/></r>");
+    const expr = compileXPath("(//b | //a)/name()");
+    const names = () =>
+      expr
+        .evaluate(doc)
+        .map((v) => v.value)
+        .join(" ");
+    assert.equal(names(), "a b a");
+    const [first] = [...doc.getElementsByTagName("a")];
+    doc.documentElement.appendChild(first);
+    assert.equal(names(), "b a a");
+    doc.documentElement.insertBefore(doc.createElement("a"), null);
+    assert.equal(names(), "b a a a");
+    const count = compileXPath("count(//a[@i])");
+    assert.equal(String(count.evaluate(doc)[0].value), "2");
+    first.removeAttribute("i");
+    assert.equal(String(count.evaluate(doc)[0].value), "1");
+  });
+
+  it("remembers the descendants and attributes of a tree during an evaluation", () => {
+    const doc = parse(
+      "<r><i c='x' p='1'/><i c='y' p='2'/><i c='x' p='3'/><i p='4'/></r>",
+    );
+    assert.equal(
+      xs("for $c in distinct-values(//i/@c) return sum(//i[@c = $c]/@p)", doc),
+      "4 2",
+    );
+    assert.equal(xs("count(//i) + count(//i[@c][@c])", doc), "7");
+  });
+
+  it("keeps the compiled expressions of evaluateXPath in a small cache", () => {
+    const doc = parse("<r><a/></r>");
+    for (let i = 0; i <= COMPILED_CACHE_SIZE; i++) {
+      assert.equal(
+        evaluateXPath(`${i} + count(//a)`, doc)[0].value,
+        BigInt(i + 1),
+      );
+    }
+    assert.equal(evaluateXPath("0 + count(//a)", doc)[0].value, 1n);
+    assert.equal(evaluateXPath("0 + count(//a)", doc)[0].value, 1n);
+    const variables = { n: 2 };
+    assert.equal(evaluateXPath("$n", null, { variables })[0].value, 2);
+    assert.equal(
+      evaluateXPath("$n", null, { variables: { n: 3 } })[0].value,
+      3,
+    );
+    // Other static options are compiled every time
+    const namespaces = { p: "urn:p" };
+    assert.equal(xs("count(//p:a)", doc, { namespaces }), "0");
+    assert.equal(code("count(//p:a)", doc), "XPST0081");
   });
 
   it("shares a document order cache between evaluations", () => {

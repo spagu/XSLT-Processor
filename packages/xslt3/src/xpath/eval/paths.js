@@ -11,8 +11,13 @@
 
 import { XPathError } from "../../errors.js";
 import { isNode } from "../../xdm/atomic.js";
-import { axes, REVERSE_AXES } from "./axes.js";
+import { REVERSE_AXES } from "./axes.js";
+import { axisNodes } from "./descendantMemo.js";
 import { rootOf } from "./domNodes.js";
+import {
+  compileGroupedChildren,
+  isGroupedChildren,
+} from "./groupedChildren.js";
 import { compileNodeTest } from "./nodeTests.js";
 import { isPositionIndependent } from "./positional.js";
 import { compilePredicate } from "./predicates.js";
@@ -57,10 +62,13 @@ const positionalLimit = (predicate) =>
     ? Math.max(Number(predicate.value), 0)
     : Infinity;
 
+/** Marks a `descendant-or-self::node()/child::T[P]` pair in a path. */
+const GROUPED = "GroupedChildren";
+
 /** Compilers by node type. */
 export const pathCompilers = {
   AxisStep(node, scope, compile) {
-    const axis = axes[node.axis];
+    const axis = node.axis;
     const test = compileNodeTest(node.nodeTest, node.axis, scope.sc);
     const predicates = node.predicates.map((p) =>
       compilePredicate(p, scope, compile),
@@ -68,7 +76,8 @@ export const pathCompilers = {
     const limit = positionalLimit(node.predicates[0]);
     const reverse = REVERSE_AXES.has(node.axis);
     return (ctx) => {
-      let nodes = axis(contextNode(ctx, "XPTY0020"), test, limit);
+      const item = contextNode(ctx, "XPTY0020");
+      let nodes = axisNodes(axis, item, test, limit, ctx.dyn);
       for (const predicate of predicates) nodes = predicate(nodes, ctx);
       return reverse ? nodes.reverse() : nodes;
     };
@@ -81,12 +90,25 @@ export const pathCompilers = {
         steps.splice(i, 2, { ...steps[i + 1], axis: "descendant" });
       }
     }
+    for (let i = 0; i < steps.length - 1; i++) {
+      if (isGroupedChildren(steps[i], steps[i + 1])) {
+        steps.splice(i, 2, { type: GROUPED, step: steps[i + 1] });
+      }
+    }
     const compiled = steps.map((step) => {
+      if (step.type === GROUPED) {
+        const run = compileGroupedChildren(step.step, scope, compile);
+        const evaluate = (ctx) => run([contextNode(ctx, "XPTY0020")], ctx);
+        return { evaluate, run };
+      }
       const evaluate = compile(step, scope);
       const axis = step.type === "AxisStep" ? step.axis : null;
       return { evaluate, run: stepper(evaluate, axis) };
     });
-    const sortedStart = node.absolute || steps[0].type === "AxisStep";
+    const sortedStart =
+      node.absolute ||
+      steps[0].type === "AxisStep" ||
+      steps[0].type === GROUPED;
     const start = node.absolute
       ? (ctx) => {
           const root = rootOf(contextNode(ctx, "XPTY0020"));

@@ -116,6 +116,21 @@ describe("document order", () => {
     assert.deepEqual(order.sort([r]), [r]);
   });
 
+  it("orders the attributes of one element by their index", () => {
+    const order = new DocumentOrder();
+    const element = parse("<e a='1' b='2' c='3'/>").documentElement;
+    const [a, b, c] = [...element.attributes];
+    assert.deepEqual(order.sort([c, a, b, a, element]), [element, a, b, c]);
+    assert.ok(order.compare(b, a) > 0);
+    assert.ok(order.compare(a, c) < 0);
+  });
+
+  it("orders a detached attribute as a tree of its own", () => {
+    const order = new DocumentOrder();
+    const detached = doc.createAttribute("z");
+    assert.ok(order.compare(r, detached) < 0);
+  });
+
   it("orders trees by first use and renumbers changed trees", () => {
     const order = new DocumentOrder();
     const other = parse("<o/>");

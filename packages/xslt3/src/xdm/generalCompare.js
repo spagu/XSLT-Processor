@@ -8,8 +8,9 @@
 import { XPathError } from "../errors.js";
 import { AtomicValue } from "./atomic.js";
 import { cast } from "./cast.js";
-import { valueCompare } from "./compare.js";
+import { orderTests, valueCompare } from "./compare.js";
 import { atomize, effectiveBooleanValue } from "./nodes.js";
+import { compareCodepoints } from "./strings.js";
 import { derivesFrom, isNumericType, types } from "./types.js";
 
 const valueOperators = {
@@ -22,6 +23,10 @@ const valueOperators = {
 };
 
 const isUntyped = (item) => item.type === types.untypedAtomic;
+/** xs:untypedAtomic or xs:string itself (not a subtype). */
+const isPlainString = (item) =>
+  item.type === types.untypedAtomic || item.type === types.string;
+
 const isString = (item) => derivesFrom(item.type, types.string);
 
 /**
@@ -54,13 +59,11 @@ function castUntyped(untyped, other) {
 }
 
 /**
- * Prepares a pair of atomic values (XPath 3.1 mode).
+ * Prepares a pair of atomic values (XPath 3.1 mode). Two untyped values
+ * compare as strings, which generalCompare does without converting them.
  * @returns {[AtomicValue, AtomicValue]}
  */
 function convertPair(a, b) {
-  if (isUntyped(a) && isUntyped(b)) {
-    return [cast(a, types.string), cast(b, types.string)];
-  }
   if (isUntyped(a)) return [castUntyped(a, b), b];
   if (isUntyped(b)) return [a, castUntyped(b, a)];
   return [a, b];
@@ -131,10 +134,19 @@ export function generalCompare(left, op, right, options = {}) {
     a = a.map(toNumber);
     b = b.map(toNumber);
   }
-  return a.some((x) =>
-    b.some((y) => {
+  const collation = options.collation ?? compareCodepoints;
+  const holds = orderTests[valueOp];
+  for (const x of a) {
+    for (const y of b) {
+      // Strings and untyped values compare as strings in both modes:
+      // skip the casts and the result objects of valueCompare
+      if (isPlainString(x) && isPlainString(y)) {
+        if (holds(collation(x.value, y.value))) return true;
+        continue;
+      }
       const [p, q] = convert(x, y);
-      return valueCompare(p, valueOp, q, options);
-    }),
-  );
+      if (valueCompare(p, valueOp, q, options)) return true;
+    }
+  }
+  return false;
 }

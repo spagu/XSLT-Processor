@@ -122,5 +122,9 @@
  * @returns {{type: string, start: number, end: number} & F} The node
  */
 export function makeNode(type, fields, start, end) {
-  return { type, ...fields, start, end };
+  // Object.assign: several times faster than a spread in a literal here
+  const node = Object.assign({ type }, fields);
+  node.start = start;
+  node.end = end;
+  return node;
 }

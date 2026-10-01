@@ -114,7 +114,9 @@ class Lexer {
 
   /** @returns {Token} A token from the current offset to `end`. */
   token(type, fields, end) {
-    const token = { type, ...fields, start: this.pos, end };
+    const token = Object.assign({ type }, fields);
+    token.start = this.pos;
+    token.end = end;
     this.pos = end;
     return token;
   }
