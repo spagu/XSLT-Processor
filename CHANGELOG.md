@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- **ssg 1.8.64** for the website: it fixes the two ssg bugs we reported, spagu/ssg#309 (fingerprinting left ES module imports unrewritten) and #310 (heading ids differed from GitHub's for linked headings). CSS and JS are fingerprinted again (`fingerprint: true`) and cached for a year as immutable; the `max-age=0` workaround is gone. `check-site.mjs` finds `css/tokens.css` under its fingerprinted name.
 - **Chrome's removal dates corrected**: README.md and docs/BROWSER-SUPPORT.md said Chrome 164 (August 2027). Chrome's announcement says XSLT stops working in stable Chrome 158 on 17 November 2026, and for everyone (origin trial and enterprise policy included) in Chrome 176 on 17 August 2027. Firefox and WebKit support the removal without dates.
 
 ### Added

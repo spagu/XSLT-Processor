@@ -10,14 +10,15 @@
  *   Google Tag Manager snippet;
  * - accessibility basics: lang, one <main>, one <h1>, no skipped heading
  *   levels, alt on every image, a title on every iframe;
- * - WCAG 2.2 contrast of the colour pairs of css/tokens.css, light and dark.
+ * - WCAG 2.2 contrast of the colour pairs of css/tokens.css (or its
+ *   fingerprinted css/tokens.<hash>.css), light and dark.
  *
  * Usage: node site/scripts/check-site.mjs <output dir> [path prefix]
  * Exits with 1 and lists the problems when a check fails.
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { basename, dirname, extname, join, relative } from "node:path";
 import { URL } from "node:url";
 import { JSDOM } from "jsdom";
 import { contrastProblems, parseTokens } from "./contrast.mjs";
@@ -170,13 +171,40 @@ export function linkProblems(root, prefix, docs) {
  *
  * @param {string} root - Output directory
  * @param {string} [prefix=""] - Path prefix the site is served under
- * @param {string} tokensCss - Contents of css/tokens.css
+ * @param {string} tokensCss - Contents of css/tokens.css (fingerprinted or not)
  * @returns {string[]} Problems
  */
+/**
+ * Path of a built asset by its source name: the file itself, or the
+ * fingerprinted copy ssg writes with `fingerprint: true` (name.<hash8>.ext).
+ *
+ * @param {string} root - Output directory of the site
+ * @param {string} asset - Asset path relative to the root, e.g. "css/tokens.css"
+ * @returns {string} Absolute path of the built file
+ * @throws {Error} When neither form exists
+ */
+export function assetPath(root, asset) {
+  const plain = join(root, asset);
+  if (existsSync(plain)) return plain;
+  const dir = dirname(plain);
+  const ext = extname(asset);
+  const stem = basename(asset, ext);
+  const found =
+    existsSync(dir) &&
+    readdirSync(dir).find(
+      (name) =>
+        name.startsWith(`${stem}.`) &&
+        name.endsWith(ext) &&
+        /^[0-9a-f]{8}$/.test(name.slice(stem.length + 1, -ext.length)),
+    );
+  if (!found) throw new Error(`${asset} not found in ${root}`);
+  return join(dir, found);
+}
+
 export function checkSite(
   root,
   prefix = "",
-  tokensCss = readFileSync(join(root, "css", "tokens.css"), "utf8"),
+  tokensCss = readFileSync(assetPath(root, "css/tokens.css"), "utf8"),
 ) {
   const docs = new Map(
     htmlFiles(root).map((file) => [

@@ -47,18 +47,12 @@ marketing:
 minify_html: true
 minify_css: true
 
-# Cache policy of the generated _headers (Cloudflare Pages). ssg caches
-# /css/*, /js/* and /images/* for a year as immutable, which is only safe for
-# content-hashed names. The theme's CSS and JS keep their names, and
-# fingerprint: true breaks the playground's module imports
-# (https://github.com/spagu/ssg/issues/309), so CSS and JS are revalidated on
-# every visit (a 304 when unchanged). Images keep ssg's year: replace an image
-# under a new file name.
-headers:
-  /css/*:
-    Cache-Control: "public, max-age=0, must-revalidate"
-  /js/*:
-    Cache-Control: "public, max-age=0, must-revalidate"
+# Content-hashed CSS and JS names (style.<hash>.css), rewritten in every page
+# and in the playground's ES module imports. The generated _headers caches
+# /css/* and /js/* for a year as immutable, which is safe only with hashed
+# names. Images keep their names: replace an image under a new name.
+# (ssg 1.8.64 or newer: 1.8.63 left some module imports unrewritten, #309.)
+fingerprint: true
 
 # Blog: hand-written posts from site/posts/ (copied by build-content.mjs) at
 # /blog/<slug>/, listed by site/pages/blog.md, with an RSS and an Atom feed.

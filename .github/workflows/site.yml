@@ -17,8 +17,8 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # Pinned ssg release and the SHA-256 of its linux-amd64 archive, taken from
   # the release's checksums.sha256. Update both together.
-  SSG_VERSION: "1.8.63"
-  SSG_SHA256: "776e555b1e89e97d02ae03c0fe808788bfe4fc82400f304c9262e7161219f212"
+  SSG_VERSION: "1.8.64"
+  SSG_SHA256: "dfc0a414b53d31984462533a95097ed1eb5815a4b024384cb418ff4acfa2f689"
   # Wrangler release used for the deployment; keep in sync with the Makefile.
   WRANGLER_VERSION: "4.144.0"
 

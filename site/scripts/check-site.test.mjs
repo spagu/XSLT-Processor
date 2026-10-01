@@ -12,7 +12,7 @@ import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
-import { checkSite, pageProblems } from "./check-site.mjs";
+import { assetPath, checkSite, pageProblems } from "./check-site.mjs";
 import { PAIRS, contrast, contrastProblems, parseTokens } from "./contrast.mjs";
 
 const tokensCss = readFileSync(
@@ -69,6 +69,27 @@ describe("pageProblems", () => {
       parse(page("<main><h1>A</h1><h3>C</h3></main>")),
     );
     assert.deepEqual(problems, ['heading level skipped: <h3> "C"']);
+  });
+});
+
+describe("assetPath", () => {
+  it("finds an asset by its plain or its fingerprinted name", () => {
+    const root = mkdtempSync(join(tmpdir(), "site-asset-"));
+    mkdirSync(join(root, "css"));
+    writeFileSync(join(root, "css", "tokens.css"), "");
+    assert.equal(
+      assetPath(root, "css/tokens.css"),
+      join(root, "css", "tokens.css"),
+    );
+    rmSync(join(root, "css", "tokens.css"));
+    writeFileSync(join(root, "css", "tokens.f55532e6.css"), "");
+    writeFileSync(join(root, "css", "tokens-extra.0123abcd.css"), "");
+    assert.equal(
+      assetPath(root, "css/tokens.css"),
+      join(root, "css", "tokens.f55532e6.css"),
+    );
+    assert.throws(() => assetPath(root, "css/missing.css"), /missing\.css/);
+    rmSync(root, { recursive: true, force: true });
   });
 });
 
