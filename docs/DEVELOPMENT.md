@@ -82,9 +82,23 @@ and a token that enforces 2FA fails in CI with `EOTP`.
 **One-time prerequisite** (npmjs.com -> package `@tradik/xslt-processor` ->
 Settings -> Trusted Publisher): provider *GitHub Actions*, owner `spagu`,
 repository `XSLT-Processor`, workflow `release.yml`, environment left empty.
-Until that is configured the `publish` job fails with `E404`, and the package
-has to be published manually from the tag with
-`npm publish --provenance --access public --otp=CODE`.
+Until that is configured the `publish` job fails with `E404`.
+
+**Publishing by hand** (`scripts/publish.sh`): check out the release tag and
+run `make publish` with the one-time password from your npm authenticator:
+
+```sh
+git checkout v1.3.0
+npm login                  # once
+make publish-dry           # every check, then npm publish --dry-run
+make publish OTP=123456
+```
+
+It refuses unless the working tree is clean, HEAD is the tag `v<version>` of
+package.json, that version is not on npm yet and you are logged in; then it
+installs from the lockfile, builds, runs the tests and the libxslt
+conformance suite, and publishes. A manual release has no provenance
+attestation (only CI can sign one).
 
 **Release process:**
 
@@ -180,6 +194,20 @@ with `import()` only when XPath 3.1 mode is opened. The mode logic lives in
 `site/templates/xslt-site/js/` (`playground-modes.js`, `xpath-core.js`,
 `xpath-items.js`, `xpath-presets.js`) and is tested by
 `site/scripts/xpath.test.mjs` and `vendor.test.mjs`, which run every example.
+
+**Cookie consent** comes from ssg's cookie-consent worker in
+`site/workers/cookie-consent/` (scaffolded with `ssg new worker
+cookie-consent`; see its README). `variables.cookie_consent` in
+`site/ssg.yaml` configures the banner; the theme writes it into every page
+with `/cookie-consent.js` and `.css`. The banner opens by itself in the EEA
+and the UK: the Pages Function `/api/consent/geo` answers from the visitor's
+country (without the Function, as in a local preview, it always opens). Google
+Analytics starts in Consent Mode v2 with storage denied, Google Tag Manager
+loads only after consent to analytics, and its `<noscript>` iframe is left
+out. The policy page is `site/pages/cookie-policy.md`; list any new cookie
+there. ssg copies the worker's `functions/` into `site/public`, so the site is
+deployed from that directory (`make site-deploy`, and the Site workflow's
+`workingDirectory`), where wrangler builds the Functions.
 
 Google Analytics 4 runs on every page with the measurement id in
 `variables.ga_id` (`site/ssg.yaml`); the redirect page in `site/redirect/`

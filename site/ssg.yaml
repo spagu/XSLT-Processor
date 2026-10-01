@@ -67,6 +67,17 @@ feeds:
     title: "@tradik/xslt-processor blog"
     format: atom
 
+# Cookie consent: ssg's cookie-consent worker (scaffolded with
+# `ssg new worker cookie-consent` into site/workers/cookie-consent). Its
+# public/ files are served at /cookie-consent.js and .css; its Pages Function
+# /api/consent/geo tells the banner whether the visitor is in the EEA or the
+# UK, where consent is required. variables.cookie_consent is the banner's
+# client configuration; the theme writes it into every page.
+workers:
+  - name: cookie-consent
+    dir: workers/cookie-consent
+    routes_include: [/api/consent/*]
+
 variables:
   # Path prefix of the site on its host, no trailing slash ("" at a root).
   base_path: ""
@@ -76,5 +87,19 @@ variables:
   # with the real container id. The theme renders both halves of the snippet
   # (head script and body noscript) on every page.
   gtm_id: GTM-XXXXXXX
-  # Google Analytics 4 measurement id (gtag.js), on every page next to GTM.
+  # Google Analytics 4 measurement id (gtag.js), on every page. It starts in
+  # Consent Mode v2 with every storage type denied; the cookie banner grants
+  # analytics_storage when the visitor accepts the analytics category.
   ga_id: G-QX8Y8L1B20
+  # Cookie banner (ssg's cookie-consent worker, keys as in its README). No
+  # marketing category: the site runs no advertising. No audit log endpoint:
+  # it needs a CONSENT_LOG KV namespace (see wrangler.snippet.toml).
+  cookie_consent:
+    version: "1"
+    policyUrl: /cookie-policy/
+    position: bottom
+    geoMode: edge
+    expiryDays: 180
+    categories:
+      - { id: necessary, required: true }
+      - { id: analytics }

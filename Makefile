@@ -1,4 +1,4 @@
-.PHONY: install test test-watch test-browser test-dom conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help site site-content site-serve site-test site-clean site-deploy
+.PHONY: install test test-watch test-browser test-dom conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help site site-content site-serve site-test site-clean site-deploy publish publish-dry
 
 # Default target
 help:
@@ -26,6 +26,8 @@ help:
 	@echo "  site-test    - Test the website's content scripts and playground"
 	@echo "  site-clean   - Remove the website's generated files"
 	@echo "  site-deploy  - Build and deploy the website to Cloudflare Pages"
+	@echo "  publish      - Publish the tagged release to npm by hand: make publish OTP=123456"
+	@echo "  publish-dry  - Every publish check and npm publish --dry-run, nothing published"
 
 # Install dependencies
 install:
@@ -108,7 +110,7 @@ site: site-content
 # Deploy site/public to Cloudflare Pages (wrangler.toml). Needs a Cloudflare
 # login (npx wrangler login) or CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
 site-deploy: site
-	npx --yes wrangler@$(WRANGLER_VERSION) pages deploy --branch=main
+	cd site/public && npx --yes wrangler@$(WRANGLER_VERSION) pages deploy . --project-name=xslt-processor --branch=main
 
 # Local preview at the server root, rebuilt on change
 site-serve: site-content
@@ -146,3 +148,13 @@ docker-build:
 # Docker: Clean up
 docker-clean:
 	docker-compose down -v --rmi local
+
+# Publish @tradik/xslt-processor to npm by hand, from a clean checkout of the
+# release tag (git checkout v<version>), with the one-time password of your
+# npm account. Checks, build and tests are in scripts/publish.sh.
+publish:
+	OTP=$(OTP) bash scripts/publish.sh
+
+# The same checks and an npm publish --dry-run (no OTP, nothing published)
+publish-dry:
+	DRY_RUN=1 bash scripts/publish.sh

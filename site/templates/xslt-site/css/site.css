@@ -159,6 +159,21 @@ img {
   margin: 0;
 }
 
+/* A button that looks like a link: "Cookie settings" opens the consent dialog */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration-thickness: 2px;
+}
+
 /* Buttons */
 
 .button {

@@ -67,6 +67,22 @@ describe("pageProblems", () => {
     }
   });
 
+  it("expects no GTM <noscript> on pages with the cookie banner", () => {
+    const consent =
+      '<script id="ssg-consent-config" type="application/json">{}</script>';
+    const withBanner = page("<main><h1>A</h1></main>")
+      .replace("</head>", `${consent}</head>`)
+      .replace(/<noscript>.*?<\/noscript>/, "");
+    assert.deepEqual(pageProblems(parse(withBanner)), []);
+    const leaking = page("<main><h1>A</h1></main>").replace(
+      "</head>",
+      `${consent}</head>`,
+    );
+    assert.deepEqual(pageProblems(parse(leaking)), [
+      "GTM <noscript> loads without consent on a page with the cookie banner",
+    ]);
+  });
+
   it("reports skipped heading levels", () => {
     const problems = pageProblems(
       parse(page("<main><h1>A</h1><h3>C</h3></main>")),
