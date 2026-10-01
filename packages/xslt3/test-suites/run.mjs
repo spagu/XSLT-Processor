@@ -14,7 +14,12 @@
  *   --results <file>    JSON results (default <tmpdir>/xslt3-suites/results-*.json)
  *   --adapter <module>  engine adapter module (default: the xslt3 parser if present)
  *   --xpath10-compat    also run XPath 1.0 compatibility / backwards-compatible tests
+ *   --timeout <ms>      time limit per test case (default 10000)
+ *   --no-isolate        run the cases in this thread, without time limit
  *
+ * Each test case runs in a worker thread under the time limit (see
+ * lib/isolation.mjs): a case that times out or crashes the worker fails
+ * alone.
  * The suite is fetched first (see fetch.mjs). The exit code is 1 when a test
  * of the baseline no longer passes; newly passing tests are listed.
  */
@@ -29,6 +34,7 @@ import { SUITES, SUITES_ROOT } from "./constants.mjs";
 import { fetchSuite } from "./fetch.mjs";
 import { loadAdapter } from "./lib/adapter.mjs";
 import { createConfig } from "./lib/dependencies.mjs";
+import { createIsolatedRunner, DEFAULT_TIMEOUT } from "./lib/isolation.mjs";
 import { loadQt3Suite } from "./lib/qt3Catalog.mjs";
 import {
   buildBaseline,
@@ -75,7 +81,10 @@ async function main() {
       summary: { type: "string" },
       results: { type: "string" },
       adapter: { type: "string" },
+      timeout: { type: "string", default: String(DEFAULT_TIMEOUT) },
+      isolate: { type: "boolean", default: true },
     },
+    allowNegative: true,
   });
   const kind = positionals[0];
   if (kind !== "qt3" && kind !== "xslt30") {
@@ -98,13 +107,27 @@ async function main() {
   const config = createConfig(kind, {
     xpath10Compatibility: values["xpath10-compat"],
   });
-  const results = runSuite(suite, {
-    kind,
-    adapter,
-    config,
-    parseOnly,
-    filter: values.filter,
-  });
+  const isolated = values.isolate
+    ? createIsolatedRunner({
+        kind,
+        parseOnly,
+        adapterPath: values.adapter,
+        timeout: Number(values.timeout),
+      })
+    : null;
+  let results;
+  try {
+    results = runSuite(suite, {
+      kind,
+      adapter,
+      config,
+      parseOnly,
+      filter: values.filter,
+      runCase: isolated && ((testCase) => isolated.run(testCase)),
+    });
+  } finally {
+    await isolated?.close();
+  }
 
   const baselinePath = join(here, `baseline-${mode}.json`);
   const baseline = existsSync(baselinePath)

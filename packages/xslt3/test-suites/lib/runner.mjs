@@ -160,6 +160,35 @@ export function runXsltCase(testCase, adapter, readFile) {
 }
 
 /**
+ * Run one test case of either suite, turning a missing capability into a
+ * "not-run" verdict and any other failure of the harness into "fail".
+ *
+ * @param {object} testCase - Test case
+ * @param {object} options - Options
+ * @param {"qt3"|"xslt30"} options.kind - Suite kind
+ * @param {object} options.adapter - Engine adapter
+ * @param {boolean} [options.parseOnly] - qt3: only parse
+ * @param {(path: string) => string} [options.readFile] - File reader
+ * @returns {{status: string, reason: string}} The verdict
+ */
+export function runCase(testCase, options) {
+  const {
+    kind,
+    adapter,
+    parseOnly = false,
+    readFile = readSuiteFile,
+  } = options;
+  try {
+    return kind === "qt3"
+      ? runQt3Case(testCase, adapter, parseOnly, readFile)
+      : runXsltCase(testCase, adapter, readFile);
+  } catch (error) {
+    const status = error instanceof NotRunError ? "not-run" : "fail";
+    return { status, reason: error.message };
+  }
+}
+
+/**
  * Run the test cases of a suite.
  *
  * @param {{testSets: object[]}} suite - Loaded suite
@@ -170,16 +199,14 @@ export function runXsltCase(testCase, adapter, readFile) {
  * @param {boolean} [options.parseOnly] - qt3: only parse
  * @param {string} [options.filter] - Wildcard filter
  * @param {(path: string) => string} [options.readFile] - File reader
+ * @param {(testCase: object) => {status: string, reason: string}} [options.runCase]
+ *   - Runs an applicable test case (default: {@link runCase} in this
+ *   thread; see isolation.mjs for worker threads with a time limit)
  * @returns {TestResult[]} One result per test case passing the filter
  */
 export function runSuite(suite, options) {
-  const {
-    kind,
-    adapter,
-    config,
-    parseOnly = false,
-    readFile = readSuiteFile,
-  } = options;
+  const { config } = options;
+  const run = options.runCase ?? ((testCase) => runCase(testCase, options));
   const matches = compileFilter(options.filter);
   const results = [];
   for (const testSet of suite.testSets) {
@@ -197,15 +224,7 @@ export function runSuite(suite, options) {
       } else if (testCase.environmentError) {
         verdict = { status: "not-run", reason: testCase.environmentError };
       } else {
-        try {
-          verdict =
-            kind === "qt3"
-              ? runQt3Case(testCase, adapter, parseOnly, readFile)
-              : runXsltCase(testCase, adapter, readFile);
-        } catch (error) {
-          const status = error instanceof NotRunError ? "not-run" : "fail";
-          verdict = { status, reason: error.message };
-        }
+        verdict = run(testCase);
       }
       results.push({ ...base, ...verdict });
     }

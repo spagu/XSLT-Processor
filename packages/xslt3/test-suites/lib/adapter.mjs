@@ -14,7 +14,8 @@
  * ```
  *
  * A sequence is an array of items (or a single item); an atomic item gives
- * its JavaScript value with `valueOf()`. `context` has `variables` (name to
+ * its JavaScript value with `valueOf()`, or is an engine atomic value
+ * (`{type, value}`). `context` has `variables` (name to
  * value, `result` for assertions), `contextItem`, `namespaces`,
  * `environment` and `staticBaseUri`.
  *
@@ -26,31 +27,41 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { confinePath } from "../../../../scripts/lib/fsSafety.mjs";
 import { NotRunError } from "./assertions.mjs";
+import { createEngineAdapter } from "./engineAdapter.mjs";
+
+const srcDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "src");
 
 /** Parser module of @tradik/xslt3, loaded when it exists. */
-export const PARSER_MODULE = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "src",
-  "xpath",
-  "syntax",
-  "index.js",
-);
+export const PARSER_MODULE = join(srcDir, "xpath", "syntax", "index.js");
+
+/** XPath engine module of @tradik/xslt3, preferred when it exists. */
+export const ENGINE_MODULE = join(srcDir, "xpath", "index.js");
 
 /**
- * Load the default adapter (the @tradik/xslt3 XPath parser when present,
- * else an adapter without capabilities) or an adapter module given on the
- * command line (its default export, or the module namespace).
+ * Load the default adapter (the @tradik/xslt3 XPath engine when present,
+ * else its parser, else an adapter without capabilities) or an adapter
+ * module given on the command line (its default export, or the module
+ * namespace).
  *
  * @param {string} [modulePath] - Path of an adapter module
  * @param {string} [parserModule] - Parser module path (for tests)
+ * @param {string} [engineModule] - Engine module path (for tests)
  * @returns {Promise<object>} The adapter
  */
-export async function loadAdapter(modulePath, parserModule = PARSER_MODULE) {
+export async function loadAdapter(
+  modulePath,
+  parserModule = PARSER_MODULE,
+  engineModule = ENGINE_MODULE,
+) {
   if (modulePath) {
     const module = await import(pathToFileURL(confinePath(modulePath)).href);
     return module.default ?? module;
+  }
+  if (existsSync(engineModule)) {
+    const engine = await import(pathToFileURL(engineModule).href);
+    if (typeof engine.compileXPath === "function") {
+      return createEngineAdapter(engine);
+    }
   }
   if (!existsSync(parserModule)) return { name: "none" };
   const { parseXPath } = await import(pathToFileURL(parserModule).href);
@@ -59,6 +70,17 @@ export async function loadAdapter(modulePath, parserModule = PARSER_MODULE) {
     name: "xslt3-parser",
     parse: (expr, staticContext) => parseXPath(expr, staticContext),
   };
+}
+
+/**
+ * JavaScript value of an item: the value of an engine atomic value, else
+ * `valueOf()`.
+ *
+ * @param {*} item - Item
+ * @returns {*} The value
+ */
+function rawValue(item) {
+  return item?.type && "value" in item ? item.value : item.valueOf();
 }
 
 /**
@@ -79,7 +101,7 @@ function firstItem(sequence) {
  */
 export function toBoolean(sequence) {
   const item = firstItem(sequence);
-  return item == null ? false : Boolean(item.valueOf());
+  return item == null ? false : Boolean(rawValue(item));
 }
 
 /**
@@ -90,7 +112,7 @@ export function toBoolean(sequence) {
  */
 export function toText(sequence) {
   const item = firstItem(sequence);
-  return item == null ? "" : String(item.valueOf());
+  return item == null ? "" : String(rawValue(item));
 }
 
 /**

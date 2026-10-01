@@ -65,20 +65,24 @@ describe("adapters", () => {
   it("loads no capabilities without a parser, the parser when present, or a module", async () => {
     const dir = mkdtempSync(join(tmpdir(), "adapter-"));
     try {
-      assert.deepEqual(await loadAdapter(undefined, join(dir, "missing.js")), {
-        name: "none",
-      });
+      const noEngine = join(dir, "no-engine.js");
+      assert.deepEqual(
+        await loadAdapter(undefined, join(dir, "missing.js"), noEngine),
+        { name: "none" },
+      );
       const parserFile = join(dir, "parser.mjs");
       writeFileSync(
         parserFile,
         'export function parseXPath(e) { if (e === "(") throw new Error("x"); return e; }',
       );
-      const adapter = await loadAdapter(undefined, parserFile);
+      const adapter = await loadAdapter(undefined, parserFile, noEngine);
       assert.equal(adapter.name, "xslt3-parser");
       assert.equal(adapter.parse("1"), "1");
       const wrong = join(dir, "wrong.mjs");
       writeFileSync(wrong, "export const other = 1;");
-      assert.deepEqual(await loadAdapter(undefined, wrong), { name: "none" });
+      assert.deepEqual(await loadAdapter(undefined, wrong, noEngine), {
+        name: "none",
+      });
       const custom = join(dir, "custom.mjs");
       writeFileSync(custom, 'export default { name: "custom" };');
       assert.equal((await loadAdapter(custom)).name, "custom");

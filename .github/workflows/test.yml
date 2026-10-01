@@ -137,6 +137,9 @@ jobs:
       - name: qt3tests, parse stage
         run: npm run test:qt3:parse
 
+      - name: qt3tests, XPath 3.1 evaluation
+        run: npm run test:qt3
+
   docker-test:
     runs-on: ubuntu-latest
 
