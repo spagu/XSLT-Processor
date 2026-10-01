@@ -69,7 +69,11 @@ export default [
         performance: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
-        Option: 'readonly'
+        Option: 'readonly',
+        history: 'readonly',
+        location: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly'
       }
     }
   },

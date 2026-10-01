@@ -170,6 +170,17 @@ in `site/templates/xslt-site/images/blog/` as SVG with light and dark colours,
 referenced relative to the post (`../../images/blog/chart.svg`). Don't add
 `tags:` to posts: the theme has no tag archive template.
 
+The playground has two modes, kept in the address (`?mode=xpath`) and
+remembered in localStorage. XSLT 1.0 uses `dist/xslt-processor.browser.min.js`
+(copied to `site/static/vendor/`, so run `npm run build` first). XPath 3.1 uses
+`@tradik/xslt3`, which `site/scripts/vendor.mjs` bundles with esbuild from
+`packages/xslt3/src/` into `site/static/vendor/xslt3.browser.min.js` (a
+minified ES module; `npm run site:content` prints its size). The page loads it
+with `import()` only when XPath 3.1 mode is opened. The mode logic lives in
+`site/templates/xslt-site/js/` (`playground-modes.js`, `xpath-core.js`,
+`xpath-items.js`, `xpath-presets.js`) and is tested by
+`site/scripts/xpath.test.mjs` and `vendor.test.mjs`, which run every example.
+
 The Google Tag Manager container id is a placeholder (`variables.gtm_id` in
 `site/ssg.yaml`).
 

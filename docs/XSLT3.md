@@ -106,6 +106,11 @@ evaluateXPath("json-doc('file:///srv/data/config.json')?name", null, {
 });
 ```
 
+The website's [playground](https://xslt-processor.tradik.com/playground/?mode=xpath)
+has an XPath 3.1 mode that runs this function in the browser, with examples
+of `for`/`let`, `sort`, maps, regular expressions, formatting, `=>` and
+`fold-left`. XSLT 2.0 and 3.0 stylesheets join it once the XSLT part is ready.
+
 Values are returned as data model items (`{ type, value }` for atomic values,
 DOM nodes, maps, arrays and functions). JavaScript values passed as
 variables are converted: string to `xs:string`, number to `xs:double`,

@@ -4,6 +4,72 @@
   padding-top: var(--space-5);
 }
 
+/* Panels of the other mode; .field and the grids would otherwise win. */
+.playground [hidden] {
+  display: none !important;
+}
+
+/* Mode switch: two radio buttons drawn as a segmented control. The inputs
+   stay in the accessibility tree and take the arrow keys; the labels show
+   the state and the focus ring. */
+.pg-mode {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.pg-mode legend {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.pg-mode__options {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: 2px solid var(--color-control);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.pg-mode input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.pg-mode label {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pg-mode label + input + label {
+  border-left: 2px solid var(--color-control);
+}
+
+.pg-mode input:checked + label {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.pg-mode input:focus-visible + label {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -6px;
+}
+
+.pg-mode input:checked:focus-visible + label {
+  outline-color: var(--color-on-primary);
+}
+
+.pg-mode__note {
+  font-weight: 400;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -152,6 +218,61 @@
   line-height: 1.5;
 }
 
+/* XPath 3.1 mode: expression, variables and namespaces in one column. */
+.pg__xpath {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.pg__xpath .hint {
+  margin: 0;
+}
+
+.pg .pg-expr {
+  min-height: 15rem;
+}
+
+.pg .pg-small {
+  min-height: 4.5rem;
+}
+
+/* One row per item of the result sequence: its type, then its value. */
+.pg-items {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pg-item {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.pg-item__type {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-strong);
+  color: var(--color-primary);
+  font: 600 0.85rem/1.5 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.pg-item__value {
+  max-height: 20rem;
+  margin: 0;
+  overflow: auto;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 /* The preview shows the result as the user's page would: white canvas. */
 .pg-preview {
   width: 100%;
@@ -175,7 +296,17 @@
     width: 100%;
   }
 
-  .pg-param {
-    grid-template-columns: 1fr;
+  .pg-param,
+  .pg-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pg-mode__options {
+    display: flex;
+  }
+
+  .pg-mode label {
+    flex: 1;
+    text-align: center;
   }
 }

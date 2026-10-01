@@ -9,7 +9,8 @@
  * - site/data/landing.json and site/data/nav.json feed the home page and the
  *   documentation sidebar;
  * - the browser bundle dist/xslt-processor.browser.min.js (run `npm run
- *   build` first) is copied to site/static/vendor/ for the playground.
+ *   build` first) is copied to site/static/vendor/ for the playground, and
+ *   @tradik/xslt3 is bundled beside it for the XPath 3.1 mode (vendor.mjs).
  *
  * Everything written here is generated and ignored by git; edit the sources.
  *
@@ -35,6 +36,7 @@ import {
   pageMap,
   publishImages,
 } from "./pages.mjs";
+import { buildXslt3Bundle, formatSize, XSLT3_BUNDLE } from "./vendor.mjs";
 
 const siteDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const rootDir = join(siteDir, "..");
@@ -128,4 +130,12 @@ if (!existsSync(built)) {
 mkdirSync(vendorDir, { recursive: true });
 copyFileSync(built, join(vendorDir, bundle));
 
+const xslt3 = await buildXslt3Bundle({
+  entry: join(rootDir, "packages", "xslt3", "src", "index.js"),
+  outfile: join(vendorDir, XSLT3_BUNDLE),
+});
+
 console.log(`Site content: ${sources.length} documents, version ${version}.`);
+console.log(
+  `XPath 3.1 bundle: ${formatSize(xslt3.raw)} (${formatSize(xslt3.gzip)} gzip).`,
+);
