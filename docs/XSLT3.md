@@ -39,6 +39,17 @@ Not planned: schema awareness (`xsl:import-schema` with a schema), streaming
 (`xsl:mode streamable="yes"` runs, without streaming guarantees), static
 typing and XQuery.
 
+## Implementation-defined limits
+
+| Item | Value |
+|---|---|
+| `xs:decimal` and `xs:integer` | exact, unbounded (BigInt) |
+| Decimal division (`div`) | at least 18 fraction digits, more when an operand has more, rounded half-down |
+| `xs:double`, `xs:float` | IEEE 754 (JavaScript numbers; float through `Math.fround`) |
+| Years | -999,999,999 to 999,999,999 (XSD 1.1: year 0 exists) |
+| Implicit timezone | an option, default UTC |
+| `xs:anyURI` | lexical form not validated |
+
 ## Milestones
 
 | Milestone | Content |
