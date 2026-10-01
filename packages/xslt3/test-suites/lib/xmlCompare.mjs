@@ -27,7 +27,10 @@ export function parseFragment(text) {
   const body = text
     .replace(/^\uFEFF/, "")
     .replace(/^\s*<\?xml\s[^?]*\?>/, "")
-    .replace(/^\s*<!DOCTYPE[^>[]*(\[[^\]]*\])?\s*>/, "");
+    .replace(/^\s*<!DOCTYPE[^>[]*(\[[^\]]*\])?\s*>/, "")
+    // whitespace around the markup is layout of the catalog
+    .replace(/^\s+</, "<")
+    .replace(/>\s+$/, ">");
   return parseXml(`<fragment-wrapper>${body}</fragment-wrapper>`, "assert-xml")
     .documentElement;
 }

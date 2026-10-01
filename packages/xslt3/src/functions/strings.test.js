@@ -124,7 +124,7 @@ describe("normalize-space and normalize-unicode", () => {
     );
   });
 
-  it("normalizes to the four forms and FULLY-NORMALIZED", () => {
+  it("normalizes to the four forms, not FULLY-NORMALIZED", () => {
     const decomposed = "é";
     assert.equal(one(f("normalize-unicode", decomposed)), "é");
     assert.equal(one(f("normalize-unicode", "é", " nfd ")), decomposed);
@@ -132,10 +132,9 @@ describe("normalize-space and normalize-unicode", () => {
     assert.equal(one(f("normalize-unicode", "ﬁ", "NFKD")), "fi");
     assert.equal(one(f("normalize-unicode", decomposed, "")), decomposed);
     assert.equal(one(f("normalize-unicode", null)), "");
-    assert.equal(one(f("normalize-unicode", "́a", "FULLY-NORMALIZED")), " ́a");
-    assert.equal(
-      one(f("normalize-unicode", "blah", "fully-normalized")),
-      "blah",
+    throwsCode(
+      () => f("normalize-unicode", "blah", "fully-normalized"),
+      "FOCH0003",
     );
     throwsCode(() => f("normalize-unicode", "a", "NFX"), "FOCH0003");
   });

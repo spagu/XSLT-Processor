@@ -80,7 +80,7 @@ export function createConfig(
             schemaAware: false,
             staticTyping: false,
             typedData: false,
-            serialization: false,
+            serialization: true,
           },
         }
       : {
@@ -93,7 +93,7 @@ export function createConfig(
             backwards_compatibility: xpath10Compatibility,
             schema_aware: false,
             streaming: false,
-            serialization: false,
+            serialization: true,
           },
         };
   return {

@@ -60,6 +60,24 @@ export const defaultFunctionLibrary = createFunctionLibrary(coreFunctions);
  * @property {Date|import("../xdm/datetime.js").DateTimeValue} [currentDateTime]
  * @property {(uri: string) => Node} [documentLoader] - Loads fn:doc URIs
  *   (absolute, resolved against the base URI)
+ * @property {(uri: string) => (string|Uint8Array|ArrayBuffer|{content: string|Uint8Array|ArrayBuffer, encoding?: string, mediaType?: string})} [textLoader]
+ *   - Loads the text resources of fn:unparsed-text, fn:unparsed-text-lines,
+ *   fn:unparsed-text-available and fn:json-doc (absolute URIs, resolved
+ *   against the base URI); bytes are decoded by BOM, `encoding` (external
+ *   information), the XML declaration of an XML `mediaType`, the
+ *   function's encoding argument, else UTF-8. Return null or throw when
+ *   there is no resource (FOUT1170). Default: no resources at all;
+ *   `readFileUri` (exported) reads `file:` URIs in Node.js, for trusted
+ *   expressions only
+ * @property {(text: string, baseUri?: string) => Document} [xmlParser]
+ *   - Parses the strings of fn:parse-xml and fn:parse-xml-fragment; throws
+ *   when the text is not well-formed. Default: `globalThis.DOMParser`,
+ *   FODC0006 without it
+ * @property {(uri: string|null) => Array|null} [collections] - The items
+ *   of fn:collection by absolute URI (null: the default collection);
+ *   fn:uri-collection gives their document URIs (xs:anyURI items are
+ *   returned as they are). Null for an unknown collection (FODC0002).
+ *   Default: no collections
  * @property {(value: Array, label: string) => void} [trace] - fn:trace output
  * @property {() => Document} [createDocument] - Creates the empty
  *   documents in which functions build new nodes (default: from the DOM of
@@ -146,3 +164,4 @@ export function evaluateXPath(expression, contextItem, options = {}) {
 }
 
 export { createFunctionLibrary, FunctionLibrary, XPathError };
+export { readFileUri } from "./eval/resources.js";

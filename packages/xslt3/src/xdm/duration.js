@@ -36,8 +36,10 @@ export class DurationValue {
 /** The zero duration. */
 export const ZERO_DURATION = new DurationValue(0, Decimal.ZERO);
 
+// seconds need digits on both sides of a decimal point, as in XSD 1.0
+// ("PT.5S" and "PT1.S" are errors, qt3tests CastAs688-691)
 const pattern =
-  /^(-)?P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d*)?|\.\d+)S)?)?$/;
+  /^(-)?P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;
 
 /** Components allowed per primitive type (indexes into the pattern groups). */
 const allowed = {

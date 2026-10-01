@@ -89,7 +89,7 @@ export function runQt3Case(testCase, adapter, parseOnly, readFile) {
     }
     let parse = {};
     try {
-      adapter.parse(expression, staticContext(environment));
+      adapter.parse(expression, staticContext(environment, testCase.baseUri));
     } catch (error) {
       parse = errorOutcome(error);
     }
@@ -100,7 +100,7 @@ export function runQt3Case(testCase, adapter, parseOnly, readFile) {
   }
   let outcome;
   try {
-    const context = dynamicContext(environment, adapter);
+    const context = dynamicContext(environment, adapter, testCase.baseUri);
     outcome = { value: adapter.evaluateXPath(expression, context) };
   } catch (error) {
     outcome = errorOutcome(error);

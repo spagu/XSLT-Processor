@@ -17,6 +17,37 @@ const DAYS = "Monday Tuesday Wednesday Thursday Friday Saturday Sunday".split(
   " ",
 );
 
+/**
+ * Conventional English abbreviations longer than three letters, by name;
+ * every name of more than three letters also abbreviates to its first
+ * three.
+ */
+const ABBREVIATIONS = {
+  Tuesday: ["Tues"],
+  Wednesday: ["Weds"],
+  Thursday: ["Thur", "Thurs"],
+  September: ["Sept"],
+};
+
+/**
+ * The longest abbreviation of a name that fits a maximum width, else the
+ * name truncated to it.
+ * @param {string} name - Capitalized English name
+ * @param {number} maxWidth
+ * @returns {string}
+ */
+function abbreviate(name, maxWidth) {
+  const chars = Array.from(name);
+  if (chars.length <= maxWidth) return name;
+  const candidates = [name.slice(0, 3), ...(ABBREVIATIONS[name] ?? [])];
+  const fitting = candidates.filter(
+    (c) => c.length <= maxWidth && c.length < chars.length,
+  );
+  return fitting.length
+    ? fitting[fitting.length - 1]
+    : chars.slice(0, maxWidth).join("");
+}
+
 /** Components available per value kind. */
 const AVAILABLE = {
   dateTime: "YMDdFWwHhPmsfZzCE",
@@ -132,12 +163,14 @@ export function componentName(value, component, calendar) {
  * @returns {string}
  */
 export function presentName(name, token, minWidth, maxWidth) {
-  let text =
+  const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
+  const short =
+    maxWidth === null ? capitalized : abbreviate(capitalized, maxWidth);
+  const text =
     token === "N"
-      ? name.toUpperCase()
+      ? short.toUpperCase()
       : token === "n"
-        ? name.toLowerCase()
-        : name.charAt(0).toUpperCase() + name.slice(1);
-  if (maxWidth !== null) text = Array.from(text).slice(0, maxWidth).join("");
+        ? short.toLowerCase()
+        : short;
   return minWidth === null ? text : text.padEnd(minWidth, " ");
 }

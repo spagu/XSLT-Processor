@@ -18,6 +18,7 @@ import {
   parseXml,
 } from "./xmlUtil.mjs";
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 /**
  * @typedef {object} Dependency
@@ -41,6 +42,8 @@ import { readFileSync } from "node:fs";
  *   text, or the absolute path of a query file)
  * @property {boolean} hasModules - Whether the test imports XQuery modules
  * @property {import('./assertionModel.mjs').Assertion|null} result - Expected
+ * @property {string} baseUri - URI of the test set file, the static base
+ *   URI when the environment declares none
  */
 
 /**
@@ -102,9 +105,10 @@ export function parseQt3Catalog(text, dir) {
  * @param {string} setName - Test set name
  * @param {string} baseDir - Directory of the test set file
  * @param {(env: object|undefined) => object|null} resolve - Environment resolver
+ * @param {string} baseUri - URI of the test set file
  * @returns {Qt3TestCase} The test case
  */
-function parseTestCase(element, setName, baseDir, resolve) {
+function parseTestCase(element, setName, baseDir, resolve, baseUri) {
   const name = attr(element, "name");
   const test = firstChild(element, "test");
   const envElement = firstChild(element, "environment");
@@ -118,6 +122,7 @@ function parseTestCase(element, setName, baseDir, resolve) {
     test: { text: test?.textContent ?? "" },
     hasModules: childElements(element, "module").length > 0,
     result: parseResult(firstChild(element, "result"), baseDir),
+    baseUri,
   };
   const file = test ? attr(test, "file") : undefined;
   if (file !== undefined) testCase.test.file = join(baseDir, file);
@@ -147,13 +152,14 @@ export function parseQt3TestSet(text, file, shared = new Map()) {
   const name = attr(root, "name");
   const local = namedEnvironments(root, baseDir);
   const resolve = (env) => resolveEnvironment(env, local, shared);
+  const baseUri = pathToFileURL(file).href;
   return {
     name,
     file,
     family: name.split("-")[0],
     dependencies: parseQt3Dependencies(root),
     testCases: childElements(root, "test-case").map((el) =>
-      parseTestCase(el, name, baseDir, resolve),
+      parseTestCase(el, name, baseDir, resolve, baseUri),
     ),
   };
 }

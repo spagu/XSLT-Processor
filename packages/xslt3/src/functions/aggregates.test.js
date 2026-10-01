@@ -68,6 +68,10 @@ describe("max and min", () => {
     assert.equal(typed(f("max", ["a", "b", "c"])), "string:c");
     assert.equal(typed(f("max", ["a", v("anyURI", "b")])), "string:b");
     assert.equal(
+      typed(f("max", [v("token", "z"), v("anyURI", "b")])),
+      "token:z",
+    );
+    assert.equal(
       typed(f("max", [v("anyURI", "a"), v("anyURI", "b")])),
       "anyURI:b",
     );

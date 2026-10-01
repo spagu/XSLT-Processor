@@ -13,12 +13,16 @@ import { NotRunError } from "./assertions.mjs";
  * Static context handed to `adapter.parse`.
  *
  * @param {import('./environment.mjs').Environment|null} environment - Env
+ * @param {string} [defaultBaseUri] - Static base URI when the environment
+ *   declares none (the URI of the test set file); "#UNDEFINED" in the
+ *   environment means no static base URI
  * @returns {object} `{namespaces, decimalFormats, staticBaseUri, variables}`
  *   where `variables` names the external variables in scope
  */
-export function staticContext(environment) {
+export function staticContext(environment, defaultBaseUri) {
+  const base = defaultBaseUri && { staticBaseUri: defaultBaseUri };
   if (!environment) {
-    return { namespaces: [], decimalFormats: [], variables: [] };
+    return { namespaces: [], decimalFormats: [], variables: [], ...base };
   }
   const variables = [
     ...environment.params.map((param) => param.name),
@@ -29,7 +33,10 @@ export function staticContext(environment) {
   return {
     namespaces: environment.namespaces,
     decimalFormats: environment.decimalFormats,
-    staticBaseUri: environment.staticBaseUri,
+    staticBaseUri:
+      environment.staticBaseUri === "#UNDEFINED"
+        ? undefined
+        : (environment.staticBaseUri ?? defaultBaseUri),
     variables,
   };
 }
@@ -39,14 +46,15 @@ export function staticContext(environment) {
  *
  * @param {import('./environment.mjs').Environment|null} environment - Env
  * @param {object} adapter - Engine adapter
+ * @param {string} [defaultBaseUri] - See {@link staticContext}
  * @returns {object} The context: static context entries plus `variables`
  *   (name to value), `contextItem`, `documents` (URI to document),
  *   `collations`, `resources`, `collections` and `environment`
  * @throws {NotRunError} When the environment needs a missing capability
  */
-export function dynamicContext(environment, adapter) {
+export function dynamicContext(environment, adapter, defaultBaseUri) {
   const context = {
-    ...staticContext(environment),
+    ...staticContext(environment, defaultBaseUri),
     variables: {},
     documents: {},
     environment,

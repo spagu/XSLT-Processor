@@ -11,7 +11,7 @@ describe("function library", () => {
       (d) => `${d.namespace}|${d.local}#${d.params.length}`,
     );
     assert.equal(new Set(keys).size, keys.length);
-    assert.equal(keys.length, 131);
+    assert.equal(keys.length, 134);
   });
 
   it("leaves the core overlap out", () => {

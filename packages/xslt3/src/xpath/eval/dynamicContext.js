@@ -14,6 +14,11 @@ import { DocumentOrder } from "./documentOrder.js";
 import { deepEqualItem } from "../../functions/mapArrayEqual.js";
 import { compareCodepoints } from "../../xdm/strings.js";
 import { functionItemOf, resolveFunction } from "./functionItems.js";
+import {
+  createCollections,
+  createTextLoader,
+  createXmlParser,
+} from "./resources.js";
 import { resolveUri } from "./uris.js";
 
 /**
@@ -118,6 +123,9 @@ export function createDynamicContext(sc, options, contextNode) {
     position: 0,
     size: 0,
     loadDocument: documentLoader(options.documentLoader, sc.baseUri),
+    loadText: createTextLoader(options.textLoader, sc.baseUri),
+    parseXml: createXmlParser(options.xmlParser),
+    collection: createCollections(options.collections, sc.baseUri),
     trace: options.trace ?? (() => {}),
     decimalFormats: sc.decimalFormats,
     createDocument: options.createDocument ?? documentFactory(contextNode),

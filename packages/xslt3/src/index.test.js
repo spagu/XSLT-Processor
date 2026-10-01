@@ -2,7 +2,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { compileXPath, evaluateXPath, VERSION, XPathError } from "./index.js";
+import {
+  compileXPath,
+  evaluateXPath,
+  serialize,
+  serializeChunks,
+  serializeToBytes,
+  VERSION,
+  XPathError,
+} from "./index.js";
 
 describe("@tradik/xslt3", () => {
   it("exports the version of package.json", () => {
@@ -22,5 +30,12 @@ describe("@tradik/xslt3", () => {
     const [nine] = square.evaluate(null, { variables: { x: 3n } });
     assert.equal(nine.value, 9n);
     assert.throws(() => evaluateXPath("1 +", null), XPathError);
+  });
+
+  it("exposes the Serialization 3.1 API", () => {
+    const items = evaluateXPath("[1, 'a']", null);
+    assert.equal(serialize(items, { method: "json" }), '[1,"a"]');
+    assert.deepEqual([...serializeChunks(items, { method: "text" })], ["1 a"]);
+    assert.equal(serializeToBytes(items, { method: "text" }).length, 3);
   });
 });

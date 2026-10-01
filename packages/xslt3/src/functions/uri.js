@@ -137,7 +137,9 @@ export function resolveUri(relative, base) {
 function resolveUriFunction([relative, base], context) {
   if (relative.length === 0) return [];
   const baseUri = base ? base[0].value : context.staticBaseUri;
-  if (baseUri === undefined || baseUri === null) {
+  // an absolute URI is returned as is, without a base
+  const absolute = parseReference(relative[0].value).scheme !== undefined;
+  if (!absolute && (baseUri === undefined || baseUri === null)) {
     throw new XPathError("FONS0005", "The static base URI is absent");
   }
   return [

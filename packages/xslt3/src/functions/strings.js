@@ -15,21 +15,10 @@ import {
   contextString,
   define,
   integerItem,
+  isXmlChar,
   stringArg,
   stringItem,
 } from "./support.js";
-
-/**
- * @param {number} cp
- * @returns {boolean} whether the codepoint is an XML 1.0 Char
- */
-const isXmlChar = (cp) =>
-  cp === 0x9 ||
-  cp === 0xa ||
-  cp === 0xd ||
-  (cp >= 0x20 && cp <= 0xd7ff) ||
-  (cp >= 0xe000 && cp <= 0xfffd) ||
-  (cp >= 0x10000 && cp <= 0x10ffff);
 
 /**
  * fn:round on a double: nearest integer, halves toward positive infinity.
@@ -72,15 +61,13 @@ const NORMALIZATION_FORMS = new Set(["NFC", "NFD", "NFKC", "NFKD"]);
  * @param {string} text
  * @param {string} form - Normalization form name (any case, trimmed)
  * @returns {string}
+ * @throws {XPathError} FOCH0003 for another form than NFC, NFD, NFKC and
+ *   NFKD (FULLY-NORMALIZED is not supported: no normalization of a string
+ *   that starts with a composing character yields a fully-normalized one)
  */
 function normalizeUnicode(text, form) {
   const name = collapse(form).toUpperCase();
   if (name === "") return text;
-  if (name === "FULLY-NORMALIZED") {
-    // NFC, and no composing character at the start (W3C charmod-norm)
-    const nfc = text.normalize("NFC");
-    return /^\p{M}/u.test(nfc) ? ` ${nfc}` : nfc;
-  }
   if (!NORMALIZATION_FORMS.has(name)) {
     throw new XPathError("FOCH0003", `Unsupported normalization form ${form}`);
   }

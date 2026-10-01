@@ -24,8 +24,6 @@ describe("durations", () => {
     );
     assert.equal(roundTrip("duration", "P14M"), "P1Y2M");
     assert.equal(roundTrip("duration", "PT90M"), "PT1H30M");
-    assert.equal(roundTrip("duration", "PT.5S"), "PT0.5S");
-    assert.equal(roundTrip("duration", "PT1.S"), "PT1S");
     assert.equal(roundTrip("dayTimeDuration", "-PT0.000S"), "PT0S");
     assert.equal(roundTrip("duration", "P1DT0.1S"), "P1DT0.1S");
     assert.equal(roundTrip("duration", "PT3600S"), "PT1H");
@@ -47,6 +45,9 @@ describe("durations", () => {
       ["duration", "P-1Y"],
       ["duration", "P1.5Y"],
       ["duration", "PT1.5M"],
+      ["duration", "PT.5S"],
+      ["duration", "PT1.S"],
+      ["dayTimeDuration", "PT10M30.S"],
       ["yearMonthDuration", "P1D"],
       ["yearMonthDuration", "PT1H"],
       ["dayTimeDuration", "P1Y"],

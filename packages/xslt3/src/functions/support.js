@@ -61,6 +61,18 @@ export const integerItem = (n) => new AtomicValue(types.integer, BigInt(n));
 export const decimalItem = (d) => new AtomicValue(types.decimal, d);
 
 /**
+ * @param {number} cp
+ * @returns {boolean} whether the codepoint is an XML 1.0 Char
+ */
+export const isXmlChar = (cp) =>
+  cp === 0x9 ||
+  cp === 0xa ||
+  cp === 0xd ||
+  (cp >= 0x20 && cp <= 0xd7ff) ||
+  (cp >= 0xe000 && cp <= 0xfffd) ||
+  (cp >= 0x10000 && cp <= 0x10ffff);
+
+/**
  * The string of an optional xs:string argument ("" for the empty sequence).
  * @param {Array<AtomicValue>} sequence
  * @returns {string}

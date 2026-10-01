@@ -55,6 +55,15 @@ import { NS } from "./signatures.js";
  * @property {number} size
  * @property {(uri: string) => Node} loadDocument - Loads a document
  *   (FODC0002 when it cannot)
+ * @property {(href: string, encoding?: string) => string} loadText - Loads
+ *   and decodes a text resource, href resolved against the static base URI
+ *   (FOUT1170, FOUT1190, FOUT1200; see xpath/eval/resources.js)
+ * @property {(text: string, baseUri?: string) => Document} parseXml -
+ *   Parses an XML document (throws when it is not well-formed)
+ * @property {(href: string|null) => Array} collection - The items of a
+ *   collection, null for the default one (FODC0002 when unknown)
+ * @property {() => Document} createDocument - A new empty document, for
+ *   functions that build nodes
  */
 
 /** A set of function definitions. */

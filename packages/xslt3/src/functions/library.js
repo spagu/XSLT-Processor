@@ -14,10 +14,12 @@ import { formatIntegerFunctions } from "./format/formatInteger.js";
 import { formatNumberFunctions } from "./format/formatNumber.js";
 import { mathFunctions } from "./math.js";
 import { numericFunctions } from "./numeric.js";
+import { parseIetfDateFunctions } from "./parseIetfDate.js";
 import { qnameFunctions } from "./qnames.js";
 import { analyzeStringFunctions } from "./regex/analyzeString.js";
 import { regexFunctions } from "./regex/regexFunctions.js";
 import { sequenceFunctions } from "./sequences.js";
+import { serializeFunctions } from "./serializeFunction.js";
 import { stringFunctions } from "./strings.js";
 import { stringMatchFunctions } from "./stringMatch.js";
 import { uriFunctions } from "./uri.js";
@@ -37,7 +39,9 @@ export const libraryFunctions = [
   ...mathFunctions,
   ...dateTimeFunctions,
   ...formatDateTimeFunctions,
+  ...parseIetfDateFunctions,
   ...qnameFunctions,
   ...sequenceFunctions,
   ...aggregateFunctions,
+  ...serializeFunctions,
 ];

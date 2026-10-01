@@ -22,6 +22,7 @@ import {
   inScopeNamespaces,
   XML_NAMESPACE,
 } from "../xpath/eval/namespaceNodes.js";
+import { recordedBaseUri } from "./baseUris.js";
 import { focusNode } from "./focus.js";
 
 /** @param {Node} node @returns {boolean} */
@@ -97,7 +98,9 @@ function baseUriOf(node) {
   const chain = [];
   for (let n = node; n; n = parentOf(n)) chain.unshift(n);
   const document = chain[0];
-  let base = isDocument(document) ? documentUriOf(document) : undefined;
+  let base = isDocument(document)
+    ? (recordedBaseUri(document) ?? documentUriOf(document))
+    : undefined;
   for (const n of chain) {
     if (n.nodeType === 1 && n.hasAttributeNS(XML_NAMESPACE, "base")) {
       base = resolveUri(n.getAttributeNS(XML_NAMESPACE, "base"), base);

@@ -114,6 +114,7 @@ describe("resolve-uri", () => {
     );
     assert.deepEqual(f("resolve-uri", [null, "http://x/"]), []);
     throwsCode(() => f("resolve-uri", ["a"], {}), "FONS0005");
+    assert.equal(one(f("resolve-uri", ["http://x/a"], {})), "http://x/a");
     throwsCode(
       () => f("resolve-uri", ["a"], { staticBaseUri: null }),
       "FONS0005",

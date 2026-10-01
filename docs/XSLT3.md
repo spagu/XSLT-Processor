@@ -71,27 +71,14 @@ Pass rates per feature are published here as they come in.
 | Suite | Stage | Applicable | Pass | Rate |
 |---|---|---:|---:|---:|
 | qt3tests (XPath 3.1) | parsing and static analysis | 21,787 | 21,759 | 99.9% |
-| qt3tests (XPath 3.1) | evaluation, all families | 21,787 | 20,778 | 95.4% |
+| qt3tests (XPath 3.1) | evaluation, all families | 21,787 | 21,767 | 99.9% |
 
-Evaluation per family:
-
-| Family | Applicable | Pass | Rate |
-|---|---:|---:|---:|
-| prod (expressions) | 7,039 | 6,993 | 99.3% |
-| op (operators) | 3,544 | 3,543 | 100.0% |
-| fn (functions) | 9,402 | 8,473 | 90.1% |
-| app (use cases) | 962 | 940 | 97.7% |
-| map | 219 | 217 | 99.1% |
-| array | 179 | 177 | 98.9% |
-| math | 149 | 149 | 100.0% |
-| xs (types) | 137 | 137 | 100.0% |
-| misc | 156 | 149 | 95.5% |
-
-Most of the failures in fn are functions that are not implemented yet:
-`parse-json`, `json-to-xml`, `xml-to-json`, `json-doc`, `serialize`,
-`parse-ietf-date`, `unparsed-text*`, `parse-xml*`, `random-number-generator`,
-`collection`, `id`/`idref`. The parse stage misses only XQuery-only errors and
-static typing (XPST0005), which a basic processor does not do.
+The 20 remaining evaluation failures are `collation-key` with UCA collations
+(JavaScript's `Intl` exposes no sort keys), `fn:transform` and
+`load-xquery-module` (not offered by a basic processor), and three cases where
+the DOM implementation used by the test runner (@xmldom/xmldom) does not
+normalize `xml:id`, apply DTD default attributes or resolve external entities.
+The parse stage misses only XQuery-only errors and static typing (XPST0005).
 
 ## Using XPath 3.1
 
@@ -104,6 +91,19 @@ const query = compileXPath("//item[@price > $min]/@id ! string()", {
   variables: ["min"],
 });
 query.evaluate(document, { variables: { min: 10 } }); // strings
+```
+
+Expressions cannot reach outside the data you give them unless you allow it:
+`doc()` needs a `documentLoader`, `unparsed-text()` and `json-doc()` a
+`textLoader`, `collection()` a `collections` option. To let trusted
+expressions read local files in Node.js, pass the exported `readFileUri`:
+
+```js
+import { evaluateXPath, readFileUri } from "@tradik/xslt3";
+
+evaluateXPath("json-doc('file:///srv/data/config.json')?name", null, {
+  textLoader: readFileUri,
+});
 ```
 
 Values are returned as data model items (`{ type, value }` for atomic values,

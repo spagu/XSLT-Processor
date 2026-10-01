@@ -71,6 +71,12 @@ describe("collations", () => {
     assert.equal(getCollation(HTML_ASCII_COLLATION).compare("ABC", "abc"), 0);
     assert.equal(getCollation(UCA).compare("a", "b"), -1);
     throwsCode(() => getCollation("http://example.com/c"), "FOCH0002");
+    const base = { staticBaseUri: "http://www.w3.org/2005/xpath-functions/" };
+    assert.equal(
+      getCollation("collation/codepoint", base).uri,
+      CODEPOINT_COLLATION,
+    );
+    throwsCode(() => getCollation("collation/codepoint"), "FOCH0002");
   });
 
   it("honours the UCA parameters Intl.Collator supports", () => {
@@ -87,6 +93,12 @@ describe("collations", () => {
       c("lang=en;alternate=shifted;strength=primary", "a-b", "ab"),
       0,
     );
+    const space = (params) => c(`lang=en;${params}`, "database", "data base");
+    assert.equal(space("alternate=blanked;strength=quaternary"), 0);
+    assert.notEqual(space("alternate=blanked;strength=identical"), 0);
+    assert.notEqual(space("alternate=shifted;strength=4"), 0);
+    assert.notEqual(space("alternate=shifted;strength=5"), 0);
+    assert.equal(space("alternate=shifted;strength=tertiary"), 0);
     assert.equal(c("lang=@*!+%", "a", "b"), -1);
     assert.equal(c("fallback=no;lang=en", "a", "b"), -1);
     throwsCode(

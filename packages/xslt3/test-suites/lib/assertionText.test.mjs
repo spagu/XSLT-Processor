@@ -94,6 +94,7 @@ describe("xml comparison", () => {
       1,
     );
     assert.equal(parseFragment("text<a/>").childNodes.length, 2);
+    assert.equal(parseFragment("\n <a/>\n ").childNodes.length, 1);
   });
 
   it("finds equality regardless of attribute order and namespace declarations", () => {

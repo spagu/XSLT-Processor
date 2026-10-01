@@ -1,7 +1,8 @@
 /**
  * The adapter of the @tradik/xslt3 engine: XPath compilation (parse stage:
  * syntax and static analysis), evaluation, source documents parsed with
- * @xmldom/xmldom, and a basic XML serialization of results.
+ * @xmldom/xmldom, and the serialization of results with the engine's
+ * serializer (Serialization 3.1, every output method).
  *
  * @module test-suites/lib/engineAdapter
  */
@@ -10,8 +11,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DOMImplementation, DOMParser } from "@xmldom/xmldom";
 import { confinePath } from "../../../../scripts/lib/fsSafety.mjs";
-import { serializeXml } from "./serialize.mjs";
-import { NotRunError } from "./assertions.mjs";
+import { serialize } from "../../src/serialize/index.js";
 import { decodeXml } from "./xmlUtil.mjs";
 
 /**
@@ -25,6 +25,13 @@ import { decodeXml } from "./xmlUtil.mjs";
  */
 export function parseXml(text, uri) {
   const errors = [];
+  // xmldom does not check characters: XML 1.0 Char only
+  const bad = /[^\t\n\r\x20-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u.exec(
+    text,
+  );
+  if (bad) {
+    errors.push(`character U+${bad[0].codePointAt(0).toString(16)}`);
+  }
   const parser = new DOMParser({
     onError: (level, message) => {
       if (level !== "warning") errors.push(message);
@@ -32,7 +39,7 @@ export function parseXml(text, uri) {
   });
   let document;
   try {
-    document = parser.parseFromString(text, "text/xml");
+    if (!errors.length) document = parser.parseFromString(text, "text/xml");
   } catch (error) {
     errors.push(error.message);
   }
@@ -53,6 +60,49 @@ export function parseXml(text, uri) {
   }
   if (uri) document.documentURI = uri;
   return document;
+}
+
+/**
+ * A text resource of the test environment, or a file: URI.
+ *
+ * @param {{uri: string, file: string, encoding?: string, mediaType?: string}[]} resources
+ *   - Resources of the environment
+ * @param {string} uri - Absolute URI
+ * @returns {object|null} `{content, encoding, mediaType}`, null when absent
+ */
+function loadResource(resources, uri) {
+  const resource = resources.find(
+    (r) => r.uri === uri || uri.endsWith(`/${r.uri}`),
+  );
+  if (resource) {
+    return {
+      content: readFileSync(confinePath(resource.file)),
+      encoding: resource.encoding,
+      mediaType: resource.mediaType,
+    };
+  }
+  if (uri.startsWith("file:")) {
+    return readFileSync(confinePath(fileURLToPath(uri)));
+  }
+  return null;
+}
+
+/**
+ * The documents of a collection of the test environment.
+ *
+ * @param {{uri?: string, sources: {file?: string}[]}[]} collections - Collections
+ * @param {string|null} uri - Absolute URI, null for the default collection
+ * @param {(file: string) => Document} loadFile - Document loader
+ * @returns {Document[]|null} the documents, null when unknown
+ */
+function collectionItems(collections, uri, loadFile) {
+  const collection = collections.find((c) =>
+    uri === null
+      ? !c.uri
+      : Boolean(c.uri) && (c.uri === uri || uri.endsWith(`/${c.uri}`)),
+  );
+  if (!collection || collection.queries.length) return null;
+  return collection.sources.map((source) => loadFile(source.file));
 }
 
 /**
@@ -114,6 +164,10 @@ export function createEngineAdapter(engine) {
         .evaluate(context.contextItem, {
           variables: context.variables ?? {},
           documentLoader,
+          textLoader: (uri) => loadResource(context.resources ?? [], uri),
+          xmlParser: (text) => parseXml(text),
+          collections: (uri) =>
+            collectionItems(context.collections ?? [], uri, loadFile),
           createDocument: () =>
             new DOMImplementation().createDocument(null, null),
         });
@@ -122,12 +176,9 @@ export function createEngineAdapter(engine) {
       if (source.file) return loadFile(source.file);
       return parseXml(source.content ?? "", source.uri);
     },
+    // XQuery 3.1 defaults (Appendix C.3): no XML declaration
     serialize(value, params = {}) {
-      const method = params.method ?? "xml";
-      if (method !== "xml") {
-        throw new NotRunError(`serialization method ${method}`);
-      }
-      return serializeXml(value);
+      return serialize(value, { "omit-xml-declaration": true, ...params });
     },
   };
 }

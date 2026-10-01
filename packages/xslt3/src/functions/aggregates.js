@@ -42,7 +42,10 @@ export function promoteAll(items) {
     return values.map((v) => cast(v, target));
   }
   if (primitives.has("anyURI") && primitives.has("string")) {
-    return values.map((v) => cast(v, types.string));
+    // only the URIs are promoted: an xs:token stays an xs:token
+    return values.map((v) =>
+      v.type.primitive === types.anyURI ? cast(v, types.string) : v,
+    );
   }
   return values;
 }

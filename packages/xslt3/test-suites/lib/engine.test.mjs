@@ -12,9 +12,7 @@ import {
   toBoolean,
   toText,
 } from "./adapter.mjs";
-import { NotRunError } from "./assertions.mjs";
 import { createEngineAdapter, parseXml } from "./engineAdapter.mjs";
-import { serializeXml } from "./serialize.mjs";
 
 describe("the engine adapter", () => {
   it("is the default adapter when the engine exists", async () => {
@@ -98,33 +96,78 @@ describe("the engine adapter", () => {
     }
   });
 
+  it("reads resources, collections and XML strings", () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-"));
+    try {
+      const file = join(dir, "r.txt");
+      writeFileSync(file, "text");
+      const xml = join(dir, "c.xml");
+      writeFileSync(xml, "<c/>");
+      const adapter = createEngineAdapter(engine);
+      const context = {
+        staticBaseUri: pathToFileURL(join(dir, "set.xml")).href,
+        resources: [{ uri: "res.txt", file, encoding: "utf-8" }],
+        collections: [
+          { uri: "", sources: [{ file: xml }], queries: [] },
+          { uri: "q", sources: [], queries: ["1"] },
+        ],
+      };
+      const run = (expr) => toText(adapter.evaluateXPath(expr, context));
+      assert.equal(run("unparsed-text('res.txt')"), "text");
+      assert.equal(run("unparsed-text('r.txt')"), "text");
+      assert.equal(run("unparsed-text-available('none.txt')"), "false");
+      assert.equal(run("name(collection()/*)"), "c");
+      assert.throws(() => run("collection('q')"), { code: "FODC0002" });
+      assert.throws(() => run("collection('other')"), { code: "FODC0002" });
+      assert.equal(run("name(parse-xml('<p/>')/*)"), "p");
+      assert.throws(() => adapter.evaluateXPath("collection()", {}), {
+        code: "FODC0002",
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("reports XML that is not well-formed as FODC0002", () => {
     assert.throws(() => parseXml("<a>"), { code: "FODC0002" });
+    assert.throws(() => parseXml("<a>\u0001</a>"), { code: "FODC0002" });
     assert.throws(() => parseXml("<a></b>"), { code: "FODC0002" });
   });
 
-  it("serializes as XML only", () => {
+  it("serializes with every output method", () => {
     const adapter = createEngineAdapter(engine);
     assert.equal(adapter.serialize(engine.evaluateXPath("1, 2"), {}), "1 2");
     assert.equal(adapter.serialize([], { method: "xml" }), "");
-    assert.throws(() => adapter.serialize([], { method: "json" }), NotRunError);
+    assert.equal(adapter.serialize([], { method: "json" }), "null");
   });
 });
 
-describe("XML serialization of results", () => {
+describe("serialization of results", () => {
+  const adapter = createEngineAdapter(engine);
+  const params = { method: "xml", "omit-xml-declaration": true };
+
   it("normalizes sequences", () => {
     const doc = parseXml("<!DOCTYPE r><r a='1'>x<b/></r>");
     const items = engine.evaluateXPath("(1, 'a', /r/b, [2, [3]], /)", doc);
-    assert.equal(serializeXml(items), '1 a<b/>2 3<r a="1">x<b/></r>');
-    assert.equal(serializeXml(engine.evaluateXPath("1")[0]), "1");
+    assert.equal(
+      adapter.serialize(items, params),
+      '1 a<b/>2 3<r a="1">x<b/></r>',
+    );
+    assert.equal(adapter.serialize(engine.evaluateXPath("1")[0], params), "1");
+    // a raw CR would become LF when the output is parsed again
+    assert.equal(
+      adapter.serialize(parseXml("<r>a&#13;</r>"), params),
+      "<r>a&#xD;</r>",
+    );
   });
 
   it("rejects attributes, namespace nodes, maps and functions", () => {
     const doc = parseXml("<r a='1'/>");
     for (const expr of ["/r/@a", "/r/namespace::*", "map{}", "count#1"]) {
-      assert.throws(() => serializeXml(engine.evaluateXPath(expr, doc)), {
-        code: "SENR0001",
-      });
+      assert.throws(
+        () => adapter.serialize(engine.evaluateXPath(expr, doc), params),
+        { code: "SENR0001" },
+      );
     }
   });
 });

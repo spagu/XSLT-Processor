@@ -45,6 +45,16 @@ describe("contexts", () => {
     });
   });
 
+  it("defaults the static base URI to the test set file", () => {
+    const set = "file:///suite/fn/set.xml";
+    assert.equal(staticContext(null, set).staticBaseUri, set);
+    assert.equal(staticContext(environment, set).staticBaseUri, "http://b/");
+    const none = { ...environment, staticBaseUri: undefined };
+    assert.equal(staticContext(none, set).staticBaseUri, set);
+    const undefinedBase = { ...environment, staticBaseUri: "#UNDEFINED" };
+    assert.equal(staticContext(undefinedBase, set).staticBaseUri, undefined);
+  });
+
   it("loads documents and evaluates parameters and the context item", () => {
     const adapter = {
       loadDocument: (source) => `doc:${source.role}`,

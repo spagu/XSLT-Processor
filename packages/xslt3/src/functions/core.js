@@ -1,8 +1,10 @@
 /**
  * The core functions of F&O 3.1 that depend on the evaluator: booleans,
- * focus, string, data and number conversion, count, empty and exists. `coreFunctions` gathers these and the
- * other modules of this package that have no home of their own yet
- * (sequences, nodes, higher-order functions, maps and arrays).
+ * focus, string, data and number conversion, count, empty and exists.
+ * `coreFunctions` gathers these and the other modules of this package
+ * that depend on the evaluator or on the hooks of the dynamic context
+ * (nodes, higher-order functions, maps and arrays, JSON, resources,
+ * random numbers, IDs, collections).
  *
  * @module @tradik/xslt3/functions/core
  */
@@ -23,6 +25,12 @@ import { mapFunctions } from "./maps.js";
 import { nodeFunctions } from "./nodes.js";
 import { focusItem } from "./focus.js";
 import { diagnosticFunctions } from "./diagnostics.js";
+import { collectionFunctions } from "./collections.js";
+import { idFunctions } from "./ids.js";
+import { jsonFunctions } from "./json/index.js";
+import { parseXmlFunctions } from "./parseXml.js";
+import { randomFunctions } from "./random.js";
+import { unparsedTextFunctions } from "./unparsedText.js";
 
 /**
  * fn:string of an optional item.
@@ -148,4 +156,10 @@ export const coreFunctions = [
   ...higherOrderFunctions,
   ...mapFunctions,
   ...arrayFunctions,
+  ...jsonFunctions,
+  ...unparsedTextFunctions,
+  ...parseXmlFunctions,
+  ...randomFunctions,
+  ...idFunctions,
+  ...collectionFunctions,
 ];

@@ -66,6 +66,11 @@ describe("format-date, format-time and format-dateTime", () => {
       "31 31 tuesday AD AD 12",
     );
     assert.equal(dateTime("[F,3-4] [FNn,*-3] [P1] [C1]"), "tues Tue pm AD");
+    const september = v("date", "2002-09-05").value;
+    assert.equal(
+      formatDateTime("date", september, "[MNn,3-4] [FN,3-5] [FNn,2-2] [MNn,5]"),
+      "Sept THURS Th September",
+    );
     assert.equal(
       time("[h] [H] [P,2] [m] [s] [f1,1-1] [f01] [f,1-*]"),
       "3 15 pm 58 45 7 76 762",
