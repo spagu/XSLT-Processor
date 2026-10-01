@@ -1,0 +1,41 @@
+{
+  "name": "@tradik/xslt3",
+  "version": "0.0.0",
+  "private": true,
+  "description": "XSLT 3.0 and XPath 3.1 in JavaScript, also running XSLT 2.0 stylesheets (in development, see docs/XSLT3.md)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.js"
+  ],
+  "scripts": {
+    "test": "node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=96 --test-coverage-exclude=\"**/*.test.js\" \"src/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22.8.0"
+  },
+  "license": "BSD-3-Clause",
+  "author": "tradik",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spagu/XSLT-Processor.git",
+    "directory": "packages/xslt3"
+  },
+  "homepage": "https://xslt-processor.tradik.com/",
+  "bugs": {
+    "url": "https://github.com/spagu/XSLT-Processor/issues"
+  },
+  "keywords": [
+    "xslt",
+    "xslt3",
+    "xslt2",
+    "xpath",
+    "xpath3",
+    "xml",
+    "json",
+    "transform"
+  ]
+}

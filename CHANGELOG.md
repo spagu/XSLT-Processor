@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **XSLT 2.0 / 3.0 track started** ([docs/XSLT3.md](docs/XSLT3.md)): the repository is an npm workspace monorepo, and `packages/xslt3` holds `@tradik/xslt3`, a separate engine for XSLT 3.0 and XPath 3.1 that will also run 2.0 stylesheets and 1.0 ones in backwards-compatible mode. Not published yet. `@tradik/xslt-processor` is unchanged (same files, still zero dependencies); `npm run test:xslt3` runs the new package's tests.
+
 ### Internal
 
 - The release workflow's `release-binaries` job failed with `Cannot find package 'esbuild'`: `scripts/binaries/build.mjs checksums` loaded the bundler although that job installs no dependencies. esbuild is now loaded only when a binary is built. The v1.2.1 executables and `checksums.sha256` were attached by hand from the release run's artifacts, checked with `sha256sum --check` and `scripts/install.sh`.

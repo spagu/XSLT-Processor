@@ -46,6 +46,9 @@ jobs:
       - name: Run tests with coverage
         run: npm test
 
+      - name: Run @tradik/xslt3 tests with coverage
+        run: npm run test:xslt3
+
       - name: Build distribution
         run: npm run build
 

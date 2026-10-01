@@ -41,6 +41,21 @@ npm run format:check
 The `Makefile` wraps the same commands (`make test`, `make build`, `make lint`,
 `make docker-test`, ...; `make help` lists them).
 
+## Repository layout
+
+The repository is an npm workspace. The root is the published
+`@tradik/xslt-processor` (XSLT 1.0; `src/`, `bin/`), and `packages/` holds
+further packages, built and tested on their own:
+
+| Directory | Package | Tests |
+|---|---|---|
+| `.` | `@tradik/xslt-processor` | `npm test` |
+| `packages/xslt3` | `@tradik/xslt3` (XSLT 3.0 / XPath 3.1, in development, [design](XSLT3.md)) | `npm run test:xslt3` |
+
+`npm ci` at the root installs every package. A workspace never becomes a
+dependency of `@tradik/xslt-processor`: its tarball holds only `dist/`,
+`src/` and `bin/`.
+
 ## Docker
 
 ```bash
