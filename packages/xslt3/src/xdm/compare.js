@@ -63,7 +63,9 @@ function compareNumeric(a, b, pa, pb) {
   const level = numericRank[pa] > numericRank[pb] ? pa : pb;
   const x = promote(a, level);
   const y = promote(b, level);
-  return level === "decimal" ? x.compare(y) : sign(x - y);
+  if (level === "decimal") return x.compare(y);
+  // Equal infinities: INF - INF is NaN, which would make them unordered
+  return x === y ? 0 : sign(x - y);
 }
 
 /**

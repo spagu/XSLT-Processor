@@ -9,6 +9,18 @@ const L = (type, text) => fromLexical(type, text);
 const vc = (a, op, b, options) => valueCompare(a, op, b, options);
 
 describe("valueCompare: numbers", () => {
+  it("orders equal infinities as equal (INF - INF is NaN)", () => {
+    const inf = L("xs:double", "INF");
+    assert.equal(vc(inf, "eq", L("xs:double", "INF")), true);
+    assert.equal(vc(inf, "le", L("xs:float", "INF")), true);
+    assert.equal(
+      vc(L("xs:double", "-INF"), "eq", L("xs:double", "-INF")),
+      true,
+    );
+    assert.equal(vc(L("xs:double", "-INF"), "lt", inf), true);
+    assert.equal(deepEqualAtomic(inf, L("xs:double", "INF")), true);
+  });
+
   it("promotes integer → decimal → float → double", () => {
     assert.equal(vc(L("xs:integer", "1"), "eq", L("xs:decimal", "1.0")), true);
     assert.equal(vc(L("xs:integer", "1"), "lt", L("xs:double", "1.5")), true);
