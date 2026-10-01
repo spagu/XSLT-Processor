@@ -22,12 +22,18 @@ import { XPathEvaluator, XPathContext } from "./evaluator.js";
  *
  * @param {string} expression - XPath expression
  * @param {Node} contextNode - Context node
- * @param {Object} options - Options (variables, namespaces)
+ * @param {Object} options - Options: variables, namespaces, and the
+ *   evaluator limits maxResultSize, maxRecursionDepth and maxStringLength
+ *   (defaults in XPathLimits)
  * @returns {*} Evaluation result
  */
 export function evaluate(expression, contextNode, options = {}) {
   const ast = parse(expression);
-  const evaluator = new XPathEvaluator();
+  const evaluator = new XPathEvaluator({
+    maxResultSize: options.maxResultSize,
+    maxRecursionDepth: options.maxRecursionDepth,
+    maxStringLength: options.maxStringLength,
+  });
   const context = new XPathContext(
     contextNode,
     1,

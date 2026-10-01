@@ -10,7 +10,6 @@ import {
   compareDomPositions,
   compareNodeOrder,
   hasNativePositionComparison,
-  hasPositionComparison,
 } from "./documentOrder.js";
 import { XSLTProcessor } from "../index.js";
 import { namespaceAxis } from "./namespaceNodes.js";
@@ -134,19 +133,13 @@ describe("DocumentOrderIndex", () => {
   });
 });
 
-describe("compareDomPositions and hasPositionComparison", () => {
+describe("compareDomPositions", () => {
   it("reads compareDocumentPosition", () => {
     const k = r.firstChild;
     assert.strictEqual(compareDomPositions(r, k), -1);
     assert.strictEqual(compareDomPositions(k, r), 1);
     const disconnected = { compareDocumentPosition: () => 1 };
     assert.strictEqual(compareDomPositions(disconnected, r), 0);
-  });
-
-  it("looks at the element of a namespace node", () => {
-    const [xmlNs] = namespaceAxis(r, new WeakMap());
-    assert.strictEqual(hasPositionComparison(xmlNs), true);
-    assert.strictEqual(hasPositionComparison({ nodeType: 1 }), false);
   });
 });
 

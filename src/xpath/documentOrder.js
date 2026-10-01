@@ -90,18 +90,6 @@ export function compareDomPositions(a, b) {
 }
 
 /**
- * Whether the DOM of a node can compare positions
- * (`compareDocumentPosition`; xmldom 0.8 cannot).
- *
- * @param {Node} node - A DOM node or namespace node
- * @returns {boolean} True when `compareDocumentPosition` is available
- */
-export function hasPositionComparison(node) {
-  const domNode = node.nodeType === NAMESPACE_NODE ? node.ownerElement : node;
-  return typeof domNode.compareDocumentPosition === "function";
-}
-
-/**
  * Whether a node's DOM compares positions in native code (browsers), as
  * opposed to a JavaScript implementation (jsdom, xmldom) or none.
  *

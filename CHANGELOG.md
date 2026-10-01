@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The standalone XPath API was very slow on @xmldom/xmldom** (task 0036): `evaluateXPath`, `selectXPath` and `XPathEvaluator` sorted node-sets with one `compareDocumentPosition` call per comparison whenever the DOM had the method, and xmldom's is written in JavaScript: `sum(//item/@price)` over 20,000 items took 27.9 s, now 30 ms. They now number the trees once per evaluation unless the DOM compares positions natively (browsers), as transformations already did; an `XPathEvaluator` reused across evaluations numbers the trees again for each one, so changes to the document between calls are seen.
+
 ### Documentation
 
 - **ssg 1.8.64** for the website: it fixes the two ssg bugs we reported, spagu/ssg#309 (fingerprinting left ES module imports unrewritten) and #310 (heading ids differed from GitHub's for linked headings). CSS and JS are fingerprinted again (`fingerprint: true`) and cached for a year as immutable; the `max-age=0` workaround is gone. `check-site.mjs` finds `css/tokens.css` under its fingerprinted name.
@@ -14,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `evaluateXPath`, `selectXPath` and `selectFirstXPath` accept the evaluator limits `maxResultSize`, `maxRecursionDepth` and `maxStringLength` in their options; the defaults are unchanged (10,000 nodes per step, see docs/SECURITY-LIMITS.md).
 - **XPath benchmark** (`npm run bench:xpath`, docs/BENCHMARKS.md): XPath 1.0 in `@tradik/xslt-processor` against XPath 3.1 in `@tradik/xslt3` on the same 20,000-item document, with jsdom and @xmldom/xmldom, plus XPath 3.1-only scenarios; a pre-check confirms both engines return the same results. On jsdom the new engine is 1.10 times slower on geometric mean, on xmldom 27 times faster. It found that the 1.0 package's standalone XPath API sorts slowly on xmldom (7 to 33 s for 20,000 nodes; transformations are not affected), tracked as a separate fix.
 - **Playground: XPath 3.1 mode** (`?mode=xpath`): evaluate XPath 3.1 with `@tradik/xslt3` against your XML, with variables and namespace prefixes; results listed with their types, item count and time, errors with their W3C code; nine examples (for/let, sort with a key, maps, regex, format-date, `=>`, fold-left, namespaces). The engine is a separate browser bundle (145 kB, 51 kB gzip) loaded only when the mode is opened.
 - **Blog on the website** (`/blog/`) with RSS (`/blog/rss.xml`) and Atom (`/blog/feed.xml`) feeds, linked from the header and footer and announced to feed readers on every page. First articles: why Chrome turns off XSLT on 17 November 2026, what that breaks and the options, and why XSLT 2.0/3.0 is a separate package (`@tradik/xslt3`), with SVG charts in light and dark colours. Posts are Markdown files in `site/posts/` (see docs/DEVELOPMENT.md).
