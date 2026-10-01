@@ -17,7 +17,6 @@ import { compileNodeTest } from "../../xpath/eval/nodeTests.js";
 import { isPositionIndependent } from "../../xpath/eval/positional.js";
 import { compilePredicate } from "../../xpath/eval/predicates.js";
 import { namespaceOf } from "../../xpath/eval/staticContext.js";
-import { xsltError } from "../names.js";
 
 /** Node kinds an axis step can match, by axis. */
 const AXIS_KINDS = {
@@ -42,7 +41,7 @@ const KIND_KEYS = {
  * @param {object} sc
  * @returns {string}
  */
-function stepKey(step, sc) {
+export function stepKey(step, sc) {
   const { nodeTest, axis } = step;
   const attribute = axis === "attribute";
   if (axis === "self") return "*";
@@ -71,10 +70,8 @@ function compileAxisStep(step, env) {
     step.nodeTest.type === "DocumentTest" &&
     !env.text.startsWith("child::", step.start);
 
+  // the axis is child, attribute, namespace or (alone) self: see paths.js
   const kindOk = documentStep ? AXIS_KINDS.self : AXIS_KINDS[step.axis];
-  if (!kindOk) {
-    throw xsltError("XTSE0340", `The ${step.axis} axis is not allowed here`);
-  }
   const nodeTest = compileNodeTest(step.nodeTest, step.axis, env.sc);
   const accepts = (node) => kindOk(node) && nodeTest(node);
   const scope = { sc: env.sc, vars: env.vars };

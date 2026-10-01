@@ -162,6 +162,9 @@ const ON_NO_MATCH = new Set([
  * @param {object} cx
  */
 export function declareMode({ element }, cx) {
+  if (cx.children(element).length > 0) {
+    throw xsltError("XTSE0010", "xsl:mode must be empty");
+  }
   const nameText = attr(element, "name");
   const name =
     nameText === undefined || nameText.trim() === "#unnamed"

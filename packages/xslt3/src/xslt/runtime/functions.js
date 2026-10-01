@@ -16,9 +16,11 @@ import { AtomicValue, isNode } from "../../xdm/atomic.js";
 import { types } from "../../xdm/types.js";
 import { stringValue } from "../../xdm/nodes.js";
 import { xsltError } from "../names.js";
+import { accumulatorFunctions } from "./accumulatorFunctions.js";
 import { availabilityFunctions, nameArgument } from "./availability.js";
 import { copyFunctions } from "./copyFunctions.js";
 import { keyLookup } from "./keys.js";
+import { mergeFunctions } from "./merging.js";
 
 /**
  * Whether a node is a node of the subtree rooted at another.
@@ -156,4 +158,6 @@ export const xsltFunctions = [
     returns: "xs:string",
     impl: () => [stringItem("")],
   })),
+  ...accumulatorFunctions,
+  ...mergeFunctions,
 ];

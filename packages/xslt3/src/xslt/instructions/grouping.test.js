@@ -176,8 +176,8 @@ describe("xsl:for-each-group", () => {
           xml,
         ],
         [
-          '<xsl:for-each-group select="1" group-starting-with="a"/>',
-          "XTTE1120",
+          '<xsl:for-each-group select="1 to 5" group-starting-with=".[. mod 2 = 1]">{count(current-group())}</xsl:for-each-group>',
+          "221",
         ],
         [
           '<xsl:variable name="n" select="\'h\'"/><xsl:for-each-group select="doc/*" group-starting-with="*[name() = $n]">{count(current-group())}</xsl:for-each-group>',
@@ -186,6 +186,16 @@ describe("xsl:for-each-group", () => {
         ],
       ],
       options,
+    );
+    // XSLT 2.0 groups nodes only
+    checkBodies(
+      [
+        [
+          '<xsl:for-each-group select="1" group-starting-with="a"/>',
+          "XTTE1120",
+        ],
+      ],
+      { ...options, version: "2.0" },
     );
   });
 });

@@ -9,8 +9,8 @@
  */
 
 import { parentOf } from "../../xpath/eval/domNodes.js";
-import { xsltError } from "../names.js";
-import { compileStep, stepPriority } from "./steps.js";
+import { compileGeneralPath } from "./general.js";
+import { compileStep, stepPriority, stepKey } from "./steps.js";
 
 /** Functions allowed as the first step of a path pattern. */
 const ROOT_FUNCTIONS = new Set(["id", "key", "doc", "element-with-id", "root"]);
@@ -29,19 +29,30 @@ const isSlashSlash = (step) =>
   step.nodeTest.type === "AnyKindTest" &&
   step.predicates.length === 0;
 
+/** Axes the fast matcher follows upwards (self:: only alone). */
+const FAST_AXES = new Set(["child", "attribute", "namespace"]);
+
 /**
- * Checks that a step that is not an axis step is a rooted first step
- * (key(), id(), doc(), $var...).
+ * Whether the fast matcher handles a step: an axis step on a fast axis,
+ * `//`, or an unfiltered rooted first step (key(), id(), doc(), $var...).
  * @param {object} step
  * @param {boolean} first
+ * @param {boolean} alone - The step is the whole pattern
+ * @returns {boolean}
  */
-function checkStep(step, first) {
-  if (step.type === "AxisStep") return;
-  const rooted =
+function isFastStep(step, first, alone) {
+  if (step.type === "AxisStep") {
+    return (
+      FAST_AXES.has(step.axis) ||
+      isSlashSlash(step) ||
+      (alone && step.axis === "self")
+    );
+  }
+  return (
     first &&
     ((step.type === "FunctionCall" && ROOT_FUNCTIONS.has(step.name.local)) ||
-      step.type === "VarRef");
-  if (!rooted) throw xsltError("XTSE0340", "Invalid step in a pattern");
+      step.type === "VarRef")
+  );
 }
 
 /**
@@ -89,6 +100,18 @@ export function compilePathPattern(ast, env) {
   if (absolute && steps.length === 0) {
     return { matches: (item) => isDocument(item), priority: -0.5, key: "k9" };
   }
+  const last = steps.at(-1);
+  const single = steps.length === 1 && !absolute;
+  const fast = steps.every((step, i) =>
+    isFastStep(step, i === 0 && !absolute, single),
+  );
+  if (!fast) {
+    return {
+      matches: compileGeneralPath(ast, env),
+      priority: single ? stepPriority(last) : 0.5,
+      key: last.type === "AxisStep" ? stepKey(last, env.sc) : "*",
+    };
+  }
   const parts = [];
   let separator = absolute ? "/" : null;
   for (const step of steps) {
@@ -96,12 +119,9 @@ export function compilePathPattern(ast, env) {
       separator = "//";
       continue;
     }
-    checkStep(step, parts.length === 0 && !absolute);
     parts.push({ separator, test: compileStep(step, env) });
     separator = "/";
   }
-  const last = steps.at(-1);
-  const single = parts.length === 1 && !absolute;
   return {
     matches: matchParts(parts),
     priority: single ? stepPriority(last) : 0.5,

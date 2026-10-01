@@ -39,7 +39,7 @@ export function invokeTemplate(template, xc, out, machine, args) {
     tunnel = new Map(tunnel ?? []);
     for (const [key, value] of args.tunnel) tunnel.set(key, value);
   }
-  let ctx = derive(xc, { env: xc.tx.globalEnv, tunnel });
+  let ctx = derive(xc, { env: xc.tx.globalEnv, tunnel, merge: undefined });
   for (const param of template.params) {
     let value = param.tunnel
       ? tunnel?.get(param.key)

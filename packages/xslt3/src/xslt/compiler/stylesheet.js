@@ -12,6 +12,8 @@ import { defaultFunctionLibrary } from "../../xpath/index.js";
 import { xsltFunctions } from "../runtime/functions.js";
 import { XSL_NS, xsltError } from "../names.js";
 import { declareAttributeSet } from "../instructions/attributeSets.js";
+import { declareAccumulators } from "./accumulatorDecl.js";
+import { declareGlobalContextItem } from "./globalContextItem.js";
 import { checkAttributes, checkEmpty } from "./attributes.js";
 import { infoOf } from "./elementInfo.js";
 import { ExpressionCompiler } from "./expressions.js";
@@ -55,6 +57,7 @@ const DECLARATIONS = new Set([
   "mode",
   "import-schema",
   "global-context-item",
+  "accumulator",
 ]);
 
 /** Declarations that must be empty. */
@@ -164,6 +167,8 @@ export class StylesheetCompiler extends CompilerRegistry {
     );
     for (const declaration of all("mode")) declareMode(declaration, this);
     this.globals = compileGlobals(globals, this);
+    declareAccumulators(all, this);
+    declareGlobalContextItem(all("global-context-item"), this);
     for (const { element } of all("attribute-set")) {
       declareAttributeSet(element, this);
     }

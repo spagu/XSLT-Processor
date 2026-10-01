@@ -9,7 +9,7 @@
 import { Mode } from "../patterns/modes.js";
 import { useStaticContext } from "../runtime/context.js";
 import { callFunction } from "../runtime/functionCall.js";
-import { tokens, xsltError } from "../names.js";
+import { attr, tokens, xsltError } from "../names.js";
 import { infoOf } from "./elementInfo.js";
 import { expandCharacterMaps } from "./outputDecl.js";
 import { StaticStage } from "./staticStage.js";
@@ -170,6 +170,9 @@ export class CompilerRegistry extends StaticStage {
       params: Array(signature.arity).fill("item()*"),
       returns: "item()*",
       impl: (args, context) => callFunction(compiled, args, context),
+      // xsl:evaluate sees the public and final functions only
+      visibility:
+        attr(signature.declaration.element, "visibility")?.trim() ?? "private",
     };
   }
 

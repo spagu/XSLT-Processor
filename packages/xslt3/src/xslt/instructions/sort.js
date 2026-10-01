@@ -48,7 +48,7 @@ function optionalAvt(element, name, cx, scope) {
  * @param {object} scope
  * @returns {object} the compiled key
  */
-function compileSortKey(element, cx, scope) {
+export function compileSortKey(element, cx, scope) {
   checkAttributes(element);
   const select = attr(element, "select");
   const children = cx.children(element);

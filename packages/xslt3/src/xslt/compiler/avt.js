@@ -49,6 +49,20 @@ function closingBracket(text, start) {
 }
 
 /**
+ * Removes the XPath comments (which nest) from a text.
+ * @param {string} text
+ * @returns {string}
+ */
+export function withoutComments(text) {
+  let result = text;
+  for (let previous = ""; previous !== result;) {
+    previous = result;
+    result = result.replace(/\(:(?:(?!\(:|:\))[^])*:\)/g, "");
+  }
+  return result;
+}
+
+/**
  * Splits an attribute value template.
  * @param {string} text
  * @returns {Array<string|{expr: string}>} literal parts and expressions
@@ -71,13 +85,13 @@ export function parseAvt(text) {
       throw xsltError("XTSE0370", `Unescaped "}" in "${text}"`);
     } else if (c === "{") {
       const end = closingBracket(text, i + 1);
-      if (literal) parts.push(literal);
-      literal = "";
       const expr = text.slice(i + 1, end);
-      if (expr.trim() === "") {
-        throw xsltError("XTSE0350", `Empty expression in "${text}"`);
+      // an empty expression (or only comments) stands for ""
+      if (withoutComments(expr).trim() !== "") {
+        if (literal) parts.push(literal);
+        literal = "";
+        parts.push({ expr });
       }
-      parts.push({ expr });
       i = end + 1;
     } else {
       literal += c;

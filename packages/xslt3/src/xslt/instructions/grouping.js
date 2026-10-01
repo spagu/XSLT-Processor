@@ -71,11 +71,12 @@ function groupByKeys(items, keysOf, xc, adjacent, collation) {
  * Groups by patterns (group-starting-with, group-ending-with).
  * @returns {Array<{items: Array, key: undefined}>}
  */
-function groupByPattern(items, pattern, xc, starting) {
+function groupByPattern(items, pattern, xc, starting, strict) {
   const groups = [];
   let current = null;
   items.forEach((item, i) => {
-    if (!isNode(item)) {
+    // XSLT 2.0 groups nodes only; 3.0 any items
+    if (strict && !isNode(item)) {
       throw xsltError("XTTE1120", "Pattern grouping applies to nodes only");
     }
     const matches = patternMatches(
@@ -128,6 +129,7 @@ export function compileForEachGroup(element, cx, scope) {
   const { sorts, rest } = splitSorts(cx.children(element));
   const sort = compileSorts(sorts, cx, scope);
   const body = compileBody(element, cx, scope, rest);
+  const strict = cx.versionOf(element) < 3;
   return (xc, out, machine) => {
     const items = evaluate(select, xc);
     let collationObject = getCollation(undefined, xc.tx.dyn);
@@ -140,7 +142,13 @@ export function compileForEachGroup(element, cx, scope) {
       }
     }
     const groups = byPattern
-      ? groupByPattern(items, pattern, xc, method === "group-starting-with")
+      ? groupByPattern(
+          items,
+          pattern,
+          xc,
+          method === "group-starting-with",
+          strict,
+        )
       : groupByKeys(
           items,
           (focus) => evaluate(keys, focus),

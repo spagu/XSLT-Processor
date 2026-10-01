@@ -64,7 +64,7 @@ const ALLOWED = {
   try: "select rollback-output",
   catch: "errors select",
   "context-item": "as use",
-  "global-context-item": "as use",
+  "global-context-item": "as use use-accumulators",
   message: "select terminate error-code",
   "namespace-alias": "stylesheet-prefix result-prefix",
   namespace: "name select",
@@ -91,6 +91,26 @@ const ALLOWED = {
   variable: "name select as visibility static",
   when: "test",
   "with-param": "name select as tunnel",
+  // XSLT 3.0 instructions of task 0031
+  break: "select",
+  iterate: "select",
+  "next-iteration": "",
+  "on-completion": "select",
+  "on-empty": "select",
+  "on-non-empty": "select",
+  "where-populated": "",
+  fork: "",
+  accumulator: "name initial-value as streamable",
+  "accumulator-rule": "match phase select",
+  "source-document": "href streamable use-accumulators validation type",
+  assert: "test select error-code",
+  evaluate:
+    "xpath as base-uri with-params context-item namespace-context schema-aware",
+  merge: "",
+  "merge-action": "",
+  "merge-key": "select lang order collation case-order data-type",
+  "merge-source":
+    "name for-each-item for-each-source select streamable use-accumulators sort-before-merge validation type",
 };
 
 /** @type {Map<string, Set<string>>} */

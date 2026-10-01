@@ -28,10 +28,12 @@ describe("attribute value templates", () => {
       errorCode(() => parseAvt("{(: 1}")),
       "XTSE0350",
     );
-    assert.equal(
-      errorCode(() => parseAvt("{ }")),
-      "XTSE0350",
-    );
+    // XSLT 3.0: an empty expression, or only comments, stands for ""
+    assert.deepEqual(parseAvt("{ }"), [""]);
+    assert.deepEqual(parseAvt("x{ (: a (: b :) :) }y{1}"), [
+      "xy",
+      { expr: "1" },
+    ]);
     assert.equal(
       errorCode(() => parseAvt("a}b")),
       "XTSE0370",

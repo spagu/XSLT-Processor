@@ -72,7 +72,7 @@ Pass rates per feature are published here as they come in.
 |---|---|---:|---:|---:|
 | qt3tests (XPath 3.1) | parsing and static analysis | 21,787 | 21,759 | 99.9% |
 | qt3tests (XPath 3.1) | evaluation, all families | 21,787 | 21,767 | 99.9% |
-| xslt30-test (XSLT 3.0 and 2.0) | transformation, all families | 7,734 | 6,277 | 81.2% |
+| xslt30-test (XSLT 3.0 and 2.0) | transformation, all families | 7,787 | 6,759 | 86.8% |
 
 The 20 remaining evaluation failures are `collation-key` with UCA collations
 (JavaScript's `Intl` exposes no sort keys), `fn:transform` and
@@ -83,21 +83,21 @@ The parse stage misses only XQuery-only errors and static typing (XPST0005).
 
 XSLT per family:
 
-| Family | Applicable | Pass | Rate |
-|---|---:|---:|---:|
-| expr (expressions in stylesheets) | 635 | 624 | 98.3% |
-| misc | 1,822 | 1,710 | 93.9% |
-| type (types and conversions) | 768 | 695 | 90.5% |
-| fn (XSLT functions) | 1,110 | 952 | 85.8% |
-| attr (attributes and AVTs) | 993 | 806 | 81.2% |
-| insn (instructions) | 1,355 | 965 | 71.2% |
-| decl (declarations) | 1,051 | 525 | 50.0% |
+| Family | Pass |
+|---|---:|
+| expr (expressions in stylesheets) | 624 |
+| misc | 1,749 |
+| type (types and conversions) | 748 |
+| fn (XSLT functions) | 956 |
+| attr (attributes and AVTs) | 857 |
+| insn (instructions) | 1,257 |
+| decl (declarations) | 568 |
 
-Not done yet (task 0031): packages (`xsl:use-package`, most of the 371 tests
-not run), `xsl:accumulator`, `xsl:merge`, `xsl:iterate`, `xsl:on-empty`,
-`xsl:on-non-empty`, `xsl:where-populated` and `xsl:evaluate`; several
-static error codes are reported as XTSE0010 because the instruction is not
-known yet.
+XSLT 3.0 instructions: `xsl:iterate` 44 of 44 tests, `xsl:merge` 74 of 77,
+`xsl:on-empty` 72 of 72, `xsl:where-populated` 26 of 27, `xsl:evaluate` 39 of
+42, patterns 178 of 179, text value templates 59 of 59. Not done yet:
+packages (`xsl:use-package`; most of the 371 tests not run, and 40 of the
+accumulator tests use a package as their root).
 
 ## Using XSLT 3.0
 
@@ -133,6 +133,15 @@ serialize([result.principal].flat(), result.output);
 serialization parameters of `xsl:output`. Recursion runs on an explicit work
 stack, so templates nested 10,000 deep work (`maxDepth` sets the limit). An
 `XSLTProcessor` class with the browser's method names is also exported.
+
+Two XSLT 3.0 features are on by default, as the specification intends, and can
+be turned off per transformation:
+
+- `xsl:evaluate` compiles and runs XPath expressions built at run time, often
+  from the source document. For untrusted input pass
+  `transform({ dynamicEvaluation: false })`: `xsl:evaluate` then runs its
+  `xsl:fallback` children or raises XTDE3175.
+- `xsl:assert`: `transform({ assertions: false })` skips the assertions.
 
 ## Using XPath 3.1
 

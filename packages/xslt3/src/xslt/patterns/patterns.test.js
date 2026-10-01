@@ -152,7 +152,7 @@ describe("patterns", () => {
       "1 +",
       "a/b()",
       "count(a)",
-      "descendant::a",
+      "ancestor::a",
       "a/key('k', 1)",
     ]) {
       assert.equal(

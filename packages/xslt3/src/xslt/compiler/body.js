@@ -14,6 +14,7 @@ import { instructionCompilers } from "../instructions/index.js";
 import { compileLiteralElement } from "../instructions/literal.js";
 import { compileLocalVariable } from "../instructions/variables.js";
 import { checkAttributes } from "./attributes.js";
+import { conditionalBody } from "../runtime/conditional.js";
 
 /**
  * The scope of a compilation: the variables in scope (a linked list of
@@ -125,5 +126,7 @@ export function compileBody(parent, cx, scope, children) {
     } else step = compileLiteralElement(child, cx, current);
     if (step) body.push(step);
   }
-  return body;
+  // xsl:on-empty and xsl:on-non-empty make the whole body conditional
+  const conditional = body.some((step) => step.conditional !== undefined);
+  return conditional ? [conditionalBody(body)] : body;
 }

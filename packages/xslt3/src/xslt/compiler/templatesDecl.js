@@ -16,23 +16,10 @@ import {
   xsltError,
 } from "../names.js";
 import { compilePattern } from "../patterns/compile.js";
-import { checkAttributes } from "./attributes.js";
+import { splitContextItem } from "./contextItem.js";
 import { compileBody } from "./body.js";
 import { splitLeading } from "./children.js";
 import { infoOf } from "./elementInfo.js";
-
-/**
- * The children of a template without its xsl:context-item declaration
- * (XSLT 3.0, accepted and not enforced).
- * @param {Array<object>} children
- * @returns {Array<object>}
- */
-function withoutContextItem(children) {
-  const index = children.findIndex((child) => child.nodeType === 1);
-  if (index < 0 || !isXsl(children[index], "context-item")) return children;
-  checkAttributes(children[index]);
-  return children.slice(index + 1);
-}
 
 /**
  * Separates the leading xsl:param children of a template or function.
@@ -120,14 +107,13 @@ export function declareTemplate(declaration, cx) {
       throw xsltError("XTSE0500", "mode and priority need a match pattern");
     }
   }
-  const { params: paramElements, rest } = splitParams(
-    withoutContextItem(cx.children(element)),
-  );
+  const contextItem = splitContextItem(cx.children(element), element, cx);
+  const { params: paramElements, rest } = splitParams(contextItem.rest);
   const { params, scope } = compileParams(paramElements, cx, cx.globalScope());
   const asText = attr(element, "as");
   const template = {
     params,
-    body: compileBody(element, cx, scope, rest),
+    body: [...contextItem.steps, ...compileBody(element, cx, scope, rest)],
     convert: asText
       ? typeConverter(
           cx.exprs.sequenceType(asText, element),

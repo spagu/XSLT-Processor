@@ -10,6 +10,8 @@ import { createDynamicContext } from "../../xpath/eval/dynamicContext.js";
 import { withinLimits } from "../../xpath/eval/compiler.js";
 import { resolveUri } from "../../xpath/eval/uris.js";
 import { xsltError } from "../names.js";
+import { globalContextItem } from "../compiler/globalContextItem.js";
+import { setInitialAccumulators } from "./accumulators.js";
 import { finishTree, invoke } from "./invocation.js";
 import { LazyEntry } from "./lazy.js";
 import { Machine } from "./machine.js";
@@ -118,6 +120,8 @@ export function runTransformation(stylesheet, options) {
       options.initialMode ?? stylesheet.defaultModeName,
     ),
     principalOverride: null,
+    dynamicEvaluation: options.dynamicEvaluation !== false,
+    assertions: options.assertions !== false,
     principalOutput: null,
     dyn: transformationContext(stylesheet, options, strip, createDocument),
   };
@@ -130,7 +134,10 @@ export function runTransformation(stylesheet, options) {
   };
   tx.globalContext = {
     tx,
-    item: options.globalContextItem ?? source,
+    item: globalContextItem(
+      stylesheet.globalContextItem,
+      options.globalContextItem ?? source,
+    ),
     position: 1,
     size: 1,
     env: null,
@@ -144,6 +151,7 @@ export function runTransformation(stylesheet, options) {
     outputUri: options.baseOutputUri,
     dyn: null,
   };
+  setInitialAccumulators(tx, options, source);
   tx.globalEnv = globalEnvironment(tx, normalizeParams(options.params));
   tx.globalContext.env = tx.globalEnv;
   return withinLimits(() => invoke(tx, options, source, createDocument));

@@ -7,6 +7,7 @@
 
 import { isNode } from "../../xdm/atomic.js";
 import { xsltError } from "../names.js";
+import { setOrigin } from "./accumulators.js";
 import { SequenceReceiver } from "./sequenceReceiver.js";
 
 /**
@@ -18,8 +19,10 @@ import { SequenceReceiver } from "./sequenceReceiver.js";
 function copyItems(items, context) {
   const out = new SequenceReceiver(context.xc.tx.scratch);
   for (const item of items) {
-    if (isNode(item)) out.copy(item, true);
-    else out.item(item);
+    if (isNode(item)) {
+      out.copy(item, true);
+      setOrigin(context.xc.tx, out.items.at(-1), item);
+    } else out.item(item);
   }
   return out.items;
 }

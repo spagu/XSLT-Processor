@@ -9,7 +9,10 @@
 
 import { parseXPath } from "../../xpath/syntax/index.js";
 import { xsltError } from "../names.js";
+import { parentOf } from "../../xpath/eval/domNodes.js";
 import { derive } from "../runtime/context.js";
+import { compileGeneralPath } from "./general.js";
+import { checkPattern, isPredicatePattern } from "./grammar.js";
 import { compilePathPattern } from "./paths.js";
 
 /**
@@ -30,17 +33,6 @@ function alternativesOf(ast) {
     return [...alternativesOf(ast.left), ...alternativesOf(ast.right)];
   }
   return [ast];
-}
-
-/**
- * Whether an expression is `.` or `.[P]...`.
- * @param {object} ast
- * @returns {boolean}
- */
-function isPredicatePattern(ast) {
-  let base = ast;
-  while (base.type === "FilterExpr") base = base.base;
-  return base.type === "ContextItemExpr";
 }
 
 /**
@@ -75,9 +67,13 @@ function compileSetPattern(ast, env) {
   const right = side(ast.right);
   const any = (list, item, xc) => list.some((a) => a.matches(item, xc));
   const intersect = ast.operator === "intersect";
+  // a node with a parent: both sides are evaluated from the same context
+  const formal = compileGeneralPath(ast, env);
   return {
     matches: (item, xc) =>
-      any(left, item, xc) && any(right, item, xc) === intersect,
+      parentOf(item)
+        ? formal(item, xc)
+        : any(left, item, xc) && any(right, item, xc) === intersect,
     priority: 0.5,
     key: left.length === 1 ? left[0].key : "*",
   };
@@ -128,6 +124,7 @@ export function compilePattern(text, element, cx, vars) {
       ? xsltError("XTSE0340", `Invalid pattern "${text}": ${error.message}`)
       : error;
   }
+  checkPattern(ast, text);
   const env = {
     cx,
     sc: cx.exprs.staticContext(element),

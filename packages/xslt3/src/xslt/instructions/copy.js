@@ -9,6 +9,7 @@ import { isAtomic, isNode } from "../../xdm/atomic.js";
 import { compileBody } from "../compiler/body.js";
 import { required, yesNo } from "../compiler/attributes.js";
 import { evaluate, withFocus } from "../runtime/context.js";
+import { setOrigin } from "../runtime/accumulators.js";
 import { copyLeaf, copyNamespaceNodes } from "../runtime/copy.js";
 import { BodyFrame } from "../runtime/machine.js";
 import { bodySequence } from "../runtime/values.js";
@@ -85,10 +86,16 @@ export function compileCopyOf(element, cx, scope) {
     scope.vars,
   );
   const copyNamespaces = yesNo(element, "copy-namespaces", true);
+  const copyAccumulators = yesNo(element, "copy-accumulators", false);
   return (xc, out) => {
     for (const item of evaluate(select, xc)) {
-      if (isNode(item)) out.copy(item, copyNamespaces);
-      else out.item(item);
+      if (isNode(item)) {
+        out.copy(item, copyNamespaces);
+        // a parentless copy keeps the accumulator values of the original
+        if (copyAccumulators && out.items) {
+          setOrigin(xc.tx, out.items.at(-1), item);
+        }
+      } else out.item(item);
     }
   };
 }

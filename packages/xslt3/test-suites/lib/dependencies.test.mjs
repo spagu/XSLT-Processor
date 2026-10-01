@@ -82,6 +82,11 @@ describe("other dependencies", () => {
     const xslt = createConfig("xslt30");
     assert.equal(hasDependency(dep("feature", "streaming"), xslt), false);
     assert.equal(
+      hasDependency(dep("feature", "dynamic_evaluation"), xslt),
+      true,
+    );
+    assert.equal(hasDependency(dep("enable_assertions", "true"), xslt), true);
+    assert.equal(
       hasDependency(dep("feature", "higher_order_functions"), xslt),
       true,
     );

@@ -49,6 +49,8 @@ const SHARED_VALUES = {
   unparsed_text_encoding: ["UTF-8"],
   default_html_version: ["5"],
   "on-multiple-match": ["error"],
+  // xsl:assert is enabled by default (the transform option assertions)
+  enable_assertions: ["true"],
 };
 
 /**
@@ -94,6 +96,7 @@ export function createConfig(
             schema_aware: false,
             streaming: false,
             serialization: true,
+            dynamic_evaluation: true,
           },
         };
   return {

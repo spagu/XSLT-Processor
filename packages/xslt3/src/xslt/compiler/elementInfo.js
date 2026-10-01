@@ -183,7 +183,11 @@ function computeInfo(element, parent) {
   }
   const expand = own("expand-text");
   if (expand !== undefined) {
-    info.expandText = ["yes", "true", "1"].includes(expand.trim());
+    const value = expand.trim();
+    if (!["yes", "true", "1", "no", "false", "0"].includes(value)) {
+      throw xsltError("XTSE0020", `Invalid expand-text "${expand}"`);
+    }
+    info.expandText = ["yes", "true", "1"].includes(value);
   }
   return info;
 }
