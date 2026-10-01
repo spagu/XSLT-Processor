@@ -93,6 +93,12 @@ export function pageProblems(doc) {
   if (!scripts.some((s) => s.includes("googletagmanager.com/gtm.js"))) {
     problems.push("missing Google Tag Manager <script> in <head>");
   }
+  const gtagLoaded = [...doc.querySelectorAll("head script[src]")].some(
+    (s) => s.getAttribute("src").includes("googletagmanager.com/gtag/js?id="),
+  );
+  if (!gtagLoaded || !scripts.some((s) => s.includes("gtag('config'"))) {
+    problems.push("missing Google Analytics gtag.js in <head>");
+  }
   const noscript = doc.body.querySelector("noscript");
   if (
     !noscript ||

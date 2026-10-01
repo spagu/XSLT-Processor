@@ -76,3 +76,5 @@ variables:
   # with the real container id. The theme renders both halves of the snippet
   # (head script and body noscript) on every page.
   gtm_id: GTM-XXXXXXX
+  # Google Analytics 4 measurement id (gtag.js), on every page next to GTM.
+  ga_id: G-QX8Y8L1B20

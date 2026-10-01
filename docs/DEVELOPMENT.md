@@ -181,8 +181,11 @@ with `import()` only when XPath 3.1 mode is opened. The mode logic lives in
 `xpath-items.js`, `xpath-presets.js`) and is tested by
 `site/scripts/xpath.test.mjs` and `vendor.test.mjs`, which run every example.
 
-The Google Tag Manager container id is a placeholder (`variables.gtm_id` in
-`site/ssg.yaml`).
+Google Analytics 4 runs on every page with the measurement id in
+`variables.ga_id` (`site/ssg.yaml`); the redirect page in `site/redirect/`
+has the same id written in. The Google Tag Manager container id is still a
+placeholder (`variables.gtm_id`). `check-site.mjs` fails a page that lacks
+either snippet.
 
 ## DOM matrix
 

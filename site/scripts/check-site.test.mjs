@@ -28,7 +28,9 @@ const head = `<meta name="viewport" content="x"><meta name="description" content
 <meta property="og:title" content="t"><meta property="og:description" content="d">
 <meta property="og:url" content="u"><meta property="og:image" content="i"><meta property="og:type" content="website">
 <meta name="twitter:card" content="summary"><meta name="twitter:title" content="t"><meta name="twitter:description" content="d">
-<script>j.src='https://www.googletagmanager.com/gtm.js?id='</script>`;
+<script>j.src='https://www.googletagmanager.com/gtm.js?id='</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TEST"></script>
+<script>gtag('config', 'G-TEST');</script>`;
 const page = (body, lang = ' lang="en"') =>
   `<!DOCTYPE html><html${lang}><head><title>T</title>${head}</head><body><noscript><iframe title="g" src="https://www.googletagmanager.com/ns.html?id=G"></iframe></noscript>${body}</body></html>`;
 const parse = (html) => new JSDOM(html).window.document;
@@ -55,6 +57,7 @@ describe("pageProblems", () => {
       'missing meta[name="description"]',
       "missing Google Tag Manager <script> in <head>",
       "missing Google Tag Manager <noscript> in <body>",
+      "missing Google Analytics gtag.js in <head>",
       "expected exactly one <main>",
       "expected exactly one <h1>",
       "image without alt: x",
