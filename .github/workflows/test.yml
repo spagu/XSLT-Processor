@@ -106,6 +106,37 @@ jobs:
       - name: Test the binary build scripts
         run: node --test "scripts/binaries/*.test.mjs"
 
+  xslt3-suites:
+    # @tradik/xslt3 against the W3C suites (qt3tests, xslt30-test), compared
+    # with the committed baselines: a test that passed and now fails breaks
+    # the build. The suites (about 100 MB) are cached per pinned commit.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js 26.x
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26.x
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Cache the W3C suites
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/xslt3-suites
+          key: xslt3-suites-${{ hashFiles('packages/xslt3/test-suites/constants.mjs') }}
+
+      - name: Fetch the W3C suites
+        run: npm run suites:fetch
+
+      - name: qt3tests, parse stage
+        run: npm run test:qt3:parse
+
   docker-test:
     runs-on: ubuntu-latest
 

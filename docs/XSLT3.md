@@ -54,3 +54,14 @@ Measured with the W3C suites, fetched at test time and not committed:
 [qt3tests](https://github.com/w3c/qt3tests) for XPath 3.1 and its functions,
 and [xslt30-test](https://github.com/w3c/xslt30-test) for XSLT 3.0 and 2.0.
 Pass rates per feature are published here as they come in.
+
+### Current results
+
+| Suite | Stage | Applicable | Pass | Rate |
+|---|---|---:|---:|---:|
+| qt3tests (XPath 3.1) | parsing: syntax accepted and XPST0003 syntax errors detected | 21,787 | 21,232 | 97.5% |
+
+The remaining 555 cases of the parse stage expect a static error that needs
+the static context (unknown function XPST0017, variable XPST0008, prefix
+XPST0081), which comes with the evaluator. Evaluation results follow with
+milestone 0.1.
