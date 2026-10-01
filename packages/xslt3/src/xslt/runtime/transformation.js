@@ -1,0 +1,150 @@
+/**
+ * A transformation (XSLT 3.0 section 2.3): the dynamic context shared by
+ * every instruction, whitespace stripping of the source documents, the
+ * global variables evaluated on first use, and the results collected.
+ *
+ * @module @tradik/xslt3/xslt/runtime/transformation
+ */
+
+import { createDynamicContext } from "../../xpath/eval/dynamicContext.js";
+import { withinLimits } from "../../xpath/eval/compiler.js";
+import { resolveUri } from "../../xpath/eval/uris.js";
+import { xsltError } from "../names.js";
+import { finishTree, invoke } from "./invocation.js";
+import { LazyEntry } from "./lazy.js";
+import { Machine } from "./machine.js";
+import { normalizeParams } from "./params.js";
+import { stripDocument } from "./strip.js";
+
+/**
+ * The lazily evaluated entries of the global variables.
+ * @param {object} tx
+ * @param {Map<string, Array>} params - Supplied stylesheet parameters
+ * @returns {object|null} the environment (see xpath/eval/scope.js)
+ */
+function globalEnvironment(tx, params) {
+  let env = null;
+  for (const global of tx.stylesheet.globals) {
+    if (global.required && !params.has(global.key)) {
+      throw xsltError("XTDE0050", `The parameter ${global.key} is required`);
+    }
+    const compute =
+      global.isParam && params.has(global.key)
+        ? () => global.convert(params.get(global.key))
+        : () => global.value(tx.globalContext, tx.machine);
+    env = new LazyEntry(env, compute, global.key);
+  }
+  return env;
+}
+
+/**
+ * The document factory of a transformation: the option, else the DOM of
+ * the source, else the global document.
+ * @param {object} options
+ * @returns {() => Document}
+ */
+function documentFactory(options) {
+  if (options.createDocument) return options.createDocument;
+  return () => {
+    const owner = options.source?.ownerDocument ?? options.source;
+    const implementation =
+      owner?.implementation ?? globalThis.document?.implementation;
+    if (!implementation) {
+      throw xsltError(
+        "XPDY0130",
+        "No DOM to build results: pass createDocument",
+      );
+    }
+    return implementation.createDocument(null, null, null);
+  };
+}
+
+/**
+ * The XPath dynamic context of a transformation, whose document loader
+ * resolves relative URIs against the base URI of the calling expression
+ * and strips whitespace from the documents it loads.
+ * @param {object} stylesheet
+ * @param {object} options
+ * @param {(document: Node) => Node} strip
+ * @param {() => Document} createDocument
+ * @returns {object}
+ */
+function transformationContext(stylesheet, options, strip, createDocument) {
+  const loader = options.documentLoader;
+  const dyn = createDynamicContext(
+    stylesheet.sc,
+    {
+      documentLoader: loader && ((uri) => strip(loader(uri))),
+      createDocument,
+      implicitTimezone: options.implicitTimezone,
+      currentDateTime: options.currentDateTime,
+    },
+    options.source,
+  );
+  const load = dyn.loadDocument;
+  dyn.loadDocument = function loadDocument(uri) {
+    return load(resolveUri(uri, this.staticBaseUri));
+  };
+  dyn.xc = null;
+  return dyn;
+}
+
+/**
+ * Runs a transformation.
+ * @param {object} stylesheet - Compiled stylesheet (StylesheetCompiler)
+ * @param {object} options - See CompiledStylesheet.transform
+ * @returns {{principal: Node|Array, secondary: Map<string, object>,
+ *   messages: Array}}
+ */
+export function runTransformation(stylesheet, options) {
+  const createDocument = documentFactory(options);
+  let scratchDocument = null;
+  const strip = (document) =>
+    document?.nodeType === 9
+      ? stripDocument(document, stylesheet.spaceRules)
+      : document;
+  const source = strip(options.source);
+  const tx = {
+    stylesheet,
+    machine: new Machine(options.maxDepth),
+    scratch: () => (scratchDocument ??= createDocument()),
+    messages: [],
+    onMessage: options.onMessage,
+    resultUris: new Set(),
+    baseOutputUri: options.baseOutputUri,
+    secondary: new Map(),
+    keyIndexes: new Map(),
+    defaultMode: stylesheet.mode(
+      options.initialMode ?? stylesheet.defaultModeName,
+    ),
+    principalOverride: null,
+    principalOutput: null,
+    dyn: transformationContext(stylesheet, options, strip, createDocument),
+  };
+  tx.addResult = (uri, fragment, output) => {
+    const tree = finishTree(fragment, createDocument);
+    if (uri === "") {
+      tx.principalOverride = tree;
+      tx.principalOutput = output;
+    } else tx.secondary.set(uri, { document: tree, output });
+  };
+  tx.globalContext = {
+    tx,
+    item: options.globalContextItem ?? source,
+    position: 1,
+    size: 1,
+    env: null,
+    mode: tx.defaultMode,
+    rule: null,
+    group: undefined,
+    groupKey: undefined,
+    regex: undefined,
+    tunnel: null,
+    temporary: false,
+    outputUri: options.baseOutputUri,
+    dyn: null,
+  };
+  tx.globalEnv = globalEnvironment(tx, normalizeParams(options.params));
+  tx.globalContext.env = tx.globalEnv;
+  return withinLimits(() => invoke(tx, options, source, createDocument));
+}

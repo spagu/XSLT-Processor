@@ -34,8 +34,8 @@ const srcDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "src");
 /** Parser module of @tradik/xslt3, loaded when it exists. */
 export const PARSER_MODULE = join(srcDir, "xpath", "syntax", "index.js");
 
-/** XPath engine module of @tradik/xslt3, preferred when it exists. */
-export const ENGINE_MODULE = join(srcDir, "xpath", "index.js");
+/** Module of @tradik/xslt3 (XPath and XSLT), preferred when it exists. */
+export const ENGINE_MODULE = join(srcDir, "index.js");
 
 /**
  * Load the default adapter (the @tradik/xslt3 XPath engine when present,

@@ -114,11 +114,21 @@ export function compareNodes(expected, actual, ignorePrefixes) {
  * @param {Node} expected - Expected parent
  * @param {Node} actual - Actual parent
  * @param {boolean} ignorePrefixes - See {@link compareNodes}
+ * @param {boolean} [top] - The parents are the fragment wrappers: their
+ *   whitespace-only text children are ignored
  * @returns {string} Description of the first difference, "" when equal
  */
-function compareChildren(expected, actual, ignorePrefixes) {
-  const want = normalizedChildren(expected);
-  const got = normalizedChildren(actual);
+function compareChildren(expected, actual, ignorePrefixes, top = false) {
+  // whitespace between the top-level nodes is formatting of the catalog
+  // (text around a CDATA section) or of the result document
+  const significant = (entries) =>
+    top
+      ? entries.filter(
+          (entry) => entry.type !== TEXT || !/^[ \t\r\n]*$/.test(entry.text),
+        )
+      : entries;
+  const want = significant(normalizedChildren(expected));
+  const got = significant(normalizedChildren(actual));
   if (want.length !== got.length) {
     return `${expected.nodeName}: ${want.length} children expected, got ${got.length}`;
   }
@@ -163,5 +173,5 @@ export function xmlDifference(
   } catch (error) {
     return `result is not well-formed: ${error.message}`;
   }
-  return compareChildren(want, got, ignorePrefixes);
+  return compareChildren(want, got, ignorePrefixes, true);
 }

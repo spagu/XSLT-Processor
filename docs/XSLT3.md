@@ -72,6 +72,7 @@ Pass rates per feature are published here as they come in.
 |---|---|---:|---:|---:|
 | qt3tests (XPath 3.1) | parsing and static analysis | 21,787 | 21,759 | 99.9% |
 | qt3tests (XPath 3.1) | evaluation, all families | 21,787 | 21,767 | 99.9% |
+| xslt30-test (XSLT 3.0 and 2.0) | transformation, all families | 7,734 | 6,277 | 81.2% |
 
 The 20 remaining evaluation failures are `collation-key` with UCA collations
 (JavaScript's `Intl` exposes no sort keys), `fn:transform` and
@@ -79,6 +80,59 @@ The 20 remaining evaluation failures are `collation-key` with UCA collations
 the DOM implementation used by the test runner (@xmldom/xmldom) does not
 normalize `xml:id`, apply DTD default attributes or resolve external entities.
 The parse stage misses only XQuery-only errors and static typing (XPST0005).
+
+XSLT per family:
+
+| Family | Applicable | Pass | Rate |
+|---|---:|---:|---:|
+| expr (expressions in stylesheets) | 635 | 624 | 98.3% |
+| misc | 1,822 | 1,710 | 93.9% |
+| type (types and conversions) | 768 | 695 | 90.5% |
+| fn (XSLT functions) | 1,110 | 952 | 85.8% |
+| attr (attributes and AVTs) | 993 | 806 | 81.2% |
+| insn (instructions) | 1,355 | 965 | 71.2% |
+| decl (declarations) | 1,051 | 525 | 50.0% |
+
+Not done yet (task 0031): packages (`xsl:use-package`, most of the 371 tests
+not run), `xsl:accumulator`, `xsl:merge`, `xsl:iterate`, `xsl:on-empty`,
+`xsl:on-non-empty`, `xsl:where-populated` and `xsl:evaluate`; several
+static error codes are reported as XTSE0010 because the instruction is not
+known yet.
+
+## Using XSLT 3.0
+
+```js
+import { compileStylesheet, serialize } from "@tradik/xslt3";
+
+const parseXml = (text) =>
+  new DOMParser().parseFromString(text, "application/xml");
+
+const stylesheet = compileStylesheet(
+  `<xsl:stylesheet version="3.0" expand-text="yes"
+       xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+     <xsl:output method="html" html-version="5"/>
+     <xsl:template match="orders">
+       <ul>
+         <xsl:for-each-group select="order" group-by="@city">
+           <xsl:sort select="current-grouping-key()"/>
+           <li>{current-grouping-key()}: {sum(current-group()/@total)}</li>
+         </xsl:for-each-group>
+       </ul>
+     </xsl:template>
+   </xsl:stylesheet>`,
+  { parseXml },
+);
+
+const result = stylesheet.transform({ source: parseXml(ordersXml) });
+serialize([result.principal].flat(), result.output);
+// <ul><li>Gdańsk: 80</li><li>Kraków: 162.75</li></ul>
+```
+
+`transform()` returns the principal result, the secondary results of
+`xsl:result-document` (a `Map` by URI), the `xsl:message` output and the
+serialization parameters of `xsl:output`. Recursion runs on an explicit work
+stack, so templates nested 10,000 deep work (`maxDepth` sets the limit). An
+`XSLTProcessor` class with the browser's method names is also exported.
 
 ## Using XPath 3.1
 

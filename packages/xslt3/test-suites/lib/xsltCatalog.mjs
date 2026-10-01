@@ -64,10 +64,38 @@ export function parseXsltDependencies(element) {
 function parseEntry(element) {
   if (!element) return undefined;
   return {
-    name: attr(element, "name"),
+    name: expandedName(element, attr(element, "name")),
     select: attr(element, "select"),
-    params: childElements(element, "param").map(parseParam),
+    params: childElements(element, "param").map(parseNamedParam),
   };
+}
+
+/**
+ * Read a `<param>` element, its name as an EQName.
+ *
+ * @param {Element} param - The element
+ * @returns {object} See environment.parseParam
+ */
+function parseNamedParam(param) {
+  return {
+    ...parseParam(param),
+    name: expandedName(param, attr(param, "name")),
+  };
+}
+
+/**
+ * A prefixed name of the catalog as an EQName, `Q{uri}local`, resolved
+ * with the namespaces in scope on its element (unprefixed names as is).
+ *
+ * @param {Element} element - Element on which the name is written
+ * @param {string|undefined} name - The name
+ * @returns {string|undefined} The name
+ */
+export function expandedName(element, name) {
+  const colon = name?.indexOf(":") ?? -1;
+  if (colon < 0 || name.startsWith("Q{")) return name;
+  const uri = element.lookupNamespaceURI(name.slice(0, colon));
+  return uri === null ? name : `Q{${uri}}${name.slice(colon + 1)}`;
 }
 
 /**
@@ -107,7 +135,7 @@ export function parseInvocation(test, baseDir) {
     packages: childElements(test, "package").map((el) =>
       parseModule(el, baseDir),
     ),
-    params: childElements(test, "param").map(parseParam),
+    params: childElements(test, "param").map(parseNamedParam),
     initialTemplate: parseEntry(firstChild(test, "initial-template")),
     initialMode: parseEntry(firstChild(test, "initial-mode")),
     initialFunction: parseEntry(firstChild(test, "initial-function")),

@@ -140,6 +140,9 @@ jobs:
       - name: qt3tests, XPath 3.1 evaluation
         run: npm run test:qt3
 
+      - name: xslt30-test, XSLT 3.0 and 2.0
+        run: npm run test:xslt30
+
   docker-test:
     runs-on: ubuntu-latest
 

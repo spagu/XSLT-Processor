@@ -12,6 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { DOMImplementation, DOMParser } from "@xmldom/xmldom";
 import { confinePath } from "../../../../scripts/lib/fsSafety.mjs";
 import { serialize } from "../../src/serialize/index.js";
+import { createTransform, outputParams } from "./transformAdapter.mjs";
 import { decodeXml } from "./xmlUtil.mjs";
 
 /**
@@ -141,8 +142,25 @@ export function createEngineAdapter(engine) {
     }
     return document;
   };
+  const loadDocument = (source) => {
+    if (source.file) return loadFile(source.file);
+    return parseXml(source.content ?? "", source.uri);
+  };
+  const transform =
+    typeof engine.compileStylesheet === "function"
+      ? createTransform(engine, {
+          loadFile,
+          loadSource: loadDocument,
+          evaluate: (expression, contextItem) =>
+            engine.compileXPath(expression).evaluate(contextItem, {
+              createDocument: () =>
+                new DOMImplementation().createDocument(null, null),
+            }),
+        })
+      : undefined;
   return {
     name: "xslt3",
+    transform,
     parse(expression, context) {
       engine.compileXPath(expression, staticOptions(context));
       return true;
@@ -172,13 +190,17 @@ export function createEngineAdapter(engine) {
             new DOMImplementation().createDocument(null, null),
         });
     },
-    loadDocument(source) {
-      if (source.file) return loadFile(source.file);
-      return parseXml(source.content ?? "", source.uri);
-    },
+    loadDocument,
     // XQuery 3.1 defaults (Appendix C.3): no XML declaration
     serialize(value, params = {}) {
-      return serialize(value, { "omit-xml-declaration": true, ...params });
+      // assert-serialization uses the stylesheet's output parameters;
+      // assert-xml (which sets omit-xml-declaration) compares the tree
+      const own = outputParams.get(value);
+      const merged =
+        own && !("omit-xml-declaration" in params)
+          ? { ...params, ...own }
+          : params;
+      return serialize(value, { "omit-xml-declaration": true, ...merged });
     },
   };
 }

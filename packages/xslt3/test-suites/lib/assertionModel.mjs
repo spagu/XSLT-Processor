@@ -24,6 +24,10 @@ import { attr, boolAttr, childElements } from "./xmlUtil.mjs";
  *   `not`, `assert-message` and `assert-result-document`
  */
 
+/** Namespace of the xslt30-test catalog. */
+export const XSLT_CATALOG_NAMESPACE =
+  "http://www.w3.org/2012/10/xslt-test-catalog";
+
 /** Assertion kinds whose element children are assertions themselves. */
 export const COMPOSITE_KINDS = new Set([
   "any-of",
@@ -61,7 +65,10 @@ export function parseAssertion(element, baseDir) {
     assertion.ignorePrefixes = boolAttr(element, "ignore-prefixes");
   }
   if (kind === "assert-string-value") {
-    assertion.normalizeSpace = boolAttr(element, "normalize-space");
+    // the xslt30-test runner (runner/assert.xsl) always normalizes space
+    assertion.normalizeSpace =
+      boolAttr(element, "normalize-space") ||
+      element.namespaceURI === XSLT_CATALOG_NAMESPACE;
   }
   return assertion;
 }
