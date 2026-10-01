@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **XSLT 2.0 / 3.0 track started** ([docs/XSLT3.md](docs/XSLT3.md)): the repository is an npm workspace monorepo, and `packages/xslt3` holds `@tradik/xslt3`, a separate engine for XSLT 3.0 and XPath 3.1 that will also run 2.0 stylesheets and 1.0 ones in backwards-compatible mode. Not published yet. `@tradik/xslt-processor` is unchanged (same files, still zero dependencies); `npm run test:xslt3` runs the new package's tests.
+- **W3C test suite runners** for the new engine (task 0033): `npm run suites:fetch` downloads qt3tests and xslt30-test at pinned commits (SHA-256 checked) into the temp directory, and `npm run test:qt3:parse`, `test:qt3` and `test:xslt30` run them against a baseline of passing tests, so CI fails on a regression. 21,787 XPath 3.1 and 7,352 XSLT 3.0/2.0 test cases apply to a basic processor without schema awareness or streaming.
 
 ### Internal
 

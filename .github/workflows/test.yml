@@ -49,6 +49,9 @@ jobs:
       - name: Run @tradik/xslt3 tests with coverage
         run: npm run test:xslt3
 
+      - name: W3C suite runner unit tests
+        run: npm run test:suites:unit
+
       - name: Build distribution
         run: npm run build
 
