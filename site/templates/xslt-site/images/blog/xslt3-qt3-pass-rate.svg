@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="380" viewBox="0 0 720 380" role="img" aria-labelledby="t d">
+<title id="t">XPath 3.1 in @tradik/xslt3: W3C qt3tests pass rate per area</title>
+<desc id="d">Horizontal bars, one per test area. Operators, math and types pass 100%, expressions 99.3%, maps 99.1%, arrays 98.9%, use cases 97.7%, miscellaneous 95.5%, functions 90.1%; 95.4% overall.</desc>
+<style>
+svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--bar:#2a78d6;--warn:#eb6834;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
+@media (prefers-color-scheme:dark){svg{--surface:#202124;--text:#e8eaed;--muted:#9aa0a6;--grid:#3c4043;--axis:#5f6368;--bar:#3987e5;--warn:#d95926}}
+.bg{fill:var(--surface)}.t1{fill:var(--text)}.t2{fill:var(--muted)}
+.title{fill:var(--text);font-size:13px;font-weight:600}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--axis);stroke-width:1}
+.bar{fill:var(--bar)}.warn{fill:var(--warn)}.ring{stroke:var(--surface);stroke-width:2}
+.line{stroke:var(--axis);stroke-width:2}.today{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+</style>
+<rect class="bg" width="720" height="380" rx="8"/>
+<text class="title" x="16" y="24">XPath 3.1 in @tradik/xslt3: W3C qt3tests pass rate per area</text>
+<text class="t2" x="16" y="44">20,778 of 21,787 applicable tests pass (95.4%); 1 October 2026</text>
+<line class="grid" x1="190.0" x2="190.0" y1="62" y2="340"/>
+<text class="t2" x="190.0" y="356" text-anchor="middle">0%</text>
+<line class="grid" x1="302.5" x2="302.5" y1="62" y2="340"/>
+<text class="t2" x="302.5" y="356" text-anchor="middle">25%</text>
+<line class="grid" x1="415.0" x2="415.0" y1="62" y2="340"/>
+<text class="t2" x="415.0" y="356" text-anchor="middle">50%</text>
+<line class="grid" x1="527.5" x2="527.5" y1="62" y2="340"/>
+<text class="t2" x="527.5" y="356" text-anchor="middle">75%</text>
+<line class="grid" x1="640.0" x2="640.0" y1="62" y2="340"/>
+<text class="t2" x="640.0" y="356" text-anchor="middle">100%</text>
+<text class="t1" x="180" y="89.0" text-anchor="end">Operators (op)</text>
+<rect class="bar" x="190" y="77" width="449.9" height="16" rx="4"><title>Operators (op): 3,543 of 3,544 (100.0%)</title></rect>
+<text class="t1" x="645.9" y="89.0">100.0%</text>
+<text class="t1" x="180" y="119.0" text-anchor="end">Math (math)</text>
+<rect class="bar" x="190" y="107" width="450.0" height="16" rx="4"><title>Math (math): 149 of 149 (100.0%)</title></rect>
+<text class="t1" x="646.0" y="119.0">100.0%</text>
+<text class="t1" x="180" y="149.0" text-anchor="end">Types (xs)</text>
+<rect class="bar" x="190" y="137" width="450.0" height="16" rx="4"><title>Types (xs): 137 of 137 (100.0%)</title></rect>
+<text class="t1" x="646.0" y="149.0">100.0%</text>
+<text class="t1" x="180" y="179.0" text-anchor="end">Expressions (prod)</text>
+<rect class="bar" x="190" y="167" width="447.1" height="16" rx="4"><title>Expressions (prod): 6,993 of 7,039 (99.3%)</title></rect>
+<text class="t1" x="643.1" y="179.0">99.3%</text>
+<text class="t1" x="180" y="209.0" text-anchor="end">Maps (map)</text>
+<rect class="bar" x="190" y="197" width="445.9" height="16" rx="4"><title>Maps (map): 217 of 219 (99.1%)</title></rect>
+<text class="t1" x="641.9" y="209.0">99.1%</text>
+<text class="t1" x="180" y="239.0" text-anchor="end">Arrays (array)</text>
+<rect class="bar" x="190" y="227" width="445.0" height="16" rx="4"><title>Arrays (array): 177 of 179 (98.9%)</title></rect>
+<text class="t1" x="641.0" y="239.0">98.9%</text>
+<text class="t1" x="180" y="269.0" text-anchor="end">Use cases (app)</text>
+<rect class="bar" x="190" y="257" width="439.7" height="16" rx="4"><title>Use cases (app): 940 of 962 (97.7%)</title></rect>
+<text class="t1" x="635.7" y="269.0">97.7%</text>
+<text class="t1" x="180" y="299.0" text-anchor="end">Miscellaneous (misc)</text>
+<rect class="bar" x="190" y="287" width="429.8" height="16" rx="4"><title>Miscellaneous (misc): 149 of 156 (95.5%)</title></rect>
+<text class="t1" x="625.8" y="299.0">95.5%</text>
+<text class="t1" x="180" y="329.0" text-anchor="end">Functions (fn)</text>
+<rect class="bar" x="190" y="317" width="405.5" height="16" rx="4"><title>Functions (fn): 8,473 of 9,402 (90.1%)</title></rect>
+<text class="t1" x="601.5" y="329.0">90.1%</text>
+</svg>

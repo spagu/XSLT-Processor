@@ -70,6 +70,7 @@
       <ul>
         <li><a href="{{ $b }}/docs/"{{ if eq .Link "/docs/" }} aria-current="page"{{ else if hasPrefix .Link "/docs/" }} aria-current="true"{{ end }}>Docs</a></li>
         <li><a href="{{ $b }}/playground/"{{ if eq .Link "/playground/" }} aria-current="page"{{ end }}>Playground</a></li>
+        <li><a href="{{ $b }}/blog/"{{ if eq .Link "/blog/" }} aria-current="page"{{ end }}>Blog</a></li>
         <li><a href="{{ $b }}/changelog/"{{ if eq .Link "/changelog/" }} aria-current="page"{{ end }}>Changelog</a></li>
         <li><a href="{{ $c.Vars.repo_url }}">GitHub</a></li>
         <li><a href="{{ $c.Vars.npm_url }}">npm</a></li>
@@ -87,6 +88,7 @@
         <li><a href="{{ $b }}/docs/getting-started/">Getting started</a></li>
         <li><a href="{{ $b }}/docs/api/">API reference</a></li>
         <li><a href="{{ $b }}/docs/cli/">Command line</a></li>
+        <li><a href="{{ $b }}/blog/rss.xml">Blog RSS feed</a></li>
         <li><a href="{{ .Vars.repo_url }}/blob/main/SECURITY.md">Security policy</a></li>
         <li><a href="{{ .Vars.repo_url }}/issues">Report an issue</a></li>
       </ul>

@@ -1,0 +1,18 @@
+{{/* The blog index (site/pages/blog.md): every post, newest first. */}}
+{{define "blog.html"}}{{template "head" .}}{{ $b := .Vars.base_path }}
+<main id="main" class="wrap post">
+  <div class="prose">
+    <h1>{{ .Page.Title }}</h1>
+    {{ .Page.Content | safeHTML }}
+  </div>
+  <ol class="post-list">
+    {{ range .Site.Posts }}<li>
+      <article>
+        <h2><a href="{{ $b }}{{ .GetURL }}">{{ .Title }}</a></h2>
+        <p class="post-meta"><time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2 January 2006" }}</time> · {{ .ReadingTime }} min read</p>
+        <p>{{ .Description }}</p>
+      </article>
+    </li>{{ end }}
+  </ol>
+</main>
+{{template "footer" .}}{{end}}

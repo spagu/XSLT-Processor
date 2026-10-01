@@ -99,6 +99,14 @@ for (const name of readdirSync(handWritten).filter((n) => n.endsWith(".md"))) {
   copyFileSync(join(handWritten, name), join(pagesDir, name));
 }
 
+// Blog posts: ssg reads posts from a directory below posts/
+const postsSource = join(siteDir, "posts");
+const postsDir = join(contentDir, "posts", "blog");
+mkdirSync(postsDir, { recursive: true });
+for (const name of readdirSync(postsSource).filter((n) => n.endsWith(".md"))) {
+  copyFileSync(join(postsSource, name), join(postsDir, name));
+}
+
 const { version } = JSON.parse(read("package.json"));
 const landing = landingData({ readme: read("README.md"), pages, version });
 write(join(dataDir, "landing.json"), JSON.stringify(landing, null, 2));

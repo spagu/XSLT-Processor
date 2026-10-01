@@ -60,6 +60,19 @@ headers:
   /js/*:
     Cache-Control: "public, max-age=0, must-revalidate"
 
+# Blog: hand-written posts from site/posts/ (copied by build-content.mjs) at
+# /blog/<slug>/, listed by site/pages/blog.md, with an RSS and an Atom feed.
+# ssg adds the feed autodiscovery <link> tags to every page itself.
+permalinks:
+  post: /blog/:slug/
+feeds:
+  - path: /blog/rss.xml
+    title: "@tradik/xslt-processor blog"
+    format: rss
+  - path: /blog/feed.xml
+    title: "@tradik/xslt-processor blog"
+    format: atom
+
 variables:
   # Path prefix of the site on its host, no trailing slash ("" at a root).
   base_path: ""

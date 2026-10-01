@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" role="img" aria-labelledby="t d">
+<title id="t">How Chrome turns off XSLT</title>
+<desc id="d">Vertical timeline: March 2025 libxslt's maintainer steps down; 1 August 2025 WHATWG issue 11523; 28 October 2025 Chrome 142 console warnings; 2 December 2025 Chrome 143 deprecation; 10 March 2026 Chrome 146 enterprise policy; 25 August 2026 Chrome 152 origin trial; 22 September 2026 Chrome 154 WebView betas off; today 1 October 2026; 17 November 2026 Chrome 158 off in stable; 17 August 2027 Chrome 176 off for everyone.</desc>
+<style>
+svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--bar:#2a78d6;--warn:#eb6834;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
+@media (prefers-color-scheme:dark){svg{--surface:#202124;--text:#e8eaed;--muted:#9aa0a6;--grid:#3c4043;--axis:#5f6368;--bar:#3987e5;--warn:#d95926}}
+.bg{fill:var(--surface)}.t1{fill:var(--text)}.t2{fill:var(--muted)}
+.title{fill:var(--text);font-size:13px;font-weight:600}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--axis);stroke-width:1}
+.bar{fill:var(--bar)}.warn{fill:var(--warn)}.ring{stroke:var(--surface);stroke-width:2}
+.line{stroke:var(--axis);stroke-width:2}.today{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+</style>
+<rect class="bg" width="720" height="420" rx="8"/>
+<text class="title" x="16" y="24">How Chrome turns off XSLT</text>
+<text class="t2" x="16" y="44">Dates from Chrome's announcement (updated 29 October 2025) and the libxslt and WHATWG threads</text>
+<line class="line" x1="130" x2="130" y1="87.0" y2="393.0"/>
+<text class="t2" x="116" y="91.0" text-anchor="end">Mar 2025</text>
+<circle class="bar ring" cx="130" cy="87.0" r="6"/>
+<text class="t1" x="146" y="91.0">libxslt's maintainer steps down; the library is effectively unmaintained</text>
+<text class="t2" x="116" y="125.0" text-anchor="end">1 Aug 2025</text>
+<circle class="bar ring" cx="130" cy="121.0" r="6"/>
+<text class="t1" x="146" y="125.0">WHATWG issue #11523: should XSLT be removed from the web platform?</text>
+<text class="t2" x="116" y="159.0" text-anchor="end">28 Oct 2025</text>
+<circle class="bar ring" cx="130" cy="155.0" r="6"/>
+<text class="t1" x="146" y="159.0">Chrome 142: first warnings in the console</text>
+<text class="t2" x="116" y="193.0" text-anchor="end">2 Dec 2025</text>
+<circle class="bar ring" cx="130" cy="189.0" r="6"/>
+<text class="t1" x="146" y="193.0">Chrome 143: XSLTProcessor and xml-stylesheet officially deprecated</text>
+<text class="t2" x="116" y="227.0" text-anchor="end">10 Mar 2026</text>
+<circle class="bar ring" cx="130" cy="223.0" r="6"/>
+<text class="t1" x="146" y="227.0">Chrome 146: enterprise policy to keep XSLT (or turn it off early)</text>
+<text class="t2" x="116" y="261.0" text-anchor="end">25 Aug 2026</text>
+<circle class="bar ring" cx="130" cy="257.0" r="6"/>
+<text class="t1" x="146" y="261.0">Chrome 152: origin trial for sites that need more time</text>
+<text class="t2" x="116" y="295.0" text-anchor="end">22 Sep 2026</text>
+<circle class="bar ring" cx="130" cy="291.0" r="6"/>
+<text class="t1" x="146" y="295.0">Chrome 154: Android WebView betas switch XSLT off</text>
+<line class="today" x1="116" x2="704" y1="325.0" y2="325.0"/><text class="t2" x="146" y="319.0">today, 1 October 2026</text>
+<text class="t2" x="116" y="363.0" text-anchor="end">17 Nov 2026</text>
+<circle class="warn ring" cx="130" cy="359.0" r="6"/>
+<text class="t1" x="146" y="363.0">Chrome 158: XSLT stops working in stable Chrome</text>
+<text class="t2" x="116" y="397.0" text-anchor="end">17 Aug 2027</text>
+<circle class="warn ring" cx="130" cy="393.0" r="6"/>
+<text class="t1" x="146" y="397.0">Chrome 176: origin trial and enterprise policy end; XSLT is gone</text>
+</svg>

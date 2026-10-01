@@ -20,9 +20,11 @@ JavaScript implementation of XSLTProcessor for browser environments and Node.js 
 
 ## Background
 
-Chrome and other browsers are deprecating native XSLTProcessor support:
-- **Chrome 143+**: XSLTProcessor starts showing deprecation warnings
-- **Chrome 164 (August 2027)**: Full removal of native XSLT support
+Chrome and other browsers are removing native XSLT ([Chrome's announcement](https://developer.chrome.com/docs/web-platform/deprecating-xslt)):
+- **Chrome 143 (December 2025)**: `XSLTProcessor` and `<?xml-stylesheet type="text/xsl"?>` are deprecated, with warnings in the console
+- **Chrome 158 (17 November 2026)**: XSLT stops working in stable Chrome, except for sites in the origin trial and browsers under the enterprise policy
+- **Chrome 176 (17 August 2027)**: the origin trial and the enterprise policy end; XSLT is off everywhere
+- Firefox and WebKit support the removal but have not announced dates
 
 This library ensures your XSLT-based applications continue to work regardless of browser support.
 
@@ -38,7 +40,7 @@ This library ensures your XSLT-based applications continue to work regardless of
 
 ## Documentation
 
-The documentation is also published as a website with an interactive playground: <https://xslt-processor.tradik.com/> ([playground](https://xslt-processor.tradik.com/playground/)).
+The documentation is also published as a website with an interactive playground: <https://xslt-processor.tradik.com/> ([playground](https://xslt-processor.tradik.com/playground/), [blog](https://xslt-processor.tradik.com/blog/) with an [RSS feed](https://xslt-processor.tradik.com/blog/rss.xml)).
 
 | Guide | Contents |
 |-------|----------|

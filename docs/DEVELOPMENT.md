@@ -159,6 +159,17 @@ same workflow publishes `site/redirect/index.html` to GitHub Pages as
 `index.html` and `404.html`, which sends every old URL to the same path on
 the new domain (Settings > Pages > Source stays "GitHub Actions").
 
+The blog lives in `site/posts/`: one Markdown file per article, with
+frontmatter `title`, `description` (also the summary in the list and the
+feeds), `slug`, `status: publish`, `type: post` and `date` (ISO 8601; posts on
+the same day are ordered by time). `build-content.mjs` copies the posts into
+the ssg content, ssg publishes them at `/blog/<slug>/`, lists them on `/blog/`
+(`site/pages/blog.md`, layout `layouts/blog.html`) and writes the feeds
+`/blog/rss.xml` (RSS 2.0) and `/blog/feed.xml` (Atom). Charts for articles go
+in `site/templates/xslt-site/images/blog/` as SVG with light and dark colours,
+referenced relative to the post (`../../images/blog/chart.svg`). Don't add
+`tags:` to posts: the theme has no tag archive template.
+
 The Google Tag Manager container id is a placeholder (`variables.gtm_id` in
 `site/ssg.yaml`).
 

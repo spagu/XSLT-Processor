@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **Chrome's removal dates corrected**: README.md and docs/BROWSER-SUPPORT.md said Chrome 164 (August 2027). Chrome's announcement says XSLT stops working in stable Chrome 158 on 17 November 2026, and for everyone (origin trial and enterprise policy included) in Chrome 176 on 17 August 2027. Firefox and WebKit support the removal without dates.
+
 ### Added
 
+- **Blog on the website** (`/blog/`) with RSS (`/blog/rss.xml`) and Atom (`/blog/feed.xml`) feeds, linked from the header and footer and announced to feed readers on every page. First articles: why Chrome turns off XSLT on 17 November 2026, what that breaks and the options, and why XSLT 2.0/3.0 is a separate package (`@tradik/xslt3`), with SVG charts in light and dark colours. Posts are Markdown files in `site/posts/` (see docs/DEVELOPMENT.md).
 - **XSLT 2.0 / 3.0 track started** ([docs/XSLT3.md](docs/XSLT3.md)): the repository is an npm workspace monorepo, and `packages/xslt3` holds `@tradik/xslt3`, a separate engine for XSLT 3.0 and XPath 3.1 that will also run 2.0 stylesheets and 1.0 ones in backwards-compatible mode. Not published yet. `@tradik/xslt-processor` is unchanged (same files, still zero dependencies); `npm run test:xslt3` runs the new package's tests.
 - **XPath 3.1 parser** for the new engine (task 0026): the complete XPath 3.1 grammar (FLWOR `for`/`let`, quantifiers, maps, arrays, lookups, inline and partially applied functions, `=>`, `!`, sequence types) into an AST with W3C error codes. It accepts or rejects 21,232 of 21,787 applicable qt3tests expressions as expected (97.5%, no failures); the rest need static analysis.
 - **XPath data model** for the new engine (task 0027): the 47 built-in XSD 1.1 atomic types with their hierarchy and facets, lexical and canonical forms, the complete casting table of F&O 3.1 section 19, value and general comparisons (including the XPath 1.0 backwards-compatible mode), numeric, date/time and duration arithmetic, atomization and effective boolean value. `xs:decimal` and `xs:integer` are exact (BigInt): decimal division keeps at least 18 fraction digits; years run to ±999,999,999.

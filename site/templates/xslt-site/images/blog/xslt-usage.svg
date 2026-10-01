@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="280" viewBox="0 0 720 280" role="img" aria-labelledby="t d">
+<title id="t">How often Chrome sees XSLT, per million page loads</title>
+<desc id="d">Bars per million page loads: the XSLTProcessor API between 100 and 1,000 (0.01% to 0.1%, about 500 on average); any XSLT, Chrome's headline figure, 200 (0.02%); the xml-stylesheet processing instruction at most 10 (0.001%).</desc>
+<style>
+svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--bar:#2a78d6;--warn:#eb6834;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
+@media (prefers-color-scheme:dark){svg{--surface:#202124;--text:#e8eaed;--muted:#9aa0a6;--grid:#3c4043;--axis:#5f6368;--bar:#3987e5;--warn:#d95926}}
+.bg{fill:var(--surface)}.t1{fill:var(--text)}.t2{fill:var(--muted)}
+.title{fill:var(--text);font-size:13px;font-weight:600}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--axis);stroke-width:1}
+.bar{fill:var(--bar)}.warn{fill:var(--warn)}.ring{stroke:var(--surface);stroke-width:2}
+.line{stroke:var(--axis);stroke-width:2}.today{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+</style>
+<rect class="bg" width="720" height="280" rx="8"/>
+<text class="title" x="16" y="24">How often Chrome sees XSLT, per million page loads</text>
+<text class="t2" x="16" y="44">From Chrome's use counters as quoted by the Chromium team; the processing instruction is an upper bound</text>
+<line class="grid" x1="260.0" x2="260.0" y1="62" y2="240"/><text class="t2" x="260.0" y="256" text-anchor="middle">0</text>
+<line class="grid" x1="357.5" x2="357.5" y1="62" y2="240"/><text class="t2" x="357.5" y="256" text-anchor="middle">250</text>
+<line class="grid" x1="455.0" x2="455.0" y1="62" y2="240"/><text class="t2" x="455.0" y="256" text-anchor="middle">500</text>
+<line class="grid" x1="552.5" x2="552.5" y1="62" y2="240"/><text class="t2" x="552.5" y="256" text-anchor="middle">750</text>
+<line class="grid" x1="650.0" x2="650.0" y1="62" y2="240"/><text class="t2" x="650.0" y="256" text-anchor="middle">1,000</text>
+<text class="t1" x="250" y="91.0" text-anchor="end">XSLTProcessor API, high end</text>
+<rect class="bar" x="260" y="78" width="390.0" height="18" rx="4"><title>XSLTProcessor API, high end: 1,000 per million (0.1%)</title></rect>
+<text class="t1" x="656.0" y="91.0">0.1%</text>
+<text class="t1" x="250" y="125.0" text-anchor="end">XSLTProcessor API, average</text>
+<rect class="bar" x="260" y="112" width="195.0" height="18" rx="4"><title>XSLTProcessor API, average: 500 per million (0.05%)</title></rect>
+<text class="t1" x="461.0" y="125.0">0.05%</text>
+<text class="t1" x="250" y="159.0" text-anchor="end">Any XSLT (Chrome's headline figure)</text>
+<rect class="warn" x="260" y="146" width="78.0" height="18" rx="4"><title>Any XSLT (Chrome's headline figure): 200 per million (0.02%)</title></rect>
+<text class="t1" x="344.0" y="159.0">0.02%</text>
+<text class="t1" x="250" y="193.0" text-anchor="end">XSLTProcessor API, low end</text>
+<rect class="bar" x="260" y="180" width="39.0" height="18" rx="4"><title>XSLTProcessor API, low end: 100 per million (0.01%)</title></rect>
+<text class="t1" x="305.0" y="193.0">0.01%</text>
+<text class="t1" x="250" y="227.0" text-anchor="end">&lt;?xml-stylesheet type="text/xsl"?></text>
+<rect class="bar" x="260" y="214" width="3.9" height="18" rx="4"><title>&lt;?xml-stylesheet type="text/xsl"?>: 10 per million (0.001%)</title></rect>
+<text class="t1" x="269.9" y="227.0">0.001%</text>
+</svg>
