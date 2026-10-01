@@ -1,0 +1,1392 @@
+{
+  "environment": {
+    "date": "2026-10-01T19:02:05.381Z",
+    "cpu": "AMD Ryzen 9 7950X 16-Core Processor",
+    "cores": 32,
+    "ramGb": 31,
+    "os": "Linux 6.18.40.1-microsoft-standard-WSL2 (linux)",
+    "node": "v25.9.0",
+    "runs": 7,
+    "warmup": 2,
+    "timeoutMs": 120000,
+    "durationMin": 21.86,
+    "engines": {
+      "1.0 package": "1.2.1",
+      "xslt3": "0.0.0"
+    },
+    "entries": {
+      "1.0 package": "src/index.js",
+      "xslt3": "packages/xslt3/src/index.js"
+    },
+    "dom": {
+      "jsdom": "30.1.1",
+      "xmldom": "0.9.12"
+    },
+    "doms": [
+      "jsdom",
+      "xmldom"
+    ]
+  },
+  "problems": [],
+  "results": [
+    {
+      "id": "descendant",
+      "label": "//item",
+      "expression": "//item",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 87.46,
+              "p95Ms": 95.69,
+              "minMs": 85.12
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 87,
+              "p95Ms": 91.76,
+              "minMs": 83.52
+            },
+            "maxRssMb": 350
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 92.16,
+              "p95Ms": 99.34,
+              "minMs": 87.98
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 90.42,
+              "p95Ms": 94.86,
+              "minMs": 88.28
+            },
+            "maxRssMb": 371
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 1,
+              "runs": 3,
+              "medianMs": 14195.3,
+              "p95Ms": 14246.23,
+              "minMs": 14083.87
+            },
+            "oneShot": {
+              "warmup": 1,
+              "runs": 3,
+              "medianMs": 14130.81,
+              "p95Ms": 14162.75,
+              "minMs": 14036.28
+            },
+            "maxRssMb": 708
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 15.28,
+              "p95Ms": 15.6,
+              "minMs": 14.77
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 15.83,
+              "p95Ms": 16.35,
+              "minMs": 15.33
+            },
+            "maxRssMb": 242
+          }
+        }
+      }
+    },
+    {
+      "id": "attributePredicate",
+      "label": "//item[@id = 'i10000']",
+      "expression": "//item[@id = 'i10000']",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 143.85,
+              "p95Ms": 149.08,
+              "minMs": 140.46
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 142.72,
+              "p95Ms": 152.33,
+              "minMs": 140.71
+            },
+            "maxRssMb": 348
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 155.18,
+              "p95Ms": 160.88,
+              "minMs": 153.9
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 158.07,
+              "p95Ms": 163.94,
+              "minMs": 151.82
+            },
+            "maxRssMb": 380
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 58.54,
+              "p95Ms": 59.07,
+              "minMs": 56.98
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 56.16,
+              "p95Ms": 60.56,
+              "minMs": 54.92
+            },
+            "maxRssMb": 237
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 31.41,
+              "p95Ms": 52.52,
+              "minMs": 30.17
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 30.37,
+              "p95Ms": 31.33,
+              "minMs": 29.48
+            },
+            "maxRssMb": 280
+          }
+        }
+      }
+    },
+    {
+      "id": "last",
+      "label": "//item[last()]",
+      "expression": "//item[last()]",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 82.19,
+              "p95Ms": 85.74,
+              "minMs": 78.84
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 81.21,
+              "p95Ms": 84.13,
+              "minMs": 79.57
+            },
+            "maxRssMb": 348
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 197.41,
+              "p95Ms": 216.53,
+              "minMs": 191.03
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 195.27,
+              "p95Ms": 197.85,
+              "minMs": 188.77
+            },
+            "maxRssMb": 375
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 40.19,
+              "p95Ms": 41.84,
+              "minMs": 39.16
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 40.26,
+              "p95Ms": 41.08,
+              "minMs": 39.42
+            },
+            "maxRssMb": 271
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 41.33,
+              "p95Ms": 44.14,
+              "minMs": 39.59
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 41.53,
+              "p95Ms": 43.57,
+              "minMs": 39.57
+            },
+            "maxRssMb": 289
+          }
+        }
+      }
+    },
+    {
+      "id": "position",
+      "label": "(//item)[1000]",
+      "expression": "(//item)[1000]",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 91.11,
+              "p95Ms": 93.72,
+              "minMs": 89.15
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 87.36,
+              "p95Ms": 95.52,
+              "minMs": 81.4
+            },
+            "maxRssMb": 348
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 75.13,
+              "p95Ms": 80.02,
+              "minMs": 72.35
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 73.77,
+              "p95Ms": 74.76,
+              "minMs": 72.88
+            },
+            "maxRssMb": 362
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 1,
+              "runs": 3,
+              "medianMs": 14103.07,
+              "p95Ms": 14173.19,
+              "minMs": 14102
+            },
+            "oneShot": {
+              "warmup": 1,
+              "runs": 3,
+              "medianMs": 14086.14,
+              "p95Ms": 14123.15,
+              "minMs": 14013.87
+            },
+            "maxRssMb": 662
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 15.71,
+              "p95Ms": 16.14,
+              "minMs": 15.07
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 16.02,
+              "p95Ms": 16.72,
+              "minMs": 15.27
+            },
+            "maxRssMb": 241
+          }
+        }
+      }
+    },
+    {
+      "id": "countPredicate",
+      "label": "count(//item[@price > 50])",
+      "expression": "count(//item[@price > 50])",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 150.31,
+              "p95Ms": 156.01,
+              "minMs": 148.11
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 151.43,
+              "p95Ms": 164.57,
+              "minMs": 148.71
+            },
+            "maxRssMb": 349
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 180.22,
+              "p95Ms": 182.49,
+              "minMs": 177.07
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 180.44,
+              "p95Ms": 186.59,
+              "minMs": 174.42
+            },
+            "maxRssMb": 385
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 7673.08,
+              "p95Ms": 7922.49,
+              "minMs": 7630.7
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 7694.73,
+              "p95Ms": 7778.24,
+              "minMs": 7647.44
+            },
+            "maxRssMb": 733
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 39.07,
+              "p95Ms": 48.03,
+              "minMs": 36.98
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 38.21,
+              "p95Ms": 59.71,
+              "minMs": 35.64
+            },
+            "maxRssMb": 279
+          }
+        }
+      }
+    },
+    {
+      "id": "sum",
+      "label": "sum(//item/@price)",
+      "expression": "sum(//item/@price)",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 157.83,
+              "p95Ms": 159.82,
+              "minMs": 150.85
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 155.38,
+              "p95Ms": 164.68,
+              "minMs": 151.09
+            },
+            "maxRssMb": 351
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 180.88,
+              "p95Ms": 191.46,
+              "minMs": 177.6
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 180.94,
+              "p95Ms": 195.66,
+              "minMs": 177.7
+            },
+            "maxRssMb": 395
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 1,
+              "runs": 3,
+              "medianMs": 27928.63,
+              "p95Ms": 28431.03,
+              "minMs": 27881.47
+            },
+            "oneShot": {
+              "warmup": 1,
+              "runs": 3,
+              "medianMs": 28267.34,
+              "p95Ms": 28807.37,
+              "minMs": 28129.66
+            },
+            "maxRssMb": 706
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 40.04,
+              "p95Ms": 41.64,
+              "minMs": 38.71
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 39.2,
+              "p95Ms": 40.15,
+              "minMs": 38.58
+            },
+            "maxRssMb": 277
+          }
+        }
+      }
+    },
+    {
+      "id": "contains",
+      "label": "//item[contains(name, 'abc')]",
+      "expression": "//item[contains(name, 'abc')]",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 136.05,
+              "p95Ms": 148.02,
+              "minMs": 133.79
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 140.28,
+              "p95Ms": 144.79,
+              "minMs": 137.53
+            },
+            "maxRssMb": 349
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 185.45,
+              "p95Ms": 191.42,
+              "minMs": 176.91
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 177.89,
+              "p95Ms": 182.61,
+              "minMs": 172.94
+            },
+            "maxRssMb": 384
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 291.64,
+              "p95Ms": 295.49,
+              "minMs": 288.31
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 288.17,
+              "p95Ms": 289.74,
+              "minMs": 287.05
+            },
+            "maxRssMb": 506
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 37.87,
+              "p95Ms": 43.2,
+              "minMs": 35.56
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 37.85,
+              "p95Ms": 39.66,
+              "minMs": 34.89
+            },
+            "maxRssMb": 251
+          }
+        }
+      }
+    },
+    {
+      "id": "union",
+      "label": "//a | //b",
+      "expression": "//a | //b",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 180.88,
+              "p95Ms": 196.68,
+              "minMs": 170.78
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 176.92,
+              "p95Ms": 186.91,
+              "minMs": 168.81
+            },
+            "maxRssMb": 353
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 354.13,
+              "p95Ms": 383.71,
+              "minMs": 351.06
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 357.17,
+              "p95Ms": 361.8,
+              "minMs": 350.77
+            },
+            "maxRssMb": 404
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 1,
+              "runs": 3,
+              "medianMs": 33280.39,
+              "p95Ms": 33775.18,
+              "minMs": 33239.55
+            },
+            "oneShot": {
+              "warmup": 1,
+              "runs": 3,
+              "medianMs": 33335.97,
+              "p95Ms": 33847.89,
+              "minMs": 33076.42
+            },
+            "maxRssMb": 699
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 77.23,
+              "p95Ms": 98.14,
+              "minMs": 75.1
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 77.52,
+              "p95Ms": 83.21,
+              "minMs": 73.78
+            },
+            "maxRssMb": 298
+          }
+        }
+      }
+    },
+    {
+      "id": "followingSibling",
+      "label": "following-sibling::item[1] × 20,000",
+      "expression": "following-sibling::item[1]",
+      "contexts": "item",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 68.28,
+              "p95Ms": 79.06,
+              "minMs": 53.36
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 105.14,
+              "p95Ms": 107.8,
+              "minMs": 104.14
+            },
+            "maxRssMb": 345
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 31.55,
+              "p95Ms": 34.72,
+              "minMs": 24.94
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 118.82,
+              "p95Ms": 121.51,
+              "minMs": 117.83
+            },
+            "maxRssMb": 350
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 51.42,
+              "p95Ms": 53.53,
+              "minMs": 34.41
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 91.49,
+              "p95Ms": 95.27,
+              "minMs": 88.81
+            },
+            "maxRssMb": 286
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 15.56,
+              "p95Ms": 23.75,
+              "minMs": 14.93
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 104.76,
+              "p95Ms": 107.39,
+              "minMs": 103.8
+            },
+            "maxRssMb": 284
+          }
+        }
+      }
+    },
+    {
+      "id": "ancestor",
+      "label": "ancestor::* from 1,000 deep nodes",
+      "expression": "ancestor::*",
+      "contexts": "leaf",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 9.94,
+              "p95Ms": 10.38,
+              "minMs": 9.16
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 14.09,
+              "p95Ms": 14.54,
+              "minMs": 13.39
+            },
+            "maxRssMb": 343
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 6.85,
+              "p95Ms": 7.15,
+              "minMs": 6.45
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 13,
+              "p95Ms": 13.94,
+              "minMs": 12.56
+            },
+            "maxRssMb": 343
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 7.41,
+              "p95Ms": 8.3,
+              "minMs": 6.68
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 11.68,
+              "p95Ms": 12.13,
+              "minMs": 10.35
+            },
+            "maxRssMb": 239
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 3.66,
+              "p95Ms": 5.1,
+              "minMs": 3.5
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 11.76,
+              "p95Ms": 12.14,
+              "minMs": 8.58
+            },
+            "maxRssMb": 235
+          }
+        }
+      }
+    },
+    {
+      "id": "stringFunctions",
+      "label": "translate/concat/substring × 20,000",
+      "expression": "concat(translate(name, 'abcdef', 'ABCDEF'), '-', substring(@id, 2, 3))",
+      "contexts": "item",
+      "group": "shared",
+      "doms": {
+        "jsdom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 176.79,
+              "p95Ms": 180.78,
+              "minMs": 161.91
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 258.16,
+              "p95Ms": 259.09,
+              "minMs": 255.49
+            },
+            "maxRssMb": 362
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 183.53,
+              "p95Ms": 192.06,
+              "minMs": 180.51
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 515.64,
+              "p95Ms": 531.01,
+              "minMs": 514.52
+            },
+            "maxRssMb": 368
+          }
+        },
+        "xmldom": {
+          "1.0 package": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 93.79,
+              "p95Ms": 96.69,
+              "minMs": 76.79
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 173.33,
+              "p95Ms": 174.78,
+              "minMs": 171.27
+            },
+            "maxRssMb": 293
+          },
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 76.38,
+              "p95Ms": 81.97,
+              "minMs": 75.01
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 398.41,
+              "p95Ms": 401.39,
+              "minMs": 391.18
+            },
+            "maxRssMb": 294
+          }
+        }
+      }
+    },
+    {
+      "id": "flwor",
+      "label": "for + let over //item",
+      "expression": "for $x in //item return let $p := number($x/@price) return if ($p > 50) then string($x/@id) else ()",
+      "group": "xpath31",
+      "doms": {
+        "jsdom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 209.49,
+              "p95Ms": 212.09,
+              "minMs": 201.88
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 209.86,
+              "p95Ms": 214.94,
+              "minMs": 205.25
+            },
+            "maxRssMb": 391
+          }
+        },
+        "xmldom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 50.99,
+              "p95Ms": 53.01,
+              "minMs": 48.78
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 46.84,
+              "p95Ms": 50.28,
+              "minMs": 45.87
+            },
+            "maxRssMb": 289
+          }
+        }
+      }
+    },
+    {
+      "id": "groupSum",
+      "label": "distinct-values grouping + sum",
+      "expression": "for $c in distinct-values(//item/@cat) return sum(//item[@cat = $c]/@price)",
+      "group": "xpath31",
+      "doms": {
+        "jsdom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 7831.08,
+              "p95Ms": 8511.03,
+              "minMs": 7752.87
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 7809.18,
+              "p95Ms": 7903.56,
+              "minMs": 7801.5
+            },
+            "maxRssMb": 402
+          }
+        },
+        "xmldom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 1439.48,
+              "p95Ms": 1503.93,
+              "minMs": 1393.74
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 1725.25,
+              "p95Ms": 1785.13,
+              "minMs": 1470.2
+            },
+            "maxRssMb": 296
+          }
+        }
+      }
+    },
+    {
+      "id": "sortKey",
+      "label": "sort() with a key function",
+      "expression": "sort(//item, (), function($i) { number($i/@price) })",
+      "group": "xpath31",
+      "doms": {
+        "jsdom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 199.74,
+              "p95Ms": 206.63,
+              "minMs": 190.74
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 187.6,
+              "p95Ms": 201.99,
+              "minMs": 183.33
+            },
+            "maxRssMb": 383
+          }
+        },
+        "xmldom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 70.54,
+              "p95Ms": 79.56,
+              "minMs": 66.38
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 65.96,
+              "p95Ms": 68.16,
+              "minMs": 62.78
+            },
+            "maxRssMb": 288
+          }
+        }
+      }
+    },
+    {
+      "id": "mapMerge",
+      "label": "map:merge of 20,000 maps",
+      "expression": "map:merge(//item ! map { string(@id): number(@price) })",
+      "group": "xpath31",
+      "doms": {
+        "jsdom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 236.33,
+              "p95Ms": 242.27,
+              "minMs": 234.09
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 239.64,
+              "p95Ms": 256.51,
+              "minMs": 234.35
+            },
+            "maxRssMb": 391
+          }
+        },
+        "xmldom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 54.33,
+              "p95Ms": 57.13,
+              "minMs": 52.26
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 53.41,
+              "p95Ms": 55.03,
+              "minMs": 50.36
+            },
+            "maxRssMb": 280
+          }
+        }
+      }
+    },
+    {
+      "id": "stringJoin",
+      "label": "string-join(//item/@id)",
+      "expression": "string-join(//item/@id, ',')",
+      "group": "xpath31",
+      "doms": {
+        "jsdom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 170.67,
+              "p95Ms": 174.84,
+              "minMs": 166.96
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 169.9,
+              "p95Ms": 177.37,
+              "minMs": 168.3
+            },
+            "maxRssMb": 381
+          }
+        },
+        "xmldom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 31.54,
+              "p95Ms": 32.27,
+              "minMs": 31.23
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 31.49,
+              "p95Ms": 32.56,
+              "minMs": 31.11
+            },
+            "maxRssMb": 263
+          }
+        }
+      }
+    },
+    {
+      "id": "matches",
+      "label": "//item[matches(name, ...)]",
+      "expression": "//item[matches(name, '^[a-c]{3}')]",
+      "group": "xpath31",
+      "doms": {
+        "jsdom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 145.2,
+              "p95Ms": 152.95,
+              "minMs": 144.31
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 150.63,
+              "p95Ms": 153.51,
+              "minMs": 148.86
+            },
+            "maxRssMb": 377
+          }
+        },
+        "xmldom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 36.21,
+              "p95Ms": 39.6,
+              "minMs": 35.92
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 37.02,
+              "p95Ms": 38.07,
+              "minMs": 36.59
+            },
+            "maxRssMb": 255
+          }
+        }
+      }
+    },
+    {
+      "id": "tokenize",
+      "label": "tokenize(string-join(//name))",
+      "expression": "tokenize(string-join(//name, ' '), '\\s+')",
+      "group": "xpath31",
+      "doms": {
+        "jsdom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 129.93,
+              "p95Ms": 135.31,
+              "minMs": 127.22
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 131.94,
+              "p95Ms": 140.91,
+              "minMs": 126.2
+            },
+            "maxRssMb": 378
+          }
+        },
+        "xmldom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 32.43,
+              "p95Ms": 35.11,
+              "minMs": 31.86
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 31.8,
+              "p95Ms": 32.78,
+              "minMs": 30.1
+            },
+            "maxRssMb": 264
+          }
+        }
+      }
+    },
+    {
+      "id": "formatNumber",
+      "label": "format-number × 20,000",
+      "expression": "//item ! format-number(number(@price), '#,##0.00')",
+      "group": "xpath31",
+      "doms": {
+        "jsdom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 218.64,
+              "p95Ms": 224.91,
+              "minMs": 215.78
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 217.88,
+              "p95Ms": 225.07,
+              "minMs": 214.25
+            },
+            "maxRssMb": 388
+          }
+        },
+        "xmldom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 101.69,
+              "p95Ms": 105.6,
+              "minMs": 96.19
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 99.05,
+              "p95Ms": 108.73,
+              "minMs": 96.61
+            },
+            "maxRssMb": 290
+          }
+        }
+      }
+    },
+    {
+      "id": "foldLeft",
+      "label": "fold-left sum of //item/@price",
+      "expression": "fold-left(//item/@price, 0, function($a, $b) { $a + $b })",
+      "group": "xpath31",
+      "doms": {
+        "jsdom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 166.63,
+              "p95Ms": 168.3,
+              "minMs": 165.29
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 168.6,
+              "p95Ms": 171.69,
+              "minMs": 163.21
+            },
+            "maxRssMb": 380
+          }
+        },
+        "xmldom": {
+          "xslt3": {
+            "status": "ok",
+            "compiled": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 40.19,
+              "p95Ms": 42.86,
+              "minMs": 38.45
+            },
+            "oneShot": {
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 40.49,
+              "p95Ms": 43.43,
+              "minMs": 38.58
+            },
+            "maxRssMb": 287
+          }
+        }
+      }
+    }
+  ]
+}

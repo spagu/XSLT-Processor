@@ -72,11 +72,29 @@ export function prepareVersions() {
  * @param {string} name - Package name
  * @returns {string|null} Its version, or null when not installed
  */
-function packageVersion(root, name) {
+export function packageVersion(root, name) {
   const file = join(root, "node_modules", name, "package.json");
   return existsSync(file)
     ? JSON.parse(readFileSync(file, "utf8")).version
     : null;
+}
+
+/**
+ * The machine and runtime a benchmark runs on, and the date.
+ *
+ * @returns {{date: string, cpu: string, cores: number, ramGb: number, os: string, node: string}}
+ *   Machine description
+ */
+export function machine() {
+  const cpuList = cpus();
+  return {
+    date: new Date().toISOString(),
+    cpu: cpuList[0]?.model.trim() ?? "unknown",
+    cores: cpuList.length,
+    ramGb: Math.round(totalmem() / 2 ** 30),
+    os: `${type()} ${release()} (${platform()})`,
+    node: process.version,
+  };
 }
 
 /**
@@ -86,14 +104,8 @@ function packageVersion(root, name) {
  * @returns {object} Environment description for results.json
  */
 export function environment(roots) {
-  const cpuList = cpus();
   return {
-    date: new Date().toISOString(),
-    cpu: cpuList[0]?.model.trim() ?? "unknown",
-    cores: cpuList.length,
-    ramGb: Math.round(totalmem() / 2 ** 30),
-    os: `${type()} ${release()} (${platform()})`,
-    node: process.version,
+    ...machine(),
     dom: {
       jsdom: packageVersion(REPO_ROOT, "jsdom"),
       jsdomBaselineCli: packageVersion(roots["1.1.3"], "jsdom"),

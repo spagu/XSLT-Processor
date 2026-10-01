@@ -12,6 +12,9 @@
  * Usage: node scripts/benchmark/run.mjs [--runs 7] [--warmup 2]
  *        [--timeout 120] [--only id,id] [--out scripts/benchmark/results.json]
  * Then: node scripts/benchmark/charts.mjs
+ *
+ * `--suite xpath` runs the XPath 1.0 vs 3.1 benchmark instead (xpath.mjs,
+ * with its own options).
  */
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -20,11 +23,23 @@ import { parseArgs } from "node:util";
 import { TMP_ROOT, confinePath } from "../lib/fsSafety.mjs";
 import { INPUTS } from "./inputs.mjs";
 import { binaryCommand } from "./binary.mjs";
-import { RSS_REPORTER, measureCommand, measureWorker } from "./measure.mjs";
+import { RSS_REPORTER, measureCommand } from "./measure.mjs";
+import { measureWorker } from "./workerMeasure.mjs";
 import { SCENARIOS } from "./scenarios.mjs";
 import { environment, prepareVersions } from "./versions.mjs";
+import { runXPathSuite, splitSuite } from "./xpath.mjs";
+
+const { suite, rest } = splitSuite(process.argv.slice(2));
+if (suite === "xpath") {
+  await runXPathSuite(rest);
+  process.exit();
+}
+if (suite !== undefined && suite !== "xslt") {
+  throw new Error(`Unknown benchmark suite: ${suite} (xslt or xpath)`);
+}
 
 const { values } = parseArgs({
+  args: rest,
   options: {
     runs: { type: "string", default: "7" },
     warmup: { type: "string", default: "2" },

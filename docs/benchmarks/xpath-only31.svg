@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="356" viewBox="0 0 720 356" role="img" aria-labelledby="t d">
+<title id="t">XPath 3.1-only expressions, xslt3 median time (log scale)</title>
+<desc id="d">Median time of the compiled XPath 3.1 expressions that XPath 1.0 cannot express; the slowest is distinct-values grouping + sum (7.83 s on jsdom).</desc>
+<style>
+svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--new:#2a78d6;--old:#eb6834;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
+@media (prefers-color-scheme:dark){svg{--surface:#202124;--text:#e8eaed;--muted:#9aa0a6;--grid:#3c4043;--axis:#5f6368;--new:#3987e5;--old:#d95926}}
+.bg{fill:var(--surface)}.t1{fill:var(--text)}.t2{fill:var(--muted)}
+.title{fill:var(--text);font-size:13px;font-weight:600}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--axis);stroke-width:1}
+.ref{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.link{stroke:var(--axis);stroke-width:2}
+.new{fill:var(--new)}.old{fill:var(--old)}
+.ring{stroke:var(--surface);stroke-width:2}
+.hollow{fill:var(--surface);stroke-width:2}.hollow.old{stroke:var(--old)}.hollow.new{stroke:var(--new)}
+</style>
+<rect class="bg" width="720" height="356" rx="8"/>
+<text class="title" x="16" y="24">XPath 3.1-only expressions, xslt3 median time (log scale)</text>
+<circle class="old" cx="255" cy="46" r="5"/>
+<text class="t1" x="265" y="50" text-anchor="start">xslt3, jsdom</text>
+<circle class="old hollow" cx="375" cy="46" r="4.5"><title>xmldom</title></circle>
+<text class="t1" x="385" y="50" text-anchor="start">xslt3, xmldom</text>
+<line class="grid" x1="250" x2="250" y1="78" y2="330"/>
+<text class="t2" x="250" y="346" text-anchor="middle">10 ms</text>
+<line class="grid" x1="383.3" x2="383.3" y1="78" y2="330"/>
+<text class="t2" x="383.3" y="346" text-anchor="middle">100 ms</text>
+<line class="grid" x1="516.7" x2="516.7" y1="78" y2="330"/>
+<text class="t2" x="516.7" y="346" text-anchor="middle">1 s</text>
+<line class="grid" x1="650" x2="650" y1="78" y2="330"/>
+<text class="t2" x="650" y="346" text-anchor="middle">10 s</text>
+<text class="t1" x="234" y="96" text-anchor="end">distinct-values grouping + sum</text>
+<circle class="old ring" cx="635.8" cy="92" r="5"><title>distinct-values grouping + sum, xslt3 on jsdom: median 7.83 s</title></circle>
+<circle class="old hollow" cx="537.8" cy="92" r="4.5"><title>distinct-values grouping + sum, xslt3 on xmldom: median 1.44 s</title></circle>
+<text class="t1" x="645.8" y="96" text-anchor="start">7.83 s</text>
+<text class="t1" x="234" y="124" text-anchor="end">map:merge of 20,000 maps</text>
+<circle class="old ring" cx="433.1" cy="120" r="5"><title>map:merge of 20,000 maps, xslt3 on jsdom: median 236 ms</title></circle>
+<circle class="old hollow" cx="348" cy="120" r="4.5"><title>map:merge of 20,000 maps, xslt3 on xmldom: median 54 ms</title></circle>
+<text class="t1" x="443.1" y="124" text-anchor="start">236 ms</text>
+<text class="t1" x="234" y="152" text-anchor="end">format-number × 20,000</text>
+<circle class="old ring" cx="428.6" cy="148" r="5"><title>format-number × 20,000, xslt3 on jsdom: median 219 ms</title></circle>
+<circle class="old hollow" cx="384.3" cy="148" r="4.5"><title>format-number × 20,000, xslt3 on xmldom: median 102 ms</title></circle>
+<text class="t1" x="438.6" y="152" text-anchor="start">219 ms</text>
+<text class="t1" x="234" y="180" text-anchor="end">for + let over //item</text>
+<circle class="old ring" cx="426.2" cy="176" r="5"><title>for + let over //item, xslt3 on jsdom: median 209 ms</title></circle>
+<circle class="old hollow" cx="344.3" cy="176" r="4.5"><title>for + let over //item, xslt3 on xmldom: median 51 ms</title></circle>
+<text class="t1" x="436.2" y="180" text-anchor="start">209 ms</text>
+<text class="t1" x="234" y="208" text-anchor="end">sort() with a key function</text>
+<circle class="old ring" cx="423.4" cy="204" r="5"><title>sort() with a key function, xslt3 on jsdom: median 200 ms</title></circle>
+<circle class="old hollow" cx="363.1" cy="204" r="4.5"><title>sort() with a key function, xslt3 on xmldom: median 71 ms</title></circle>
+<text class="t1" x="433.4" y="208" text-anchor="start">200 ms</text>
+<text class="t1" x="234" y="236" text-anchor="end">string-join(//item/@id)</text>
+<circle class="old ring" cx="414.3" cy="232" r="5"><title>string-join(//item/@id), xslt3 on jsdom: median 171 ms</title></circle>
+<circle class="old hollow" cx="316.5" cy="232" r="4.5"><title>string-join(//item/@id), xslt3 on xmldom: median 32 ms</title></circle>
+<text class="t1" x="424.3" y="236" text-anchor="start">171 ms</text>
+<text class="t1" x="234" y="264" text-anchor="end">fold-left sum of //item/@price</text>
+<circle class="old ring" cx="412.9" cy="260" r="5"><title>fold-left sum of //item/@price, xslt3 on jsdom: median 167 ms</title></circle>
+<circle class="old hollow" cx="330.5" cy="260" r="4.5"><title>fold-left sum of //item/@price, xslt3 on xmldom: median 40 ms</title></circle>
+<text class="t1" x="422.9" y="264" text-anchor="start">167 ms</text>
+<text class="t1" x="234" y="292" text-anchor="end">//item[matches(name, ...)]</text>
+<circle class="old ring" cx="404.9" cy="288" r="5"><title>//item[matches(name, ...)], xslt3 on jsdom: median 145 ms</title></circle>
+<circle class="old hollow" cx="324.5" cy="288" r="4.5"><title>//item[matches(name, ...)], xslt3 on xmldom: median 36 ms</title></circle>
+<text class="t1" x="414.9" y="292" text-anchor="start">145 ms</text>
+<text class="t1" x="234" y="320" text-anchor="end">tokenize(string-join(//name))</text>
+<circle class="old ring" cx="398.5" cy="316" r="5"><title>tokenize(string-join(//name)), xslt3 on jsdom: median 130 ms</title></circle>
+<circle class="old hollow" cx="318.1" cy="316" r="4.5"><title>tokenize(string-join(//name)), xslt3 on xmldom: median 32 ms</title></circle>
+<text class="t1" x="408.5" y="320" text-anchor="start">130 ms</text>
+</svg>
