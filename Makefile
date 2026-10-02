@@ -153,8 +153,9 @@ docker-clean:
 
 # Publish @tradik/xslt-processor to npm by hand, from a clean checkout of the
 # release tag (git checkout v<version>), with the one-time password of your
-# npm account, asked for after the checks (or OTP=123456). Checks, build and
-# tests are in scripts/publish.sh.
+# npm account, asked for after the checks (or OTP=123456; Enter without a
+# code approves in the browser). Checks, build and tests are in
+# scripts/publish.sh.
 publish:
 	OTP=$(OTP) bash scripts/publish.sh
 

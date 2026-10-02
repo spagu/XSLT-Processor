@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`make publish` without an authenticator code**: pressing Enter at the one-time password prompt publishes with npm's approval in the browser (`npm publish` without `--otp`), for accounts whose second factor is a passkey or a security key, or when the authenticator is out of reach. A code still has to be 6 digits; `OTP=123456` still works for scripted runs.
+
 ### Documentation
 
 - **Release steps corrected** (docs/DEVELOPMENT.md): the Release workflow starts when a GitHub release is published, not when a `v*` tag is pushed as the page said; the steps now include `gh release create` and the manual `make publish` from the tag.
