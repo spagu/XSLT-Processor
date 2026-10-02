@@ -35,8 +35,8 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024;
  */
 function patternToRegExp(pattern) {
   const escaped = pattern
-    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*/g, ".*");
+    .replaceAll(/[.+?^${}()|[\]\\]/g, String.raw`\$&`)
+    .replaceAll("*", ".*");
   return new RegExp(`^${escaped}$`);
 }
 
@@ -99,18 +99,24 @@ async function* walkDirectory(rootDir, dir, isIgnored) {
   } catch {
     return;
   }
-  entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-  for (const entry of entries) {
-    if (entry.isSymbolicLink()) continue;
+  // Code point order, the same on every platform
+  entries.sort((a, b) => (a.name > b.name) - (a.name < b.name));
+  const kept = entries.filter((entry) => !entry.isSymbolicLink());
+  // Sizes of the regular files, read together rather than one await per file
+  const sizes = await Promise.all(
+    kept.map((entry) =>
+      entry.isFile() ? lstat(join(dir, entry.name)).then((s) => s.size) : null,
+    ),
+  );
+  for (const [index, entry] of kept.entries()) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (isIgnored(entry.name)) continue;
       yield* walkDirectory(rootDir, path, isIgnored);
       continue;
     }
-    if (!entry.isFile()) continue;
-    const { size } = await lstat(path);
-    if (size > MAX_FILE_BYTES) continue;
+    const size = sizes[index];
+    if (size === null || size > MAX_FILE_BYTES) continue;
     yield { path, relativePath: toPosix(relative(rootDir, path)), size };
   }
 }

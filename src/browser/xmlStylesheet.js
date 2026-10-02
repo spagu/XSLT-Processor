@@ -61,12 +61,19 @@ export function findXmlStylesheet(doc) {
  */
 function parsePseudoAttributes(data) {
   const result = {};
-  for (const match of data.matchAll(
-    /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g,
-  )) {
-    result[match[1]] = match[2] ?? match[3];
+  let rest = data;
+  for (;;) {
+    const equals = rest.indexOf("=");
+    if (equals === -1) return result;
+    const name = rest.slice(0, equals).trim().split(/\s+/).pop();
+    const afterEquals = rest.slice(equals + 1).trimStart();
+    const quote = afterEquals[0];
+    const close =
+      quote === '"' || quote === "'" ? afterEquals.indexOf(quote, 1) : -1;
+    if (close === -1) return result;
+    if (name) result[name] = afterEquals.slice(1, close);
+    rest = afterEquals.slice(close + 1);
   }
-  return result;
 }
 
 /**
@@ -81,9 +88,7 @@ function parsePseudoAttributes(data) {
 export function needsXmlStylesheet(doc) {
   if (!doc || doc.contentType === "text/html") return false;
   const root = doc.documentElement;
-  if (root && root.namespaceURI === XHTML && root.localName === "html") {
-    return false;
-  }
+  if (root?.namespaceURI === XHTML && root.localName === "html") return false;
   return findXmlStylesheet(doc) !== null;
 }
 
@@ -160,7 +165,7 @@ function sourceWithoutScripts(doc) {
   for (const script of Array.from(
     copy.getElementsByTagNameNS(XHTML, "script"),
   )) {
-    script.parentNode.removeChild(script);
+    script.remove();
   }
   return copy;
 }

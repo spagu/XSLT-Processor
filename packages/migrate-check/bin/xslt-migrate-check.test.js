@@ -7,7 +7,7 @@ import {
   createFixture,
   removeFixture,
   renderedXml,
-} from "../src/fixture.test.js";
+} from "../test/fixtures.js";
 
 const run = promisify(execFile);
 const binPath = fileURLToPath(

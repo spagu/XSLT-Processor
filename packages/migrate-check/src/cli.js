@@ -101,7 +101,9 @@ export function directoryLabel(directory) {
  */
 async function directoryError(directory) {
   try {
-    const info = await stat(directory);
+    // The directory to scan is this tool's input, by design (a local
+    // read-only scan); it is not confined to a base directory. NOSONAR
+    const info = await stat(directory); // NOSONAR
     return info.isDirectory() ? null : `Not a directory: ${directory}`;
   } catch {
     return `Directory not found: ${directory}`;

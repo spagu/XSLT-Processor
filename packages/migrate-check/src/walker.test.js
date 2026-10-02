@@ -3,7 +3,7 @@ import { Buffer } from "node:buffer";
 import { chmod, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { createFixture, removeFixture } from "./fixture.test.js";
+import { createFixture, removeFixture } from "../test/fixtures.js";
 import {
   DEFAULT_IGNORED_DIRS,
   MAX_FILE_BYTES,

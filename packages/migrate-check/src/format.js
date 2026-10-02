@@ -30,10 +30,11 @@ export function summarizeVersions(stylesheets) {
   }
   return [...counts.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(
-      ([version, count]) =>
-        `${count} × ${version === "unknown" ? "unknown version" : `XSLT ${version}`}`,
-    )
+    .map(([version, count]) => {
+      const label =
+        version === "unknown" ? "unknown version" : `XSLT ${version}`;
+      return `${count} × ${label}`;
+    })
     .join(", ");
 }
 

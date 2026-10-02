@@ -7,7 +7,7 @@ import {
   isStylesheetHead,
   trimLine,
 } from "./detectors.js";
-import { stylesheetXml } from "./fixture.test.js";
+import { stylesheetXml } from "../test/fixtures.js";
 
 describe("trimLine", () => {
   it("trims whitespace and cuts long lines to 100 characters", () => {

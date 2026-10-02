@@ -76,7 +76,7 @@ export function trimLine(text) {
  * @returns {string|null} The value, or null when absent
  */
 function readAttribute(attributes, name) {
-  const match = new RegExp(`\\b${name}\\s*=\\s*["']([^"']*)["']`).exec(
+  const match = new RegExp(String.raw`\b${name}\s*=\s*["']([^"']*)["']`).exec(
     attributes,
   );
   return match ? match[1].trim() : null;
@@ -142,7 +142,8 @@ export function detectStylesheet(content) {
   const version = root ? readAttribute(root[1], "version") : null;
   return {
     version: version || "unknown",
-    exslt: content.includes("http://exslt.org/"),
+    // A namespace name is an identifier compared as a string, never fetched
+    exslt: content.includes("http://exslt.org/"), // NOSONAR
     disableOutputEscaping: content.includes("disable-output-escaping"),
     documentFunction: /\bdocument\s*\(/.test(content),
     key: content.includes("<xsl:key"),

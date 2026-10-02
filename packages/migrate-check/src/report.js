@@ -66,8 +66,10 @@ function headlineLines(analysis, style) {
       `Server-side / already migrated: package.json depends on ${serverSide.join(", ")}`,
     );
   }
-  lines.push(style.bold(`Chrome compatibility risk: ${analysis.risk}`));
-  lines.push(style.dim(`  ${RISK_NOTES[analysis.risk]}`));
+  lines.push(
+    style.bold(`Chrome compatibility risk: ${analysis.risk}`),
+    style.dim(`  ${RISK_NOTES[analysis.risk]}`),
+  );
   return lines;
 }
 

@@ -78,6 +78,17 @@ describe("findXmlStylesheet", () => {
     assert.strictEqual(findXmlStylesheet(doc).href, "s.xsl");
   });
 
+  it("stops at an unquoted value and ignores a value without a name", () => {
+    const unquoted = xmlDocument(
+      '<?xml-stylesheet type="text/xsl" href=s.xsl?>',
+    );
+    assert.strictEqual(findXmlStylesheet(unquoted), null);
+    const nameless = xmlDocument(
+      `<?xml-stylesheet = "x" type="text/xsl" href="s.xsl"?>`,
+    );
+    assert.strictEqual(findXmlStylesheet(nameless).href, "s.xsl");
+  });
+
   it("skips CSS, alternate and incomplete instructions", () => {
     const css = xmlDocument('<?xml-stylesheet type="text/css" href="s.css"?>');
     assert.strictEqual(findXmlStylesheet(css), null);

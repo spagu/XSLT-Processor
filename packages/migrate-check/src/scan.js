@@ -139,8 +139,10 @@ export async function inspectFile({ path, relativePath }, result) {
 export async function readServerSidePackages(rootDir) {
   let manifest;
   try {
+    // rootDir is the directory the user asked to scan; reading its
+    // package.json is the point. NOSONAR
     manifest = JSON.parse(
-      await readFile(join(rootDir, "package.json"), "utf8"),
+      await readFile(join(rootDir, "package.json"), "utf8"), // NOSONAR
     );
   } catch {
     return [];

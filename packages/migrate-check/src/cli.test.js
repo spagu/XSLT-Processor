@@ -6,7 +6,7 @@ import {
   removeFixture,
   renderedXml,
   stylesheetXml,
-} from "./fixture.test.js";
+} from "../test/fixtures.js";
 import { SUGGESTION, readVersion } from "./migration.js";
 
 /** A CliIo that records what was written. */

@@ -7,7 +7,7 @@ import {
   removeFixture,
   renderedXml,
   stylesheetXml,
-} from "./fixture.test.js";
+} from "../test/fixtures.js";
 import {
   SERVER_SIDE_PACKAGES,
   inspectFile,
