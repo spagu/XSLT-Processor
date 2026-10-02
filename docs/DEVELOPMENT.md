@@ -51,6 +51,7 @@ further packages, built and tested on their own:
 |---|---|---|
 | `.` | `@tradik/xslt-processor` | `npm test` |
 | `packages/xslt3` | `@tradik/xslt3` (XSLT 3.0 / XPath 3.1, [design](XSLT3.md)) | `npm run test:xslt3` |
+| `packages/migrate-check` | `xslt-migrate-check` (`npx xslt-migrate-check .`: finds the XSLT a project depends on in the browser and prints the risk and the one-line migration, [reference](MIGRATE-CHECK.md)) | `npm run test:migrate-check` |
 
 `npm ci` at the root installs every package. A workspace never becomes a
 dependency of `@tradik/xslt-processor`: its tarball holds only `dist/`,
@@ -95,6 +96,8 @@ make publish-dry           # every check, then npm publish --dry-run
 make publish               # the same checks, then asks for the one-time password
 ```
 
+`xslt-migrate-check` is released from the same tag too: `make publish-migrate-check-dry`
+and `make publish-migrate-check` (`npm run test:migrate-check` runs its tests).
 `@tradik/xslt3` is released from the same tag: `make publish-xslt3-dry` and
 `make publish-xslt3` run its tests and both W3C suites instead.
 Its first version has to be published this way; afterwards add a Trusted
