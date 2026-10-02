@@ -48,9 +48,17 @@ export function camelCaseOutput(output) {
  * @param {Record<string, *>} params - Its serialization parameters
  * @param {Document} output - The owner document
  * @param {(node: Node, params: object) => string} serialize - Serializer
+ * @param {{xhtmlElements?: boolean}} [options] - Deprecated
+ *   `legacyXhtmlFragments`: xml output as XHTML elements in an HTML owner
  * @returns {DocumentFragment} The fragment
  */
-export function fragmentResult(principal, params, output, serialize) {
+export function fragmentResult(
+  principal,
+  params,
+  output,
+  serialize,
+  options = {},
+) {
   if (params.method === "text") {
     return textFragment(output, serialize(principal, params));
   }
@@ -60,7 +68,7 @@ export function fragmentResult(principal, params, output, serialize) {
       importResultFragment(principal, output, { htmlMethod: true })
     );
   }
-  return importResultFragment(principal, output);
+  return importResultFragment(principal, output, options);
 }
 
 /**

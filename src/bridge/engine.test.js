@@ -244,6 +244,24 @@ describe("xsltVersion auto result shapes", () => {
     assert.strictEqual(fragment.textContent, "a < b");
   });
 
+  it(
+    "turns xml output into XHTML elements with legacyXhtmlFragments",
+    jsdomOnly("HTML documents"),
+    () => {
+      const fragment = auto(
+        stylesheet(
+          `${NO_DECLARATION}<xsl:template match="/"><Item a="1"/></xsl:template>`,
+        ),
+        { legacyXhtmlFragments: true },
+      ).transformToFragment(parseXML("<r/>"), window.document);
+      assert.strictEqual(
+        fragment.firstChild.namespaceURI,
+        "http://www.w3.org/1999/xhtml",
+      );
+      assert.strictEqual(fragment.firstChild.localName, "Item");
+    },
+  );
+
   it("keeps xml output in no namespace in an HTML owner", () => {
     const fragment = auto(
       stylesheet(

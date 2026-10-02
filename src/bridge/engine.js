@@ -45,6 +45,8 @@ export class Xslt3Engine {
     this.stylesheetLoader = options.stylesheetLoader ?? null;
     this.documentLoader = options.documentLoader ?? null;
     this.clock = options.clock ?? null;
+    /** Deprecated: xml output as XHTML elements in an HTML owner (pre-1.3.1) */
+    this.legacyXhtmlFragments = options.legacyXhtmlFragments === true;
     /** @type {Map<string, *>} Parameters by `{uri}local` or `local` */
     this.parameters = new Map();
     this.compiled = null;
@@ -164,7 +166,9 @@ export class Xslt3Engine {
    */
   transformToFragment(source, output) {
     const { principal, params } = this.run(source);
-    return fragmentResult(principal, params, output, this.xslt3.serialize);
+    return fragmentResult(principal, params, output, this.xslt3.serialize, {
+      xhtmlElements: this.legacyXhtmlFragments,
+    });
   }
 
   /**

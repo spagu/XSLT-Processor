@@ -24,24 +24,25 @@ export function createResultDocument(ownerDocument) {
 }
 
 /**
- * Copy an element in no namespace as an element of the XHTML namespace with
- * lower-case element and attribute names: what the HTML parser would make
- * of html output. Used for DOMs that cannot parse HTML fragments (see
- * parseHtmlFragment); browsers and jsdom parse instead.
+ * Copy an element in no namespace as an element of the XHTML namespace:
+ * with `lowerCase`, with lower-case element and attribute names, what the
+ * HTML parser would make of html output (for DOMs that cannot parse HTML
+ * fragments, see parseHtmlFragment); without, with the names as written
+ * (the deprecated `legacyXhtmlFragments` behaviour).
  *
  * @param {Element} element - Element in no namespace
  * @param {Document} targetDoc - The document that will own the copy
+ * @param {boolean} lowerCase - Lower-case the element and attribute names
  * @returns {Element} The shallow copy, with the attributes
  */
-function importAsHtmlElement(element, targetDoc) {
+function importAsHtmlElement(element, targetDoc, lowerCase) {
+  const fold = (name) => (lowerCase ? name.toLowerCase() : name);
   const copy = targetDoc.createElementNS(
     XHTML_NAMESPACE,
-    element.localName.toLowerCase(),
+    fold(element.localName),
   );
   for (const attribute of element.attributes) {
-    const name = attribute.namespaceURI
-      ? attribute.name
-      : attribute.name.toLowerCase();
+    const name = attribute.namespaceURI ? attribute.name : fold(attribute.name);
     copy.setAttributeNS(attribute.namespaceURI, name, attribute.value);
   }
   return copy;
@@ -51,24 +52,29 @@ function importAsHtmlElement(element, targetDoc) {
  * Deep-import a result tree node into another document.
  *
  * Unlike `Document.importNode` this preserves the internal
- * `_disableOutputEscaping` marker set by `disable-output-escaping`. With
- * `htmlMethod` (output of the html method on a DOM without an HTML parser),
- * elements in no namespace become XHTML elements with lower-case names (see
- * importAsHtmlElement); elements of other namespaces are kept.
+ * `_disableOutputEscaping` marker set by `disable-output-escaping`. Elements
+ * in no namespace become XHTML elements (see importAsHtmlElement) with
+ * `htmlMethod` (output of the html method on a DOM without an HTML parser,
+ * lower-case names) or, into an HTML document only, with `xhtmlElements`
+ * (the deprecated `legacyXhtmlFragments` option, names as written);
+ * elements of other namespaces are kept.
  *
  * @param {Node} node - The node to import
  * @param {Document} targetDoc - The document that will own the copy
- * @param {{htmlMethod?: boolean}} [options] - Import options
+ * @param {{htmlMethod?: boolean, xhtmlElements?: boolean}} [options] - Import
+ *   options
  * @returns {Node} The imported copy
  *
  * @example
  * const copy = importResultNode(element, window.document);
  */
 export function importResultNode(node, targetDoc, options = {}) {
+  const htmlMethod = options.htmlMethod === true;
+  const legacy = options.xhtmlElements === true && isHtmlDocument(targetDoc);
   const asHtml =
-    options.htmlMethod === true && node.nodeType === 1 && !node.namespaceURI;
+    (htmlMethod || legacy) && node.nodeType === 1 && !node.namespaceURI;
   const copy = asHtml
-    ? importAsHtmlElement(node, targetDoc)
+    ? importAsHtmlElement(node, targetDoc, htmlMethod)
     : targetDoc.importNode(node, false);
 
   if (node._disableOutputEscaping) {
@@ -89,7 +95,8 @@ export function importResultNode(node, targetDoc, options = {}) {
  *
  * @param {DocumentFragment} fragment - The fragment built in the neutral document
  * @param {Document} targetDoc - The document that will own the result
- * @param {{htmlMethod?: boolean}} [options] - See {@link importResultNode}
+ * @param {{htmlMethod?: boolean, xhtmlElements?: boolean}} [options] - See
+ *   {@link importResultNode}
  * @returns {DocumentFragment} A fragment owned by `targetDoc`
  *
  * @example

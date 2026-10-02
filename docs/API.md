@@ -36,6 +36,7 @@ non-W3C options:
 | `enableDynamicEvaluate` | Allow EXSLT `dyn:evaluate()` (trusted input only) |
 | `clock` | `() => Date` used by EXSLT date functions and `current-dateTime()` |
 | `legacyNameTests` | Deprecated: unprefixed name tests also match namespaced nodes, as before 1.2.0 |
+| `legacyXhtmlFragments` | Deprecated: `transformToFragment` turns xml output into XHTML elements of an HTML owner document, as in 1.2.0 to 1.3.0; Chrome and Firefox keep them in no namespace, the default since 1.3.1 |
 
 ### Methods
 

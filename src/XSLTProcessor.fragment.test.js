@@ -275,3 +275,43 @@ describe("html output on a DOM without an HTML parser", () => {
     assert.strictEqual(importResultFragment(fragment, owner), fragment);
   });
 });
+
+describe("legacyXhtmlFragments (deprecated)", () => {
+  const options = { legacyXhtmlFragments: true };
+
+  it("turns xml output into XHTML elements of an HTML owner, as before 1.3.1", () => {
+    const fragment = fragmentOf(
+      '<ul class="c"><li>x</li><Item/></ul>',
+      '<xsl:output method="xml"/>',
+      html,
+      options,
+    );
+    const list = fragment.firstChild;
+    assert.strictEqual(list.namespaceURI, XHTML);
+    assert.ok(list instanceof window.HTMLUListElement);
+    assert.strictEqual(list.getAttribute("class"), "c");
+    // The name keeps its case, as the old behaviour did
+    assert.strictEqual(list.childNodes[1].localName, "Item");
+  });
+
+  it("leaves xml output into an XML owner alone", () => {
+    const fragment = fragmentOf(
+      "<Item/>",
+      '<xsl:output method="xml"/>',
+      parseXML("<o/>"),
+      options,
+    );
+    assert.strictEqual(fragment.firstChild.namespaceURI, null);
+  });
+
+  it("does not change html output, which the HTML parser shapes anyway", () => {
+    const fragment = fragmentOf(
+      "<Item/>",
+      '<xsl:output method="html"/>',
+      html,
+      options,
+    );
+    assert.strictEqual(fragment.firstChild.localName, "item");
+    assert.strictEqual(fragment.firstChild.namespaceURI, XHTML);
+  });
+});

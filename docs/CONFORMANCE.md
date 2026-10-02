@@ -269,6 +269,11 @@ Differences from the XSLT 1.0 / XPath 1.0 specifications and from libxslt
 - **`legacyNameTests`** (deprecated, to be removed in a future major release):
   `new XSLTProcessor({ legacyNameTests: true })` restores the pre-1.2.0 matching
   where unprefixed name tests also selected namespaced nodes.
+- **`legacyXhtmlFragments`** (deprecated, to be removed in a future major
+  release): `new XSLTProcessor({ legacyXhtmlFragments: true })` restores the
+  1.2.0 to 1.3.0 behaviour where `transformToFragment` turned xml output into
+  XHTML elements of an HTML owner document; Chrome and Firefox keep such
+  elements in no namespace.
 
 ## Test Coverage
 

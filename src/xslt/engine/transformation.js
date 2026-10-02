@@ -67,7 +67,9 @@ export const transformationMethods = {
    *   and `body` tags are dropped (see parseHtmlFragment); a DOM without an
    *   HTML parser gets the result nodes as XHTML elements instead;
    * - text output is one text node;
-   * - xml output keeps the result nodes as they are, in their namespaces.
+   * - xml output keeps the result nodes as they are, in their namespaces
+   *   (with the deprecated `legacyXhtmlFragments` option, elements in no
+   *   namespace become XHTML elements of an HTML owner, as before 1.3.1).
    *
    * @param {Node} sourceNode - Source document or element
    * @param {Document} ownerDocument - Output document
@@ -87,7 +89,9 @@ export const transformationMethods = {
         importResultFragment(fragment, doc, { htmlMethod: true })
       );
     }
-    return importResultFragment(fragment, doc);
+    return importResultFragment(fragment, doc, {
+      xhtmlElements: this.legacyXhtmlFragments,
+    });
   },
 
   /**

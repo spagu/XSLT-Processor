@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **`transformToFragment()` with xml output into an HTML document keeps the result nodes as they are**: elements in no namespace stay in no namespace, as Chrome and Firefox both return them (a comparison of the native `XSLTProcessor`s with this one over 26 output scenarios found it). Since 1.2.0 they became XHTML elements, on the belief that browsers did that; a page that relied on `<ul><li>` from `method="xml"` rendering as a list should declare `method="html"` (the default when the result starts with `html`), as it would have to in Chrome.
+- **`transformToFragment()` with xml output into an HTML document keeps the result nodes as they are**: elements in no namespace stay in no namespace, as Chrome and Firefox both return them (a comparison of the native `XSLTProcessor`s with this one over 26 output scenarios found it). Since 1.2.0 they became XHTML elements, on the belief that browsers did that; a page that relied on `<ul><li>` from `method="xml"` rendering as a list should declare `method="html"` (the default when the result starts with `html`), as it would have to in Chrome, or pass `new XSLTProcessor({ legacyXhtmlFragments: true })` (deprecated, like `legacyNameTests`) to keep the old behaviour while it does.
 - `make publish` and `make publish-xslt3` ask for the npm one-time password after the build and the tests, just before publishing: a code is valid for about 30 seconds and the checks take minutes, so `make publish OTP=123456` expired before it was used. `OTP=…` still works for scripted runs.
 
 ### Documentation
