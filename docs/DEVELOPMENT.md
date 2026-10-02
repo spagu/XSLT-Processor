@@ -235,3 +235,5 @@ the conformance suite with jsdom and with @xmldom/xmldom.
 ## Benchmarks
 
 `npm run bench` (about 6 minutes) measures 1.1.3 against the working tree and writes `scripts/benchmark/results.json`; `node scripts/benchmark/charts.mjs` redraws `docs/benchmarks/*.svg` and the tables in [BENCHMARKS.md](BENCHMARKS.md).
+
+`npm run bench -- --suite xpath` and `npm run bench -- --suite xslt` run the XPath 1.0 vs 3.1 and the XSLT 1.0 package vs @tradik/xslt3 benchmarks (`--suite release`, the default, is the one above); `node scripts/benchmark/charts.mjs --suite xpath` or `--suite xslt` redraws their charts and sections. `npm run test:bench` runs the unit tests of the benchmark helpers.

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="272" viewBox="0 0 720 272" role="img" aria-labelledby="t d">
+<title id="t">XSLT 1.0 stylesheets and their 2.0/3.0 rewrites, median time on jsdom (log scale)</title>
+<desc id="d">Median time of each task on jsdom: the 1.0 package and xslt3 on the XSLT 1.0 stylesheet, and xslt3 on the idiomatic XSLT 2.0/3.0 rewrite; the largest gain is on xsl:number level=&quot;any&quot;, 8,000, where the rewrite (xsl:iterate) is 1,567× faster than the 1.0 stylesheet on xslt3.</desc>
+<style>
+svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--new:#2a78d6;--old:#eb6834;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
+@media (prefers-color-scheme:dark){svg{--surface:#202124;--text:#e8eaed;--muted:#9aa0a6;--grid:#3c4043;--axis:#5f6368;--new:#3987e5;--old:#d95926}}
+.bg{fill:var(--surface)}.t1{fill:var(--text)}.t2{fill:var(--muted)}
+.title{fill:var(--text);font-size:13px;font-weight:600}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--axis);stroke-width:1}
+.ref{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.link{stroke:var(--axis);stroke-width:2}
+.new{fill:var(--new)}.old{fill:var(--old)}
+.ring{stroke:var(--surface);stroke-width:2}
+.hollow{fill:var(--surface);stroke-width:2}.hollow.old{stroke:var(--old)}.hollow.new{stroke:var(--new)}
+.hollow{fill:none}
+</style>
+<rect class="bg" width="720" height="272" rx="8"/>
+<text class="title" x="16" y="24">XSLT 1.0 stylesheets and their 2.0/3.0 rewrites, median time on jsdom (log scale)</text>
+<circle class="new ring" cx="21" cy="46" r="5"><title>1.0 package, 1.0 stylesheet</title></circle>
+<text class="t1" x="31" y="50" text-anchor="start">1.0 package, 1.0 stylesheet</text>
+<circle class="old hollow" cx="221" cy="46" r="4.5"><title>xslt3, 1.0 stylesheet</title></circle>
+<text class="t1" x="231" y="50" text-anchor="start">xslt3, 1.0 stylesheet</text>
+<circle class="old ring" cx="391" cy="46" r="5"><title>xslt3, rewrite</title></circle>
+<text class="t1" x="401" y="50" text-anchor="start">xslt3, rewrite</text>
+<line class="grid" x1="250" x2="250" y1="78" y2="246"/>
+<text class="t2" x="250" y="262" text-anchor="middle">1 ms</text>
+<line class="grid" x1="312" x2="312" y1="78" y2="246"/>
+<text class="t2" x="312" y="262" text-anchor="middle">10 ms</text>
+<line class="grid" x1="374" x2="374" y1="78" y2="246"/>
+<text class="t2" x="374" y="262" text-anchor="middle">100 ms</text>
+<line class="grid" x1="436" x2="436" y1="78" y2="246"/>
+<text class="t2" x="436" y="262" text-anchor="middle">1 s</text>
+<line class="grid" x1="498" x2="498" y1="78" y2="246"/>
+<text class="t2" x="498" y="262" text-anchor="middle">10 s</text>
+<line class="grid" x1="560" x2="560" y1="78" y2="246"/>
+<text class="t2" x="560" y="262" text-anchor="middle">100 s</text>
+<text class="t1" x="234" y="96" text-anchor="end">xsl:number level=&quot;any&quot;, 8,000</text>
+<line class="link" x1="338.2" x2="536.3" y1="92" y2="92"/>
+<circle class="new ring" cx="369.4" cy="92" r="5"><title>xsl:number level=&quot;any&quot;, 8,000, 1.0 package, 1.0 stylesheet on jsdom: median 84 ms</title></circle>
+<circle class="old hollow" cx="536.3" cy="92" r="4.5"><title>xsl:number level=&quot;any&quot;, 8,000, xslt3, 1.0 stylesheet on jsdom: median 41.4 s</title></circle>
+<circle class="old ring" cx="338.2" cy="92" r="5"><title>xsl:number level=&quot;any&quot;, 8,000, xslt3, rewrite on jsdom: median 26 ms</title></circle>
+<text class="t1" x="546.3" y="96" text-anchor="start">rewrite 1,567× faster</text>
+<text class="t1" x="234" y="124" text-anchor="end">Muenchian grouping, 8,000</text>
+<line class="link" x1="346" x2="383.1" y1="120" y2="120"/>
+<circle class="new ring" cx="383.1" cy="120" r="5"><title>Muenchian grouping, 8,000, 1.0 package, 1.0 stylesheet on jsdom: median 140 ms</title></circle>
+<circle class="old hollow" cx="382.2" cy="120" r="4.5"><title>Muenchian grouping, 8,000, xslt3, 1.0 stylesheet on jsdom: median 135 ms</title></circle>
+<circle class="old ring" cx="346" cy="120" r="5"><title>Muenchian grouping, 8,000, xslt3, rewrite on jsdom: median 35 ms</title></circle>
+<text class="t1" x="393.1" y="124" text-anchor="start">rewrite 3.83× faster</text>
+<text class="t1" x="234" y="152" text-anchor="end">call-template depth 3,000</text>
+<line class="link" x1="301.6" x2="359.4" y1="148" y2="148"/>
+<circle class="new ring" cx="359.4" cy="148" r="5"><title>call-template depth 3,000, 1.0 package, 1.0 stylesheet on jsdom: median 58 ms</title></circle>
+<circle class="old hollow" cx="319.4" cy="148" r="4.5"><title>call-template depth 3,000, xslt3, 1.0 stylesheet on jsdom: median 13 ms</title></circle>
+<circle class="old ring" cx="301.6" cy="148" r="5"><title>call-template depth 3,000, xslt3, rewrite on jsdom: median 6.8 ms</title></circle>
+<text class="t1" x="369.4" y="152" text-anchor="start">rewrite 1.94× faster</text>
+<text class="t1" x="234" y="180" text-anchor="end">Issue #9 catalogue (3 MB HTML)</text>
+<line class="link" x1="450.3" x2="462.2" y1="176" y2="176"/>
+<circle class="new ring" cx="462.2" cy="176" r="5"><title>Issue #9 catalogue (3 MB HTML), 1.0 package, 1.0 stylesheet on jsdom: median 2.65 s</title></circle>
+<circle class="old hollow" cx="461.4" cy="176" r="4.5"><title>Issue #9 catalogue (3 MB HTML), xslt3, 1.0 stylesheet on jsdom: median 2.57 s</title></circle>
+<circle class="old ring" cx="450.3" cy="176" r="5"><title>Issue #9 catalogue (3 MB HTML), xslt3, rewrite on jsdom: median 1.70 s</title></circle>
+<text class="t1" x="472.2" y="180" text-anchor="start">rewrite 1.51× faster</text>
+<text class="t1" x="234" y="208" text-anchor="end">Identity transform, 5 MB</text>
+<line class="link" x1="449.8" x2="455.3" y1="204" y2="204"/>
+<circle class="new ring" cx="455.3" cy="204" r="5"><title>Identity transform, 5 MB, 1.0 package, 1.0 stylesheet on jsdom: median 2.05 s</title></circle>
+<circle class="old hollow" cx="455.1" cy="204" r="4.5"><title>Identity transform, 5 MB, xslt3, 1.0 stylesheet on jsdom: median 2.04 s</title></circle>
+<circle class="old ring" cx="449.8" cy="204" r="5"><title>Identity transform, 5 MB, xslt3, rewrite on jsdom: median 1.67 s</title></circle>
+<text class="t1" x="465.3" y="208" text-anchor="start">rewrite 1.22× faster</text>
+<text class="t1" x="234" y="236" text-anchor="end">Sort 20,000 by two keys</text>
+<line class="link" x1="387" x2="411.6" y1="232" y2="232"/>
+<circle class="new ring" cx="411.6" cy="232" r="5"><title>Sort 20,000 by two keys, 1.0 package, 1.0 stylesheet on jsdom: median 404 ms</title></circle>
+<circle class="old hollow" cx="388.6" cy="232" r="4.5"><title>Sort 20,000 by two keys, xslt3, 1.0 stylesheet on jsdom: median 172 ms</title></circle>
+<circle class="old ring" cx="387" cy="232" r="5"><title>Sort 20,000 by two keys, xslt3, rewrite on jsdom: median 162 ms</title></circle>
+<text class="t1" x="421.6" y="236" text-anchor="start">rewrite 1.06× faster</text>
+</svg>

@@ -10,6 +10,8 @@
  * Usage: node scripts/benchmark/charts.mjs [--results scripts/benchmark/results.json]
  *        node scripts/benchmark/charts.mjs --suite xpath [--results scripts/benchmark/results-xpath.json]
  * (the XPath charts and sections, see xpathCharts.mjs)
+ *        node scripts/benchmark/charts.mjs --suite xslt [--results scripts/benchmark/results-xslt.json]
+ * (the XSLT engine charts and sections, see xsltCharts.mjs)
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -21,11 +23,12 @@ import { speedupChart, timeChart } from "./figures.mjs";
 import { memoryChart } from "./memory.mjs";
 import { DOCS, PAGE, chart, fill } from "./page.mjs";
 import { writeXPathCharts } from "./xpathCharts.mjs";
+import { writeXsltCharts } from "./xsltCharts.mjs";
 
 const { values } = parseArgs({
   options: {
     results: { type: "string" },
-    suite: { type: "string", default: "xslt" },
+    suite: { type: "string", default: "release" },
   },
 });
 
@@ -33,8 +36,14 @@ if (values.suite === "xpath") {
   writeXPathCharts(values.results ?? "scripts/benchmark/results-xpath.json");
   process.exit();
 }
-if (values.suite !== "xslt") {
-  throw new Error(`Unknown benchmark suite: ${values.suite} (xslt or xpath)`);
+if (values.suite === "xslt") {
+  writeXsltCharts(values.results ?? "scripts/benchmark/results-xslt.json");
+  process.exit();
+}
+if (values.suite !== "release") {
+  throw new Error(
+    `Unknown benchmark suite: ${values.suite} (release, xpath or xslt)`,
+  );
 }
 
 /**

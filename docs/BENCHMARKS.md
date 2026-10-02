@@ -17,6 +17,7 @@ per scenario and peak memory, each chart followed by its data table.
 - [Scenarios](#scenarios)
 - [Notes and caveats](#notes-and-caveats)
 - [XPath 1.0 vs XPath 3.1](#xpath-10-vs-xpath-31): the 1.0 package against @tradik/xslt3
+- [XSLT 1.0 vs XSLT 3.0 engines](#xslt-10-vs-xslt-30-engines): the 1.0 package against @tradik/xslt3 on the same stylesheets, idiomatic 2.0/3.0 rewrites, 3.0-only scenarios, start-up and bundle size
 
 ## Method
 
@@ -397,3 +398,310 @@ What XPath 1.0 cannot express at all, on xslt3 alone.
   xslt3.
 - xslt3 is in development (`0.0.0`); these numbers are a baseline for
   its optimisation, not a release comparison.
+
+## XSLT 1.0 vs XSLT 3.0 engines
+
+The XSLT 1.0 engine of this package (`src/`, `XSLTProcessor`) against the
+XSLT 3.0 engine of [@tradik/xslt3](XSLT3.md) (`packages/xslt3`,
+`compileStylesheet()` + `transform()` + `serialize()`, in development), in
+three groups:
+
+1. **The same XSLT 1.0 stylesheets** as the 1.1.3 vs 1.2.0 suite, run by
+   both engines; they declare `version="1.0"`, so xslt3 runs them in
+   backwards-compatible mode.
+2. **The same tasks rewritten idiomatically** in XSLT 2.0/3.0, run by
+   xslt3: is rewriting a 1.0 stylesheet worth it?
+3. **XSLT 3.0-only tasks** that 1.0 cannot express directly: grouping,
+   regular expressions, iteration with state, JSON in and out, maps,
+   higher-order functions, accumulators, merging.
+
+<!-- bench:xslt-hero -->
+On jsdom, xslt3 is **1.04× slower** than the 1.0 package (geometric mean of the time ratio over 9 scenarios; from 0.22× the time on 100 MB text result to 492× on xsl:number level="any", 8,000) · on xmldom, xslt3 is **1.00× faster** than the 1.0 package (geometric mean of the time ratio over 9 scenarios; from 0.13× the time on following-sibling::x[1], 8,000 to 359× on xsl:number level="any", 8,000) · rewritten in XSLT 2.0/3.0, the same tasks run **5.32× faster** on xslt3 than their 1.0 stylesheets (geometric mean over 6 tasks on jsdom; 1,567× faster on xsl:number level="any", 8,000).
+<!-- /bench:xslt-hero -->
+
+### XSLT engines method
+
+<!-- bench:xslt-method -->
+- Machine: AMD Ryzen 9 7950X 16-Core Processor, 32 logical cores, 31 GB RAM, Linux 6.18.40.1-microsoft-standard-WSL2 (linux)
+- Node.js 25.9.0; DOM: jsdom 30.1.1, @xmldom/xmldom 0.9.12
+- Engines: 1.0 package 1.2.1 (`src/index.js`), xslt3 0.0.0 (`packages/xslt3/src/index.js`, in development)
+- Runs: 2 warm-up + 7 measured per phase (compile, then transform), each scenario, DOM and engine in its own process; a run over 120 s counts as a timeout. Phases slower than 10 s per run use 1 warm-up + 3 runs
+- Recorded 2026-10-02; the whole run took 20.62 minutes
+- **Provisional**: recorded on a machine shared with other work, so single numbers may be off by tens of percent; to be re-run on an idle machine before the release
+<!-- /bench:xslt-method -->
+
+Inputs are generated deterministically, the 1.0 ones by
+[scripts/benchmark/inputs.mjs](../scripts/benchmark/inputs.mjs) (the same
+bytes as the 1.1.3 vs 1.2.0 suite), the rewrites by
+[xsltRewrites.mjs](../scripts/benchmark/xsltRewrites.mjs) and the 3.0-only
+ones by [xslt30Inputs.mjs](../scripts/benchmark/xslt30Inputs.mjs) and
+[xsltJson.mjs](../scripts/benchmark/xsltJson.mjs). Each worker process
+parses the source and the stylesheet once (not timed) with jsdom or
+@xmldom/xmldom, installed globally as the `xslt` CLI does, and measures two
+phases:
+
+- **compile**: `new XSLTProcessor()` + `importStylesheet()` in the 1.0
+  package, `compileStylesheet()` in xslt3;
+- **transform**: one transformation with the compiled stylesheet, including
+  serialization to a string (`transformToString()` in the 1.0 package;
+  `transform()` + `serialize()` with the stylesheet's output parameters in
+  xslt3). The charts and the time tables show this phase.
+
+Peak memory is the process's maximum resident set size, so it includes
+Node.js, the DOM and the parsed documents; one process runs both phases.
+
+Reproduce:
+
+```bash
+npm ci --ignore-scripts
+node scripts/benchmark/run.mjs --suite xslt        # writes scripts/benchmark/results-xslt.json
+node scripts/benchmark/charts.mjs --suite xslt     # redraws docs/benchmarks/xslt-*.svg and the tables below
+```
+
+`node scripts/benchmark/run.mjs --suite xslt --dom jsdom --runs 3 --only catalog,catalogRewrite`
+runs a subset (the scenario ids are in
+[xsltScenarios.mjs](../scripts/benchmark/xsltScenarios.mjs));
+`--no-startup` skips the bundle and import measurements.
+
+#### XSLT engines pre-check
+
+Before anything is timed, every scenario runs once per engine and DOM and
+the outputs are compared: both engines on each 1.0 stylesheet, and each
+rewrite against the 1.0 package's output of the original stylesheet; every
+3.0-only stylesheet must run, and xslt3 must write the same output on every
+DOM. Two serializer defaults are removed before comparing, because they are
+not results: the line break the 1.0 package writes after the XML
+declaration (as libxslt does), and the `<!DOCTYPE html>` that XSLT 3.0
+writes for the html output method (HTML5 by default). Anything else stops
+the run, unless `--allow-mismatch` records it.
+
+<!-- bench:xslt-check -->
+Both engines wrote the same output for every XSLT 1.0 stylesheet on every DOM, every rewrite reproduced the 1.0 package's output of the original stylesheet, every XSLT 3.0-only stylesheet ran without an error, and xslt3 wrote the same output on every DOM.
+<!-- /bench:xslt-check -->
+
+### XSLT 1.0 stylesheets on both engines
+
+<!-- bench:xslt-ratio -->
+<img src="benchmarks/xslt-ratio.svg" width="720" alt="On jsdom, xslt3 is 492× slower than the 1.0 package on xsl:number level=&quot;any&quot;, 8,000, its largest time ratio (492×), and 4.64× faster on 100 MB text result (0.22×); the dashed line marks equal speed.">
+
+| Scenario | 1.0 package, jsdom | xslt3, jsdom | xslt3 ÷ 1.0, jsdom | 1.0 package, xmldom | xslt3, xmldom | xslt3 ÷ 1.0, xmldom |
+| --- | --- | --- | --- | --- | --- | --- |
+| Issue #9 catalogue (3 MB HTML) | 2.65 s | 2.57 s | 0.97× | 991 ms | 1.09 s | 1.10× |
+| apply-templates item[@id], 8,000 | 159 ms | 107 ms | 0.67× | 72 ms | 39 ms | 0.55× |
+| Muenchian grouping, 8,000 | 140 ms | 135 ms | 0.97× | 67 ms | 80 ms | 1.19× |
+| xsl:number level="any", 8,000 | 84 ms | 41.4 s | 492× | 29 ms | 10.3 s | 359× |
+| following-sibling::x[1], 8,000 | 105 ms | 23 ms | 0.22× | 51 ms | 6.8 ms | 0.13× |
+| Sort 20,000 by two keys | 404 ms | 172 ms | 0.43× | 192 ms | 109 ms | 0.57× |
+| Identity transform, 5 MB | 2.05 s | 2.04 s | 0.99× | 908 ms | 731 ms | 0.81× |
+| call-template depth 3,000 | 58 ms | 13 ms | 0.23× | 33 ms | 11 ms | 0.33× |
+| 100 MB text result | 3.83 s | 826 ms | 0.22× | 1.50 s | 285 ms | 0.19× |
+<!-- /bench:xslt-ratio -->
+
+### Rewritten in XSLT 2.0/3.0
+
+Each task keeps its source document and must produce the same output; only
+the stylesheet changes:
+
+| Task | XSLT 1.0 | XSLT 2.0/3.0 rewrite |
+|---|---|---|
+| Catalogue, grouping | Muenchian method: `key()` + `generate-id()` | `xsl:for-each-group group-by` |
+| Numbering | `xsl:number level="any" count="i[@k='1']"` | a running count in `xsl:iterate` |
+| Sort by two keys | two `xsl:sort` | `sort()` with a key function returning both keys |
+| Identity | the identity template | `xsl:mode on-no-match="shallow-copy"` |
+| Recursion | `xsl:call-template` calling itself 3,000 deep | `xsl:iterate` |
+
+<!-- bench:xslt-rewrite -->
+<img src="benchmarks/xslt-rewrite.svg" width="720" alt="Median time of each task on jsdom: the 1.0 package and xslt3 on the XSLT 1.0 stylesheet, and xslt3 on the idiomatic XSLT 2.0/3.0 rewrite; the largest gain is on xsl:number level=&quot;any&quot;, 8,000, where the rewrite (xsl:iterate) is 1,567× faster than the 1.0 stylesheet on xslt3.">
+
+| Task | Rewrite uses | 1.0 package, jsdom | xslt3 1.0 stylesheet, jsdom | xslt3 rewrite, jsdom | 1.0 package, xmldom | xslt3 1.0 stylesheet, xmldom | xslt3 rewrite, xmldom |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Issue #9 catalogue (3 MB HTML) | xsl:for-each-group | 2.65 s | 2.57 s | 1.70 s | 991 ms | 1.09 s | 634 ms |
+| Muenchian grouping, 8,000 | xsl:for-each-group | 140 ms | 135 ms | 35 ms | 67 ms | 80 ms | 18 ms |
+| xsl:number level="any", 8,000 | xsl:iterate | 84 ms | 41.4 s | 26 ms | 29 ms | 10.3 s | 16 ms |
+| Sort 20,000 by two keys | sort() with a key | 404 ms | 172 ms | 162 ms | 192 ms | 109 ms | 93 ms |
+| Identity transform, 5 MB | on-no-match | 2.05 s | 2.04 s | 1.67 s | 908 ms | 731 ms | 493 ms |
+| call-template depth 3,000 | xsl:iterate | 58 ms | 13 ms | 6.8 ms | 33 ms | 11 ms | 2.7 ms |
+<!-- /bench:xslt-rewrite -->
+
+### XSLT 3.0-only scenarios
+
+<!-- bench:xslt-only30 -->
+<img src="benchmarks/xslt-only30.svg" width="720" alt="Median time of the XSLT 3.0 scenarios that XSLT 1.0 cannot express directly; the slowest is json-to-xml, 5 MB JSON (2.96 s on jsdom).">
+
+| Scenario | jsdom | jsdom compile | xmldom | xmldom compile |
+| --- | --- | --- | --- | --- |
+| group-adjacent, 50,000 | 207 ms | 1.0 ms | 89 ms | 0.9 ms |
+| analyze-string, 5 MB log | 404 ms | 0.9 ms | 182 ms | 0.6 ms |
+| xsl:iterate totals, 100,000 | 370 ms | 1.1 ms | 244 ms | 0.7 ms |
+| json-to-xml, 5 MB JSON | 2.96 s | 1.0 ms | 1.28 s | 0.7 ms |
+| parse-json, 5 MB JSON | 474 ms | 0.9 ms | 459 ms | 0.7 ms |
+| xml-to-json, 5 MB JSON | 1.71 s | 0.8 ms | 489 ms | 0.7 ms |
+| serialize as JSON, 29,000 maps | 243 ms | 0.9 ms | 169 ms | 0.9 ms |
+| 100,000-entry map + lookups | 309 ms | 0.9 ms | 324 ms | 0.7 ms |
+| sort() with a key, 20,000 | 83 ms | 0.8 ms | 58 ms | 0.6 ms |
+| fold-left into a map, 20,000 | 132 ms | 1.1 ms | 95 ms | 1.0 ms |
+| Accumulators, 5 MB | 900 ms | 1.3 ms | 648 ms | 1.2 ms |
+| xsl:merge, 2 × 50,000 | 358 ms | 1.3 ms | 236 ms | 1.0 ms |
+<!-- /bench:xslt-only30 -->
+
+| Scenario | What it does |
+|---|---|
+| group-adjacent | 50,000 log entries grouped into runs of the same type |
+| analyze-string | the WARN and ERROR lines of a 5 MB log picked with a regular expression (`flags="m"`) |
+| xsl:iterate totals | an exact `xs:decimal` running total of 100,000 amounts |
+| json-to-xml, parse-json | the same summary of 37,500 orders (5 MB of JSON, a string parameter) through the XML representation of JSON and through maps and arrays |
+| xml-to-json | the XML representation of the same 5 MB of JSON written as JSON |
+| serialize as JSON | 29,000 records as an array of maps, written with `serialize(..., map { 'method': 'json' })` |
+| map + lookups | `map:merge` of 100,000 entries, then 100,000 lookups |
+| sort() with a key, fold-left | higher-order functions over 20,000 items: a sort by price; per-category totals folded into a map |
+| Accumulators | a record counter and an `xs:decimal` sum over the 5 MB identity document |
+| xsl:merge | two sources of 50,000 items each, sorted by an integer key |
+
+### XSLT engines compile time
+
+<!-- bench:xslt-compile -->
+| Scenario | 1.0 package, jsdom | xslt3, jsdom | 1.0 package, xmldom | xslt3, xmldom |
+| --- | --- | --- | --- | --- |
+| Issue #9 catalogue (3 MB HTML) | 0.8 ms | 2.1 ms | 0.6 ms | 1.9 ms |
+| apply-templates item[@id], 8,000 | 0.5 ms | 0.9 ms | 0.3 ms | 0.7 ms |
+| Muenchian grouping, 8,000 | 0.5 ms | 1.2 ms | 0.3 ms | 0.8 ms |
+| xsl:number level="any", 8,000 | 0.5 ms | 0.8 ms | 0.4 ms | 0.6 ms |
+| following-sibling::x[1], 8,000 | 0.5 ms | 0.8 ms | 0.3 ms | 0.5 ms |
+| Sort 20,000 by two keys | 0.5 ms | 1.0 ms | 0.3 ms | 0.7 ms |
+| Identity transform, 5 MB | 0.5 ms | 0.8 ms | 0.4 ms | 0.8 ms |
+| call-template depth 3,000 | 0.4 ms | 0.9 ms | 0.3 ms | 0.5 ms |
+| 100 MB text result | 0.4 ms | 0.8 ms | 0.3 ms | 0.5 ms |
+| Catalogue | n/a | 2.1 ms | n/a | 1.9 ms |
+| Grouping, 8,000 | n/a | 0.8 ms | n/a | 0.5 ms |
+| Numbering, 8,000 | n/a | 0.9 ms | n/a | 0.6 ms |
+| Sort, 20,000 | n/a | 1.0 ms | n/a | 0.7 ms |
+| Identity, 5 MB | n/a | 0.7 ms | n/a | 0.5 ms |
+| Depth 3,000 | n/a | 0.8 ms | n/a | 0.5 ms |
+| group-adjacent, 50,000 | n/a | 1.0 ms | n/a | 0.9 ms |
+| analyze-string, 5 MB log | n/a | 0.9 ms | n/a | 0.6 ms |
+| xsl:iterate totals, 100,000 | n/a | 1.1 ms | n/a | 0.7 ms |
+| json-to-xml, 5 MB JSON | n/a | 1.0 ms | n/a | 0.7 ms |
+| parse-json, 5 MB JSON | n/a | 0.9 ms | n/a | 0.7 ms |
+| xml-to-json, 5 MB JSON | n/a | 0.8 ms | n/a | 0.7 ms |
+| serialize as JSON, 29,000 maps | n/a | 0.9 ms | n/a | 0.9 ms |
+| 100,000-entry map + lookups | n/a | 0.9 ms | n/a | 0.7 ms |
+| sort() with a key, 20,000 | n/a | 0.8 ms | n/a | 0.6 ms |
+| fold-left into a map, 20,000 | n/a | 1.1 ms | n/a | 1.0 ms |
+| Accumulators, 5 MB | n/a | 1.3 ms | n/a | 1.2 ms |
+| xsl:merge, 2 × 50,000 | n/a | 1.3 ms | n/a | 1.0 ms |
+<!-- /bench:xslt-compile -->
+
+### Start-up and bundle size
+
+Each package bundled as one minified ES module for browsers, the way the
+website bundles @tradik/xslt3 for its playground
+([site/scripts/vendor.mjs](../site/scripts/vendor.mjs)), and the time a
+fresh Node.js process takes to `import()` it, from source and from that
+bundle (median of the runs, one process each).
+
+<!-- bench:xslt-startup -->
+| Engine | Bundle | gzip | Brotli | Node.js import(), source | Node.js import(), bundle |
+| --- | --- | --- | --- | --- | --- |
+| 1.0 package (`src/index.js`) | 143.5 kB | 45.5 kB | 39.8 kB | 30 ms | 6.0 ms |
+| xslt3 (`packages/xslt3/src/index.js`) | 323.9 kB | 111.2 kB | 95.1 kB | 75 ms | 22 ms |
+<!-- /bench:xslt-startup -->
+
+### XSLT engines peak memory
+
+<!-- bench:xslt-memory -->
+| Scenario | 1.0 package, jsdom | xslt3, jsdom | 1.0 package, xmldom | xslt3, xmldom |
+| --- | --- | --- | --- | --- |
+| Issue #9 catalogue (3 MB HTML) | 654 MB | 605 MB | 485 MB | 444 MB |
+| apply-templates item[@id], 8,000 | 270 MB | 251 MB | 186 MB | 203 MB |
+| Muenchian grouping, 8,000 | 253 MB | 274 MB | 151 MB | 150 MB |
+| xsl:number level="any", 8,000 | 237 MB | 263 MB | 129 MB | 146 MB |
+| following-sibling::x[1], 8,000 | 249 MB | 203 MB | 152 MB | 112 MB |
+| Sort 20,000 by two keys | 301 MB | 282 MB | 238 MB | 233 MB |
+| Identity transform, 5 MB | 660 MB | 697 MB | 536 MB | 567 MB |
+| call-template depth 3,000 | 208 MB | 188 MB | 104 MB | 101 MB |
+| 100 MB text result | 654 MB | 279 MB | 461 MB | 231 MB |
+| Catalogue | n/a | 592 MB | n/a | 428 MB |
+| Grouping, 8,000 | n/a | 210 MB | n/a | 113 MB |
+| Numbering, 8,000 | n/a | 219 MB | n/a | 113 MB |
+| Sort, 20,000 | n/a | 283 MB | n/a | 234 MB |
+| Identity, 5 MB | n/a | 651 MB | n/a | 522 MB |
+| Depth 3,000 | n/a | 193 MB | n/a | 77 MB |
+| group-adjacent, 50,000 | n/a | 336 MB | n/a | 278 MB |
+| analyze-string, 5 MB log | n/a | 333 MB | n/a | 286 MB |
+| xsl:iterate totals, 100,000 | n/a | 372 MB | n/a | 332 MB |
+| json-to-xml, 5 MB JSON | n/a | 1716 MB | n/a | 2254 MB |
+| parse-json, 5 MB JSON | n/a | 611 MB | n/a | 557 MB |
+| xml-to-json, 5 MB JSON | n/a | 1294 MB | n/a | 862 MB |
+| serialize as JSON, 29,000 maps | n/a | 423 MB | n/a | 392 MB |
+| 100,000-entry map + lookups | n/a | 351 MB | n/a | 299 MB |
+| sort() with a key, 20,000 | n/a | 284 MB | n/a | 198 MB |
+| fold-left into a map, 20,000 | n/a | 283 MB | n/a | 165 MB |
+| Accumulators, 5 MB | n/a | 638 MB | n/a | 600 MB |
+| xsl:merge, 2 × 50,000 | n/a | 403 MB | n/a | 364 MB |
+<!-- /bench:xslt-memory -->
+
+### SaxonJS
+
+SaxonJS 3, Saxonica's XSLT 3.0 processor for JavaScript, is the reference
+the milestone in [XSLT3.md](XSLT3.md) names. On npm it is `saxonjs-he` with
+the `xslt3-he` compiler (3.0.0-beta2; `saxon-js` and `xslt3` are SaxonJS 2).
+Its licence (Saxonica's "SaxonJS licence", version 2.0, December 2024,
+shipped as `LICENSE.txt`) allows use and redistribution in binary form but
+says nothing about publishing benchmark results, and the package is a
+preview beta. This page therefore publishes no SaxonJS numbers, and SaxonJS
+is not a dependency of this repository. To compare locally, install it
+outside the repository and point the benchmark at it; its results are
+written to the system temporary directory, never to `results-xslt.json`:
+
+```bash
+npm install --prefix /tmp/saxon saxonjs-he xslt3-he
+node scripts/benchmark/run.mjs --suite xslt --saxon-dir /tmp/saxon
+```
+
+Each stylesheet is then compiled to SEF with `xslt3-he -export -nogo`
+(timed separately), and `SaxonJS.transform()` of the SEF is timed on a
+tree SaxonJS parsed itself; its outputs are compared with xslt3's, ignoring
+whitespace between tags (SaxonJS indents HTML by default).
+
+### XSLT engines notes
+
+- **One XSLT 1.0 stylesheet is pathological on xslt3: `xsl:number
+  level="any"`.** For every numbered node xslt3 walks back through all
+  preceding nodes and tests the `count` pattern on each
+  (`numberAny()` in `packages/xslt3/src/xslt/runtime/numbering.js`), which
+  is quadratic: 8,000 numbered elements take about 41 s on jsdom and 10 s
+  on xmldom, against 84 ms and 29 ms in the 1.0 package. It dominates the
+  geometric means in the headline; without it, xslt3 runs the 1.0
+  stylesheets faster than the 1.0 package on both DOMs. The rewrite with
+  `xsl:iterate` takes 26 ms.
+- **On the other 1.0 stylesheets xslt3 is as fast or faster.** It is 2 to
+  7 times faster on sorting, `following-sibling::x[1]` in a loop,
+  recursion and the 100 MB text result (which also peaks at 280 MB of
+  memory instead of 650 MB on jsdom); the catalogue, the identity transform
+  and Muenchian grouping are within 20%, because building and serializing
+  the result tree dominates them.
+- **Rewriting pays off where the 1.0 idiom was a workaround.**
+  `xsl:for-each-group` instead of Muenchian keys is about 4 times faster on
+  the grouping scenario and 1.5 to 1.7 times on the catalogue;
+  `on-no-match="shallow-copy"` saves 20% (jsdom) to 33% (xmldom) on the
+  identity transform; `sort()` with a key function costs about the same as
+  two `xsl:sort` keys.
+- **JSON**: `parse-json()` reads 5 MB of JSON 6 times faster than
+  `json-to-xml()` on jsdom and with a third of the memory: the XML
+  representation of the JSON is a DOM tree of hundreds of thousands of
+  elements, and
+  the json-to-xml processes peak at 1.7 to 2.3 GB. A principal result that
+  is a map or an array (`xsl:output method="json"`, a raw result) is not
+  supported yet (XTDE0450), so the JSON output scenario serializes with
+  `serialize(..., map { 'method': 'json' })` into a text result.
+- **jsdom or xmldom**: both engines usually run 1.5 to 3 times faster on
+  @xmldom/xmldom than on jsdom; the ranking of the engines does not change.
+- **Compiling** a stylesheet takes 0.5 to 2 ms with either engine, so
+  reusing a compiled stylesheet matters only for small transformations.
+- **Start-up**: the xslt3 bundle is 2.4 times the 1.0 package's (111 kB
+  against 45 kB gzip) and takes 2.5 times as long to import from source in
+  Node.js (75 ms against 30 ms); the 1.0 package does not load it unless
+  asked to (see [XSLT3.md](XSLT3.md), "Opt-in bridge").
+- xslt3 is in development (`0.0.0`), and the run is marked provisional:
+  it was recorded while other processes used the CPU. Re-run on an idle
+  machine before quoting single numbers.

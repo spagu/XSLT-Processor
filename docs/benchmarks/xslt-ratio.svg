@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="370" viewBox="0 0 720 370" role="img" aria-labelledby="t d">
+<title id="t">XSLT 1.0 stylesheets, time ratio xslt3 ÷ 1.0 package (log scale)</title>
+<desc id="d">On jsdom, xslt3 is 492× slower than the 1.0 package on xsl:number level=&quot;any&quot;, 8,000, its largest time ratio (492×), and 4.64× faster on 100 MB text result (0.22×); the dashed line marks equal speed.</desc>
+<style>
+svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--new:#2a78d6;--old:#eb6834;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
+@media (prefers-color-scheme:dark){svg{--surface:#202124;--text:#e8eaed;--muted:#9aa0a6;--grid:#3c4043;--axis:#5f6368;--new:#3987e5;--old:#d95926}}
+.bg{fill:var(--surface)}.t1{fill:var(--text)}.t2{fill:var(--muted)}
+.title{fill:var(--text);font-size:13px;font-weight:600}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--axis);stroke-width:1}
+.ref{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.link{stroke:var(--axis);stroke-width:2}
+.new{fill:var(--new)}.old{fill:var(--old)}
+.ring{stroke:var(--surface);stroke-width:2}
+.hollow{fill:var(--surface);stroke-width:2}.hollow.old{stroke:var(--old)}.hollow.new{stroke:var(--new)}
+</style>
+<rect class="bg" width="720" height="370" rx="8"/>
+<text class="title" x="16" y="24">XSLT 1.0 stylesheets, time ratio xslt3 ÷ 1.0 package (log scale)</text>
+<text class="t2" x="16" y="44" text-anchor="start">xslt3 median time ÷ 1.0 package median time; right of the dashed line xslt3 is slower</text>
+<circle class="old" cx="255" cy="66" r="5"/>
+<text class="t1" x="265" y="70" text-anchor="start">xslt3, jsdom</text>
+<circle class="old hollow" cx="375" cy="66" r="4.5"><title>xmldom</title></circle>
+<text class="t1" x="385" y="70" text-anchor="start">xslt3, xmldom</text>
+<line class="grid" x1="250" x2="250" y1="92" y2="344"/>
+<text class="t2" x="250" y="360" text-anchor="middle">0.1×</text>
+<line class="grid" x1="350" x2="350" y1="92" y2="344"/>
+<text class="t2" x="350" y="360" text-anchor="middle">1×</text>
+<line class="grid" x1="450" x2="450" y1="92" y2="344"/>
+<text class="t2" x="450" y="360" text-anchor="middle">10×</text>
+<line class="grid" x1="550" x2="550" y1="92" y2="344"/>
+<text class="t2" x="550" y="360" text-anchor="middle">100×</text>
+<line class="grid" x1="650" x2="650" y1="92" y2="344"/>
+<text class="t2" x="650" y="360" text-anchor="middle">1000×</text>
+<line class="ref" x1="350" x2="350" y1="88" y2="344"/>
+<text class="t1" x="234" y="110" text-anchor="end">xsl:number level=&quot;any&quot;, 8,000</text>
+<circle class="old ring" cx="619.2" cy="106" r="5"><title>xsl:number level=&quot;any&quot;, 8,000 on jsdom: xslt3 is 492× slower than the 1.0 package (492× the time)</title></circle>
+<circle class="old hollow" cx="605.5" cy="106" r="4.5"><title>xsl:number level=&quot;any&quot;, 8,000 on xmldom: xslt3 is 359× slower than the 1.0 package (359× the time)</title></circle>
+<text class="t1" x="629.2" y="110" text-anchor="start">492×</text>
+<text class="t1" x="234" y="138" text-anchor="end">Identity transform, 5 MB</text>
+<circle class="old ring" cx="349.7" cy="134" r="5"><title>Identity transform, 5 MB on jsdom: xslt3 is 1.01× faster than the 1.0 package (0.99× the time)</title></circle>
+<circle class="old hollow" cx="340.6" cy="134" r="4.5"><title>Identity transform, 5 MB on xmldom: xslt3 is 1.24× faster than the 1.0 package (0.81× the time)</title></circle>
+<text class="t1" x="359.7" y="138" text-anchor="start">0.99×</text>
+<text class="t1" x="234" y="166" text-anchor="end">Issue #9 catalogue (3 MB HTML)</text>
+<circle class="old ring" cx="348.7" cy="162" r="5"><title>Issue #9 catalogue (3 MB HTML) on jsdom: xslt3 is 1.03× faster than the 1.0 package (0.97× the time)</title></circle>
+<circle class="old hollow" cx="354.2" cy="162" r="4.5"><title>Issue #9 catalogue (3 MB HTML) on xmldom: xslt3 is 1.10× slower than the 1.0 package (1.10× the time)</title></circle>
+<text class="t1" x="364.2" y="166" text-anchor="start">0.97×</text>
+<text class="t1" x="234" y="194" text-anchor="end">Muenchian grouping, 8,000</text>
+<circle class="old ring" cx="348.5" cy="190" r="5"><title>Muenchian grouping, 8,000 on jsdom: xslt3 is 1.04× faster than the 1.0 package (0.97× the time)</title></circle>
+<circle class="old hollow" cx="357.7" cy="190" r="4.5"><title>Muenchian grouping, 8,000 on xmldom: xslt3 is 1.19× slower than the 1.0 package (1.19× the time)</title></circle>
+<text class="t1" x="367.7" y="194" text-anchor="start">0.97×</text>
+<text class="t1" x="234" y="222" text-anchor="end">apply-templates item[@id], 8,000</text>
+<circle class="old ring" cx="332.7" cy="218" r="5"><title>apply-templates item[@id], 8,000 on jsdom: xslt3 is 1.49× faster than the 1.0 package (0.67× the time)</title></circle>
+<circle class="old hollow" cx="323.8" cy="218" r="4.5"><title>apply-templates item[@id], 8,000 on xmldom: xslt3 is 1.83× faster than the 1.0 package (0.55× the time)</title></circle>
+<text class="t1" x="342.7" y="222" text-anchor="start">0.67×</text>
+<text class="t1" x="234" y="250" text-anchor="end">Sort 20,000 by two keys</text>
+<circle class="old ring" cx="312.9" cy="246" r="5"><title>Sort 20,000 by two keys on jsdom: xslt3 is 2.35× faster than the 1.0 package (0.43× the time)</title></circle>
+<circle class="old hollow" cx="325.5" cy="246" r="4.5"><title>Sort 20,000 by two keys on xmldom: xslt3 is 1.76× faster than the 1.0 package (0.57× the time)</title></circle>
+<text class="t1" x="335.5" y="250" text-anchor="start">0.43×</text>
+<text class="t1" x="234" y="278" text-anchor="end">call-template depth 3,000</text>
+<circle class="old ring" cx="285.6" cy="274" r="5"><title>call-template depth 3,000 on jsdom: xslt3 is 4.41× faster than the 1.0 package (0.23× the time)</title></circle>
+<circle class="old hollow" cx="301.8" cy="274" r="4.5"><title>call-template depth 3,000 on xmldom: xslt3 is 3.04× faster than the 1.0 package (0.33× the time)</title></circle>
+<text class="t1" x="311.8" y="278" text-anchor="start">0.23×</text>
+<text class="t1" x="234" y="306" text-anchor="end">following-sibling::x[1], 8,000</text>
+<circle class="old ring" cx="284" cy="302" r="5"><title>following-sibling::x[1], 8,000 on jsdom: xslt3 is 4.58× faster than the 1.0 package (0.22× the time)</title></circle>
+<circle class="old hollow" cx="262.9" cy="302" r="4.5"><title>following-sibling::x[1], 8,000 on xmldom: xslt3 is 7.44× faster than the 1.0 package (0.13× the time)</title></circle>
+<text class="t1" x="294" y="306" text-anchor="start">0.22×</text>
+<text class="t1" x="234" y="334" text-anchor="end">100 MB text result</text>
+<circle class="old ring" cx="283.3" cy="330" r="5"><title>100 MB text result on jsdom: xslt3 is 4.64× faster than the 1.0 package (0.22× the time)</title></circle>
+<circle class="old hollow" cx="277.7" cy="330" r="4.5"><title>100 MB text result on xmldom: xslt3 is 5.28× faster than the 1.0 package (0.19× the time)</title></circle>
+<text class="t1" x="293.3" y="334" text-anchor="start">0.22×</text>
+</svg>

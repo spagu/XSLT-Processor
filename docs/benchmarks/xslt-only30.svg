@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440" role="img" aria-labelledby="t d">
+<title id="t">XSLT 3.0-only scenarios, xslt3 median time (log scale)</title>
+<desc id="d">Median time of the XSLT 3.0 scenarios that XSLT 1.0 cannot express directly; the slowest is json-to-xml, 5 MB JSON (2.96 s on jsdom).</desc>
+<style>
+svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--new:#2a78d6;--old:#eb6834;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
+@media (prefers-color-scheme:dark){svg{--surface:#202124;--text:#e8eaed;--muted:#9aa0a6;--grid:#3c4043;--axis:#5f6368;--new:#3987e5;--old:#d95926}}
+.bg{fill:var(--surface)}.t1{fill:var(--text)}.t2{fill:var(--muted)}
+.title{fill:var(--text);font-size:13px;font-weight:600}
+.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--axis);stroke-width:1}
+.ref{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.link{stroke:var(--axis);stroke-width:2}
+.new{fill:var(--new)}.old{fill:var(--old)}
+.ring{stroke:var(--surface);stroke-width:2}
+.hollow{fill:var(--surface);stroke-width:2}.hollow.old{stroke:var(--old)}.hollow.new{stroke:var(--new)}
+</style>
+<rect class="bg" width="720" height="440" rx="8"/>
+<text class="title" x="16" y="24">XSLT 3.0-only scenarios, xslt3 median time (log scale)</text>
+<circle class="old" cx="255" cy="46" r="5"/>
+<text class="t1" x="265" y="50" text-anchor="start">xslt3, jsdom</text>
+<circle class="old hollow" cx="375" cy="46" r="4.5"><title>xmldom</title></circle>
+<text class="t1" x="385" y="50" text-anchor="start">xslt3, xmldom</text>
+<line class="grid" x1="250" x2="250" y1="78" y2="414"/>
+<text class="t2" x="250" y="430" text-anchor="middle">10 ms</text>
+<line class="grid" x1="383.3" x2="383.3" y1="78" y2="414"/>
+<text class="t2" x="383.3" y="430" text-anchor="middle">100 ms</text>
+<line class="grid" x1="516.7" x2="516.7" y1="78" y2="414"/>
+<text class="t2" x="516.7" y="430" text-anchor="middle">1 s</text>
+<line class="grid" x1="650" x2="650" y1="78" y2="414"/>
+<text class="t2" x="650" y="430" text-anchor="middle">10 s</text>
+<text class="t1" x="234" y="96" text-anchor="end">json-to-xml, 5 MB JSON</text>
+<circle class="old ring" cx="579.6" cy="92" r="5"><title>json-to-xml, 5 MB JSON, xslt3 on jsdom: median 2.96 s</title></circle>
+<circle class="old hollow" cx="531.1" cy="92" r="4.5"><title>json-to-xml, 5 MB JSON, xslt3 on xmldom: median 1.28 s</title></circle>
+<text class="t1" x="589.6" y="96" text-anchor="start">2.96 s</text>
+<text class="t1" x="234" y="124" text-anchor="end">xml-to-json, 5 MB JSON</text>
+<circle class="old ring" cx="547.7" cy="120" r="5"><title>xml-to-json, 5 MB JSON, xslt3 on jsdom: median 1.71 s</title></circle>
+<circle class="old hollow" cx="475.2" cy="120" r="4.5"><title>xml-to-json, 5 MB JSON, xslt3 on xmldom: median 489 ms</title></circle>
+<text class="t1" x="557.7" y="124" text-anchor="start">1.71 s</text>
+<text class="t1" x="234" y="152" text-anchor="end">Accumulators, 5 MB</text>
+<circle class="old ring" cx="510.6" cy="148" r="5"><title>Accumulators, 5 MB, xslt3 on jsdom: median 900 ms</title></circle>
+<circle class="old hollow" cx="491.6" cy="148" r="4.5"><title>Accumulators, 5 MB, xslt3 on xmldom: median 648 ms</title></circle>
+<text class="t1" x="520.6" y="152" text-anchor="start">900 ms</text>
+<text class="t1" x="234" y="180" text-anchor="end">parse-json, 5 MB JSON</text>
+<circle class="old ring" cx="473.4" cy="176" r="5"><title>parse-json, 5 MB JSON, xslt3 on jsdom: median 474 ms</title></circle>
+<circle class="old hollow" cx="471.6" cy="176" r="4.5"><title>parse-json, 5 MB JSON, xslt3 on xmldom: median 459 ms</title></circle>
+<text class="t1" x="483.4" y="180" text-anchor="start">474 ms</text>
+<text class="t1" x="234" y="208" text-anchor="end">analyze-string, 5 MB log</text>
+<circle class="old ring" cx="464.3" cy="204" r="5"><title>analyze-string, 5 MB log, xslt3 on jsdom: median 404 ms</title></circle>
+<circle class="old hollow" cx="418" cy="204" r="4.5"><title>analyze-string, 5 MB log, xslt3 on xmldom: median 182 ms</title></circle>
+<text class="t1" x="474.3" y="208" text-anchor="start">404 ms</text>
+<text class="t1" x="234" y="236" text-anchor="end">xsl:iterate totals, 100,000</text>
+<circle class="old ring" cx="459.1" cy="232" r="5"><title>xsl:iterate totals, 100,000, xslt3 on jsdom: median 370 ms</title></circle>
+<circle class="old hollow" cx="434.9" cy="232" r="4.5"><title>xsl:iterate totals, 100,000, xslt3 on xmldom: median 244 ms</title></circle>
+<text class="t1" x="469.1" y="236" text-anchor="start">370 ms</text>
+<text class="t1" x="234" y="264" text-anchor="end">xsl:merge, 2 × 50,000</text>
+<circle class="old ring" cx="457.2" cy="260" r="5"><title>xsl:merge, 2 × 50,000, xslt3 on jsdom: median 358 ms</title></circle>
+<circle class="old hollow" cx="433.1" cy="260" r="4.5"><title>xsl:merge, 2 × 50,000, xslt3 on xmldom: median 236 ms</title></circle>
+<text class="t1" x="467.2" y="264" text-anchor="start">358 ms</text>
+<text class="t1" x="234" y="292" text-anchor="end">100,000-entry map + lookups</text>
+<circle class="old ring" cx="448.6" cy="288" r="5"><title>100,000-entry map + lookups, xslt3 on jsdom: median 309 ms</title></circle>
+<circle class="old hollow" cx="451.5" cy="288" r="4.5"><title>100,000-entry map + lookups, xslt3 on xmldom: median 324 ms</title></circle>
+<text class="t1" x="461.5" y="292" text-anchor="start">309 ms</text>
+<text class="t1" x="234" y="320" text-anchor="end">serialize as JSON, 29,000 maps</text>
+<circle class="old ring" cx="434.8" cy="316" r="5"><title>serialize as JSON, 29,000 maps, xslt3 on jsdom: median 243 ms</title></circle>
+<circle class="old hollow" cx="413.9" cy="316" r="4.5"><title>serialize as JSON, 29,000 maps, xslt3 on xmldom: median 169 ms</title></circle>
+<text class="t1" x="444.8" y="320" text-anchor="start">243 ms</text>
+<text class="t1" x="234" y="348" text-anchor="end">group-adjacent, 50,000</text>
+<circle class="old ring" cx="425.4" cy="344" r="5"><title>group-adjacent, 50,000, xslt3 on jsdom: median 207 ms</title></circle>
+<circle class="old hollow" cx="376.6" cy="344" r="4.5"><title>group-adjacent, 50,000, xslt3 on xmldom: median 89 ms</title></circle>
+<text class="t1" x="435.4" y="348" text-anchor="start">207 ms</text>
+<text class="t1" x="234" y="376" text-anchor="end">fold-left into a map, 20,000</text>
+<circle class="old ring" cx="399.2" cy="372" r="5"><title>fold-left into a map, 20,000, xslt3 on jsdom: median 132 ms</title></circle>
+<circle class="old hollow" cx="380.1" cy="372" r="4.5"><title>fold-left into a map, 20,000, xslt3 on xmldom: median 95 ms</title></circle>
+<text class="t1" x="409.2" y="376" text-anchor="start">132 ms</text>
+<text class="t1" x="234" y="404" text-anchor="end">sort() with a key, 20,000</text>
+<circle class="old ring" cx="372.6" cy="400" r="5"><title>sort() with a key, 20,000, xslt3 on jsdom: median 83 ms</title></circle>
+<circle class="old hollow" cx="351.5" cy="400" r="4.5"><title>sort() with a key, 20,000, xslt3 on xmldom: median 58 ms</title></circle>
+<text class="t1" x="382.6" y="404" text-anchor="start">83 ms</text>
+</svg>

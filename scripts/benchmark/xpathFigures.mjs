@@ -94,9 +94,14 @@ export function engineTimeChart(rows, dom) {
  *
  * @param {Record<string, import("./xpathData.mjs").XPathRow[]>} byDom -
  *   Shared rows by DOM (the first DOM is drawn filled)
+ * @param {string} [title] - Chart title (the XSLT engine benchmark reuses
+ *   the chart)
  * @returns {string} SVG
  */
-export function ratioChart(byDom) {
+export function ratioChart(
+  byDom,
+  title = "XPath time ratio, xslt3 ÷ 1.0 package, per scenario (log scale)",
+) {
   const doms = Object.keys(byDom);
   const [main] = doms;
   const ratioOf = (dom, id) => byDom[dom].find((row) => row.id === id)?.ratio;
@@ -140,7 +145,7 @@ export function ratioChart(byDom) {
   const [worst, best] = [shown[0], shown.at(-1)];
   return svgDocument({
     height: bottom + 26,
-    title: "XPath time ratio, xslt3 ÷ 1.0 package, per scenario (log scale)",
+    title,
     desc: `On ${main}, xslt3 is ${ratioWords(worst.ratio)} than the 1.0 package on ${worst.label}, its largest time ratio (${formatRatio(worst.ratio)}), and ${ratioWords(best.ratio)} on ${best.label} (${formatRatio(best.ratio)}); the dashed line marks equal speed.`,
     body,
     style: HOLLOW,
@@ -152,14 +157,25 @@ export function ratioChart(byDom) {
  *
  * @param {Record<string, import("./xpathData.mjs").XPathRow[]>} byDom -
  *   xpath31 rows by DOM (the first DOM is drawn filled)
+ * @param {object} [options] - For reuse by the XSLT engine benchmark
+ * @param {string} [options.phase="compiled"] - Measured phase drawn
+ * @param {string} [options.title] - Chart title
+ * @param {string} [options.lead] - Start of the description
  * @returns {string} SVG
  */
-export function only31Chart(byDom) {
+export function only31Chart(
+  byDom,
+  {
+    phase = "compiled",
+    title = "XPath 3.1-only expressions, xslt3 median time (log scale)",
+    lead = "Median time of the compiled XPath 3.1 expressions that XPath 1.0 cannot express",
+  } = {},
+) {
   const doms = Object.keys(byDom);
   const [main] = doms;
   const timeOf = (dom, id) => {
     const m = byDom[dom].find((row) => row.id === id)?.three;
-    return ok(m) ? m.compiled.medianMs : null;
+    return ok(m) ? m[phase].medianMs : null;
   };
   const shown = byDom[main]
     .filter((row) => ok(row.three))
@@ -195,8 +211,8 @@ export function only31Chart(byDom) {
   const slowest = shown[0];
   return svgDocument({
     height: bottom + 26,
-    title: "XPath 3.1-only expressions, xslt3 median time (log scale)",
-    desc: `Median time of the compiled XPath 3.1 expressions that XPath 1.0 cannot express; the slowest is ${slowest.label} (${formatMs(timeOf(main, slowest.id))} on ${main}).`,
+    title,
+    desc: `${lead}; the slowest is ${slowest.label} (${formatMs(timeOf(main, slowest.id))} on ${main}).`,
     body,
     style: HOLLOW,
   });

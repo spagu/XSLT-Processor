@@ -60,6 +60,7 @@
     "docs:check": "node scripts/check-links.mjs",
     "bench": "node scripts/benchmark/run.mjs",
     "bench:xpath": "node scripts/benchmark/run.mjs --suite xpath",
+    "bench:xslt": "node scripts/benchmark/run.mjs --suite xslt",
     "test:bench": "node --test \"scripts/benchmark/*.test.mjs\"",
     "test:browser": "playwright test -c tests/browser/playwright.config.mjs",
     "test:binaries": "node --test \"scripts/binaries/*.test.mjs\" \"scripts/lib/*.test.mjs\"",

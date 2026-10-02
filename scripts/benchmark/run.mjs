@@ -13,8 +13,10 @@
  *        [--timeout 120] [--only id,id] [--out scripts/benchmark/results.json]
  * Then: node scripts/benchmark/charts.mjs
  *
- * `--suite xpath` runs the XPath 1.0 vs 3.1 benchmark instead (xpath.mjs,
- * with its own options).
+ * `--suite xpath` runs the XPath 1.0 vs 3.1 benchmark instead (xpath.mjs),
+ * `--suite xslt` the XSLT 1.0 package vs @tradik/xslt3 benchmark
+ * (xslt.mjs), each with its own options; `--suite release` (the default)
+ * is this one.
  */
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -28,14 +30,19 @@ import { measureWorker } from "./workerMeasure.mjs";
 import { SCENARIOS } from "./scenarios.mjs";
 import { environment, prepareVersions } from "./versions.mjs";
 import { runXPathSuite, splitSuite } from "./xpath.mjs";
+import { runXsltSuite } from "./xslt.mjs";
 
 const { suite, rest } = splitSuite(process.argv.slice(2));
 if (suite === "xpath") {
   await runXPathSuite(rest);
   process.exit();
 }
-if (suite !== undefined && suite !== "xslt") {
-  throw new Error(`Unknown benchmark suite: ${suite} (xslt or xpath)`);
+if (suite === "xslt") {
+  await runXsltSuite(rest);
+  process.exit();
+}
+if (suite !== undefined && suite !== "release") {
+  throw new Error(`Unknown benchmark suite: ${suite} (release, xpath or xslt)`);
 }
 
 const { values } = parseArgs({
