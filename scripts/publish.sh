@@ -89,5 +89,14 @@ else
   else
     npm publish "${workspace[@]}" --access public --ignore-scripts
   fi
-  echo "publish: npm now has $(npm view "${name}" version)"
+  # A package published for the first time can take a minute to show up in
+  # the registry's metadata; ask a few times before giving up on the check
+  for _ in 1 2 3 4 5 6; do
+    if published=$(npm view "${name}@${version}" version 2>/dev/null) && [[ -n "${published}" ]]; then
+      echo "publish: npm now has ${name}@${published}"
+      exit 0
+    fi
+    sleep 10
+  done
+  echo "publish: ${name}@${version} was published; the registry has not listed it yet (npm view ${name} version in a minute)"
 fi
