@@ -51,14 +51,19 @@ function globalEnvironment(tx, params) {
 
 /**
  * The document factory of a transformation: the option, else the DOM of
- * the source, else the global document.
+ * the source, else the DOM of the stylesheet (a transformation without a
+ * source, from an initial template), else the global document.
  * @param {object} options
+ * @param {object} stylesheet - Compiled stylesheet (its module tree)
  * @returns {() => Document}
  */
-function documentFactory(options) {
+function documentFactory(options, stylesheet) {
   if (options.createDocument) return options.createDocument;
   return () => {
-    const owner = options.source?.ownerDocument ?? options.source;
+    const owner =
+      options.source?.ownerDocument ??
+      options.source ??
+      stylesheet.tree.root.ownerDocument;
     const implementation =
       owner?.implementation ?? globalThis.document?.implementation;
     if (!implementation) {
@@ -99,7 +104,7 @@ function initialMode(stylesheet, requested) {
  */
 export function runTransformation(stylesheet, options) {
   checkLibraryContextItems(stylesheet);
-  const createDocument = documentFactory(options);
+  const createDocument = documentFactory(options, stylesheet);
   let scratchDocument = null;
   const strip = documentStripper();
   // a source text node that stripping removes is no source (XPDY0002)

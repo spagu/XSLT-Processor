@@ -124,13 +124,13 @@ export function compileResultDocument(element, cx, scope) {
       );
     }
     tx.resultUris.add(uri);
-    const output = {
-      ...cx.outputFor(format ? format(xc) : null, element),
-      ...parameters(xc),
-    };
-    // "#absent" (XSLT 3.0 section 26.1): no item separator, overriding
-    // the one of the output definition
-    if (output["item-separator"] === "#absent") delete output["item-separator"];
+    // "#absent" (XSLT 3.0 section 26.1), here too: no item separator,
+    // overriding the one of the output definition
+    const output = cx.outputFor(
+      format ? format(xc) : null,
+      element,
+      parameters(xc),
+    );
     const { receiver, value } = resultReceiver(
       output,
       tx.scratch,

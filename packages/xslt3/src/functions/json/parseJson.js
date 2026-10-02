@@ -47,17 +47,18 @@ export function jsonOptions(options, specs) {
 }
 
 /**
- * The XDM value of a parsed JSON value.
- * @param {import("./jsonParser.js").JsonValue} value
- * @param {(chars: Array) => string} decode - String decoder
+ * The JSON builder (see jsonParser.js) that makes XDM values while the
+ * text is parsed: each value is a sequence of at most one item.
+ * @param {(chars: import("./jsonParser.js").JsonString) => string} decode
+ *   - String decoder
  * @param {string} duplicates - "reject", "use-first" or "use-last"
- * @returns {Array} a sequence of at most one item
+ * @returns {import("./jsonParser.js").JsonBuilder<Array>}
  */
-function toXdm(value, decode, duplicates) {
-  switch (value.kind) {
-    case "object": {
+function xdmBuilder(decode, duplicates) {
+  return {
+    object(members) {
       const entries = new Map();
-      for (const [keyChars, member] of value.entries) {
+      for (const [keyChars, value] of members) {
         const key = stringItem(decode(keyChars));
         const k = mapKey(key);
         if (entries.has(k)) {
@@ -66,23 +67,16 @@ function toXdm(value, decode, duplicates) {
           }
           if (duplicates === "use-first") continue;
         }
-        entries.set(k, { key, value: toXdm(member, decode, duplicates) });
+        entries.set(k, { key, value });
       }
       return [new XdmMap(entries)];
-    }
-    case "array":
-      return [
-        new XdmArray(value.members.map((m) => toXdm(m, decode, duplicates))),
-      ];
-    case "string":
-      return [stringItem(decode(value.chars))];
-    case "number":
-      return [doubleItem(Number(value.text))];
-    case "boolean":
-      return [booleanItem(value.value)];
-    default:
-      return [];
-  }
+    },
+    array: (members) => [new XdmArray(members)],
+    string: (chars) => [stringItem(decode(chars))],
+    number: (text) => [doubleItem(Number(text))],
+    boolean: (value) => [booleanItem(value)],
+    null: () => [],
+  };
 }
 
 /**
@@ -99,7 +93,7 @@ export function parseJson(text, options) {
       values: ["reject", "use-first", "use-last"],
     },
   });
-  return toXdm(parseJsonText(text), stringDecoder(rest), duplicates);
+  return parseJsonText(text, xdmBuilder(stringDecoder(rest), duplicates));
 }
 
 const OPTIONS = "map(*)";

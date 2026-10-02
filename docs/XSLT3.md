@@ -174,6 +174,14 @@ line, column }`), also appended to the message. `fn:transform` runs another
 stylesheet from inside one, and `xsl:number`/`format-integer` write English
 and German words and ordinals.
 
+Without a source document (an `initialTemplate` run), results are built with
+the DOM of the stylesheet document, so `createDocument` is needed only when
+there is no DOM at all. For `method="html"` the default HTML version is
+implementation-defined (XSLT 3.0 section 26.1): stylesheets declaring
+version 1.0 or 2.0 get HTML 4.01 (no doctype, HTML 4 empty elements), as with
+`@tradik/xslt-processor` and XSLT 1.0/2.0 processors; version 3.0 stylesheets
+get HTML5 (`<!DOCTYPE html>`). Set `html-version` on `xsl:output` to choose.
+
 Packages (`xsl:use-package`) are found through a resolver you pass to
 `compileStylesheet`; it returns the package as a document, a string or
 `{ source, baseUri }`, and `versionMatches(version, range)` (exported) helps it

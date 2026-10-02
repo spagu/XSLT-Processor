@@ -86,6 +86,17 @@ describe("compileStylesheet", () => {
       errorCode(() => compiled.transform({ createDocument })),
       "XTDE0040",
     );
+  });
+
+  it("builds results without a source in the DOM of the stylesheet", () => {
+    const module = parse(xsl);
+    const compiled = compileStylesheet(module);
+    assert.equal(
+      show(compiled.transform({ initialTemplate: "t" }).principal),
+      '<t x="1"/>',
+    );
+    // a DOM that cannot create documents, and no global document
+    Object.defineProperty(module, "implementation", { value: undefined });
     assert.equal(
       errorCode(() => compiled.transform({ initialTemplate: "t" })),
       "XPDY0130",

@@ -25,21 +25,23 @@ const SPECS = {
 };
 
 /**
- * Builds the element of a JSON value.
+ * The JSON builder (see jsonParser.js) that makes the elements of the XML
+ * representation while the text is parsed, with no intermediate tree.
  * @param {Document} document
- * @param {import("./jsonParser.js").JsonValue} value
  * @param {object} options - escape, duplicates and the string decoder
- * @returns {Element}
+ * @returns {import("./jsonParser.js").JsonBuilder<Element>}
  */
-function build(document, value, options) {
-  const name = value.kind === "object" ? "map" : value.kind;
-  const element = document.createElementNS(FN_NAMESPACE, name);
-  const text = (content) =>
-    element.appendChild(document.createTextNode(content));
-  switch (value.kind) {
-    case "object": {
+function elementBuilder(document, options) {
+  const element = (name, content) => {
+    const result = document.createElementNS(FN_NAMESPACE, name);
+    if (content) result.appendChild(document.createTextNode(content));
+    return result;
+  };
+  return {
+    object(entries) {
+      const map = element("map");
       const seen = new Set();
-      for (const [keyChars, member] of value.entries) {
+      for (const [keyChars, child] of entries) {
         const key = options.decode(keyChars);
         if (seen.has(key) && options.duplicates !== "retain") {
           if (options.duplicates === "reject") {
@@ -48,36 +50,31 @@ function build(document, value, options) {
           continue;
         }
         seen.add(key);
-        const child = build(document, member, options);
         child.setAttribute("key", key);
         if (options.escape && key.includes("\\")) {
           child.setAttribute("escaped-key", "true");
         }
-        element.appendChild(child);
+        map.appendChild(child);
       }
-      break;
-    }
-    case "array":
-      for (const member of value.members) {
-        element.appendChild(build(document, member, options));
-      }
-      break;
-    case "string": {
-      const content = options.decode(value.chars);
+      return map;
+    },
+    array(members) {
+      const array = element("array");
+      for (const member of members) array.appendChild(member);
+      return array;
+    },
+    string(chars) {
+      const content = options.decode(chars);
+      const result = element("string", content);
       if (options.escape && content.includes("\\")) {
-        element.setAttribute("escaped", "true");
+        result.setAttribute("escaped", "true");
       }
-      if (content) text(content);
-      break;
-    }
-    case "number":
-      text(value.text);
-      break;
-    case "boolean":
-      text(String(value.value));
-      break;
-  }
-  return element;
+      return result;
+    },
+    number: (text) => element("number", text),
+    boolean: (value) => element("boolean", String(value)),
+    null: () => element("null"),
+  };
 }
 
 /**
@@ -95,11 +92,12 @@ function jsonToXml(json, optionsArg, context) {
       "validate=true needs a schema-aware processor",
     );
   }
-  const value = parseJsonText(json);
   const document = context.createDocument();
-  document.appendChild(
-    build(document, value, { ...options, decode: stringDecoder(options) }),
-  );
+  const builder = elementBuilder(document, {
+    ...options,
+    decode: stringDecoder(options),
+  });
+  document.appendChild(parseJsonText(json, builder));
   return [setBaseUri(document, context.staticBaseUri)];
 }
 

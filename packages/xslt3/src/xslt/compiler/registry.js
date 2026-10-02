@@ -199,17 +199,30 @@ export class CompilerRegistry extends StaticStage {
    * The parameters of a named output definition.
    * @param {string|null} name - Lexical QName, null for the unnamed one
    * @param {Element} element - Element on which the name is written
+   * @param {object} [overrides] - Parameters that take precedence (those
+   *   of an xsl:result-document)
    * @returns {object}
    */
-  outputFor(name, element) {
+  outputFor(name, element, overrides = {}) {
     let output = this.outputs.get("") ?? {};
     if (name !== null) {
       const qname = this.exprs.qname(name, element, { code: "XTDE1460" });
       output = this.outputs.get(`{${qname.uri}}${qname.local}`);
       if (!output) throw xsltError("XTDE1460", `No output definition ${name}`);
     }
-    const params = { ...output };
+    const params = { ...output, ...overrides };
     if (params["item-separator"] === "#absent") delete params["item-separator"];
+    // The default html-version is implementation-defined (XSLT 3.0 section
+    // 26.1): HTML 4.01, as in XSLT 1.0 and 2.0, for an XSLT 1.0 or 2.0
+    // principal stylesheet module, else HTML5.
+    if (
+      (params.method === undefined || params.method === "html") &&
+      params["html-version"] === undefined &&
+      params.version === undefined &&
+      infoOf(this.tree.root).version < 3
+    ) {
+      params["html-version"] = "4.01";
+    }
     if (params["use-character-maps"]) {
       params["use-character-maps"] = expandCharacterMaps(
         params["use-character-maps"],

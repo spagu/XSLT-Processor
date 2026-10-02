@@ -46,16 +46,35 @@ export const isSpecial = (cp) =>
   cp <= 0x1f || (cp >= 0x7f && cp <= 0x9f) || cp === 0x5c || !isXmlChar(cp);
 
 /**
+ * Characters that may need the escape or fallback option: controls, the
+ * C1 range, surrogates and the non-characters xFFFE and xFFFF (a superset
+ * of the special and non-XML characters of the BMP).
+ */
+// eslint-disable-next-line no-control-regex -- controls are escaped
+const MAY_CHANGE = /[\u0000-\u001f\u007f-\u009f\ud800-\udfff\uFFFE\uFFFF]/;
+
+/**
+ * The characters of a string written without escape sequences.
+ * @param {string} text
+ * @returns {import("./jsonChars.js").JsonChar[]}
+ */
+const charsOf = (text) =>
+  Array.from(text, (char) => ({ cp: char.codePointAt(0) }));
+
+/**
  * The function that turns parsed JSON characters into a string under the
  * escape and fallback options.
  * @param {{escape: boolean, fallback?: import("../../items/function.js").FunctionItem}} options
- * @returns {(chars: import("./jsonChars.js").JsonChar[]) => string}
+ * @returns {(chars: import("./jsonParser.js").JsonString) => string}
  */
 export function stringDecoder({ escape, fallback }) {
   const replace = fallback
     ? (sequence) => fallback.invoke([[stringItem(sequence)]])[0].value
     : () => "\uFFFD";
-  return (chars) => {
+  return (json) => {
+    // a string without escape sequences is mostly kept as it is
+    if (typeof json === "string" && !MAY_CHANGE.test(json)) return json;
+    const chars = typeof json === "string" ? charsOf(json) : json;
     let result = "";
     for (const { cp, escape: written } of chars) {
       if (escape) {

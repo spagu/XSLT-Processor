@@ -13,8 +13,10 @@ import { atomize } from "../../xdm/nodes.js";
 import { infoOf } from "../compiler/elementInfo.js";
 import { evaluate } from "../runtime/context.js";
 import {
+  countKey,
   numberAny,
   numberHierarchy,
+  numberMemo,
   sameKindAndName,
 } from "../runtime/numbering.js";
 import { formatNumbers } from "../runtime/numberFormat.js";
@@ -91,6 +93,18 @@ function optionalPattern(element, name, cx, scope) {
 }
 
 /**
+ * Whether the numbers an instruction gives may be memoized: its count
+ * and from patterns must not read variables (local ones differ between
+ * invocations) or the dynamic context of the instruction.
+ * @param {Element} element
+ * @returns {boolean}
+ */
+function isMemoizable(element) {
+  const text = `${attr(element, "count") ?? ""} ${attr(element, "from") ?? ""}`;
+  return !/\$|current-|regex-group/.test(text);
+}
+
+/**
  * xsl:number.
  * @param {Element} element
  * @param {object} cx
@@ -136,6 +150,9 @@ export function compileNumber(element, cx, scope) {
     checkLanguage(langText, "XTSE0020");
   }
   const lang = langText === undefined ? null : avt("lang");
+  // identity of the instruction for the memos of each transformation
+  const instruction = {};
+  const memoizable = isMemoizable(element);
   return (xc, out) => {
     let numbers;
     if (value) {
@@ -157,10 +174,19 @@ export function compileNumber(element, cx, scope) {
         ? (n) => patternMatches(count, n, xc)
         : sameKindAndName(node);
       const fromTest = from ? (n) => patternMatches(from, n, xc) : null;
+      const memo = memoizable
+        ? numberMemo(xc.tx, instruction, count ? "" : countKey(node))
+        : null;
       const places =
         level === "any"
-          ? numberAny(node, countTest, fromTest)
-          : numberHierarchy(node, countTest, fromTest, level === "multiple");
+          ? numberAny(node, countTest, fromTest, memo)
+          : numberHierarchy(
+              node,
+              countTest,
+              fromTest,
+              level === "multiple",
+              memo,
+            );
       numbers = places.map(BigInt);
     }
     if (startAt) numbers = rebase(numbers, startAt(xc));

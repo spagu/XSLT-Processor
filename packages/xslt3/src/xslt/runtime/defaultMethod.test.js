@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { serialize } from "../../index.js";
 import { stylesheet, transform } from "../testing.test.js";
 
 /**
@@ -61,5 +62,53 @@ describe("the default output method", () => {
     assert.equal(output.indent, true);
     assert.deepEqual(output["use-character-maps"], new Map([["x", "y"]]));
     assert.equal(output.method, "xml");
+  });
+});
+
+describe("the default HTML version", () => {
+  /**
+   * Serializes the principal result of a stylesheet.
+   * @param {string} body - Declarations and templates
+   * @param {string} version - Version of the stylesheet
+   * @returns {string}
+   */
+  const html = (body, version) => {
+    const { principal, output } = transform(
+      stylesheet(body, { version }),
+      "<doc/>",
+    );
+    return serialize([principal].flat(), output);
+  };
+  const page = '<xsl:template match="/"><html><br/></html></xsl:template>';
+  const doctype = /^<!DOCTYPE html>/;
+
+  it("is HTML 4.01 for an XSLT 1.0 or 2.0 stylesheet", () => {
+    for (const version of ["1.0", "2.0"]) {
+      const text = html(`<xsl:output method="html"/>${page}`, version);
+      assert.doesNotMatch(text, doctype, version);
+      assert.match(text, /<br>/);
+      // the method implied by the result
+      assert.doesNotMatch(html(page, version), doctype);
+    }
+  });
+
+  it("is HTML5 for XSLT 3.0, or when the stylesheet asks for it", () => {
+    assert.match(html(`<xsl:output method="html"/>${page}`, "3.0"), doctype);
+    assert.match(
+      html(`<xsl:output method="html" html-version="5"/>${page}`, "1.0"),
+      doctype,
+    );
+    assert.match(
+      html(`<xsl:output method="html" version="5.0"/>${page}`, "2.0"),
+      doctype,
+    );
+    assert.match(
+      html(
+        '<xsl:template match="/"><xsl:result-document method="html" html-version="5">' +
+          "<html/></xsl:result-document></xsl:template>",
+        "2.0",
+      ),
+      doctype,
+    );
   });
 });

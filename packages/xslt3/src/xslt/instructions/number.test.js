@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { checkBodies } from "../testing.test.js";
+import { performance } from "node:perf_hooks";
+import { checkBodies, runBody } from "../testing.test.js";
 import { formatNumbers, parseFormat } from "../runtime/numberFormat.js";
 
 const tree = "<doc><s><t/><t/></s><s><t/><u/><t/></s></doc>";
@@ -136,5 +137,83 @@ describe("number format strings", () => {
       suffix: "]",
     });
     assert.equal(formatNumbers([1n, 2n], "", { ordinal: false }), "1.2");
+  });
+});
+
+describe("xsl:number on long lists", () => {
+  const items = Array.from(
+    { length: 8000 },
+    (_, i) => `<i k="${i % 3 === 0 ? 1 : 0}"/>`,
+  ).join("");
+  const xml = `<r>${items}</r>`;
+
+  it("numbers 8,000 nodes with level=any in linear time", () => {
+    const started = performance.now();
+    const numbers = runBody(
+      '<xsl:for-each select="r/i"><xsl:number level="any" count="i[@k=\'1\']"/>;</xsl:for-each>',
+      xml,
+    ).split(";");
+    const elapsed = performance.now() - started;
+    assert.equal(numbers[0], "1");
+    assert.equal(numbers[7999], "2667");
+    assert.ok(elapsed < 3000, `took ${elapsed} ms`);
+  });
+
+  it("numbers 8,000 siblings with level=single in linear time", () => {
+    const started = performance.now();
+    const numbers = runBody(
+      '<xsl:for-each select="r/i"><xsl:number/>;</xsl:for-each>',
+      xml,
+    ).split(";");
+    const elapsed = performance.now() - started;
+    assert.equal(numbers[7999], "8000");
+    assert.ok(elapsed < 3000, `took ${elapsed} ms`);
+  });
+
+  it("reuses numbers only where they stay valid", () => {
+    const doc =
+      "<doc><s><t/><x/><t/></s><s><t/><t/></s><?t?><t a='1' b='2'/></doc>";
+    const each = (select, number) =>
+      `<xsl:for-each select="${select}">${number};</xsl:for-each>`;
+    checkBodies([
+      // reverse document order: no numbered node is met on the way back
+      [each("reverse(//t)", '<xsl:number level="any"/>'), "5;4;3;2;1;", doc],
+      // a from boundary between two numbered nodes
+      [each("//t", '<xsl:number level="any" from="s"/>'), "1;2;1;2;3;", doc],
+      // the default count pattern depends on the numbered node
+      [
+        each(
+          "//t | //x | //processing-instruction()",
+          '<xsl:number level="any"/>',
+        ),
+        "1;1;2;3;4;1;5;",
+        doc,
+      ],
+      // attributes are numbered after their element
+      [
+        each("//t[@a]/@*", '<xsl:number level="any" count="@*|t"/>'),
+        "6;6;",
+        doc,
+      ],
+      // a pattern reading a variable is not memoized
+      [
+        '<xsl:for-each select="//s"><xsl:variable name="n" select="position()"/>' +
+          each("t", '<xsl:number level="any" count="s[$n]/t"/>') +
+          "</xsl:for-each>",
+        "1;2;1;2;",
+        doc,
+      ],
+      [
+        each("//t", '<xsl:number level="multiple" count="s|t"/>'),
+        "1.1;1.2;2.1;2.2;3;",
+        doc,
+      ],
+      [each("reverse(//t)", "<xsl:number/>"), "1;2;1;2;1;", doc],
+      [each("//t", "<xsl:number/>"), "1;2;1;2;1;", doc],
+    ]);
+    checkBodies(
+      [[each("//t", '<xsl:number count="t[$all]"/>'), "1;2;1;2;1;", doc]],
+      { declarations: '<xsl:variable name="all" select="true()"/>' },
+    );
   });
 });

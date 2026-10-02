@@ -18,7 +18,8 @@ describe("the JSON parser", () => {
         { kind: "boolean", value: true },
         { kind: "boolean", value: false },
         { kind: "null" },
-        { kind: "string", chars: [{ cp: 97 }] },
+        // a string without escape sequences is kept as it is
+        { kind: "string", chars: "a" },
       ],
     });
     assert.deepEqual(parseJsonText(`${ch(0xfeff)}{}`), {
@@ -114,6 +115,17 @@ describe("JSON strings", () => {
     assert.equal(
       stringDecoder({ escape: false })(chars),
       `\\${REPLACEMENT}${REPLACEMENT}\t`,
+    );
+    // strings written without escape sequences
+    const plain = `a${ch(0x85)}${ch(0xdead)}${ch(0x1f600)}`;
+    assert.equal(stringDecoder({ escape: false })("abc"), "abc");
+    assert.equal(
+      stringDecoder({ escape: true })(plain),
+      `a\\u0085\\uDEAD${ch(0x1f600)}`,
+    );
+    assert.equal(
+      stringDecoder({ escape: false })(plain),
+      `a${ch(0x85)}${REPLACEMENT}${ch(0x1f600)}`,
     );
   });
 });
