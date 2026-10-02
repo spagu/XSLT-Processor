@@ -52,7 +52,7 @@ describe("bad command lines exit with 2", () => {
     const failOn = fakeIo();
     assert.equal(await runCli(["--fail-on", "loud"], failOn), 2);
     assert.ok(
-      failOn.err.includes("--fail-on must be one of none, medium, high"),
+      failOn.err.includes("--fail-on must be one of none, low, medium, high"),
     );
     const two = fakeIo();
     assert.equal(await runCli(["a", "b"], two), 2);
@@ -97,7 +97,9 @@ describe("scanning", () => {
       ),
     );
     assert.ok(io.out.includes("Found 2 XSLTProcessor usages in 2 files\n"));
-    assert.ok(io.out.includes("Chrome compatibility risk: HIGH\n"));
+    assert.ok(io.out.includes("\nChrome 158 Migration Report\n"));
+    assert.ok(io.out.includes("\nRisk: HIGH\n"));
+    assert.ok(io.out.includes("\nFound 4 XSLT usages\n"));
     assert.ok(!io.out.includes("\u001b["));
     assert.equal(io.err, "");
   });
@@ -105,29 +107,13 @@ describe("scanning", () => {
   it("uses colour on a TTY", async () => {
     const io = fakeIo(true);
     await runCli([dir], io);
-    assert.ok(
-      io.out.includes("\u001b[1mChrome compatibility risk: HIGH\u001b[22m"),
-    );
+    assert.ok(io.out.includes("\u001b[1mRisk: HIGH\u001b[22m"));
   });
 
-  it("prints only JSON with --json", async () => {
+  it("prints only JSON with --json, with the same numbers as the report", async () => {
     const io = fakeIo();
     assert.equal(await runCli([dir, "--json", "--ignore", "legacy"], io), 0);
     const json = JSON.parse(io.out);
-    assert.deepEqual(Object.keys(json), [
-      "version",
-      "scannedFiles",
-      "durationMs",
-      "risk",
-      "usages",
-      "stylesheets",
-      "xmlDocuments",
-      "migrated",
-      "serverSide",
-      "needsXslt3",
-      "msxml",
-      "suggestion",
-    ]);
     assert.equal(json.scannedFiles, 3);
     assert.equal(json.risk, "HIGH");
     assert.equal(json.needsXslt3, true);
@@ -138,13 +124,24 @@ describe("scanning", () => {
     );
     assert.deepEqual(json.suggestion, { ...SUGGESTION });
     assert.equal(typeof json.durationMs, "number");
+    assert.equal(json.summary.findings, json.findings.length);
+    const text = fakeIo();
+    await runCli([dir, "--ignore", "legacy"], text);
+    assert.ok(
+      text.out.includes(
+        `Compatible automatically:  ${json.summary.automatic}\nManual review:             ${json.summary.manualReview}\n`,
+      ),
+    );
   });
 
   it("exits 1 only when the risk reaches --fail-on", async () => {
     assert.equal(await runCli([dir, "--fail-on", "high"], fakeIo()), 1);
     assert.equal(await runCli([dir, "--fail-on", "MEDIUM"], fakeIo()), 1);
     assert.equal(await runCli([dir, "--fail-on", "none"], fakeIo()), 0);
-    const sheetsOnly = await createFixture({ "a.xsl": stylesheetXml("1.0") });
+    const sheetsOnly = await createFixture({
+      "a.xsl": stylesheetXml("1.0"),
+      "b.xsl": stylesheetXml("2.0"),
+    });
     try {
       assert.equal(
         await runCli([sheetsOnly, "--fail-on", "high"], fakeIo()),

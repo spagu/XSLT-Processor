@@ -31,7 +31,7 @@ This library ensures your XSLT-based applications continue to work regardless of
 ## Features
 
 - **1:1 Native API Compatibility**: Drop-in replacement for native `XSLTProcessor`
-- **One-line migration**: a `<script>` tag keeps `XSLTProcessor` pages working, and the same tag inside an XML document keeps `<?xml-stylesheet?>` rendering; `npx xslt-migrate-check .` finds the pages that need it ([how-to](https://xslt-processor.tradik.com/blog/migrating-from-native-xslt/))
+- **One-line migration**: `import "@tradik/xslt-processor/polyfill"` or a `<script>` tag keeps `XSLTProcessor` pages working, and the same tag inside an XML document keeps `<?xml-stylesheet?>` rendering; `npx xslt-migrate-check .` finds the pages that need it, `--fix` writes the patch and `xslt-migrate-test` compares the output with the browser's ([wizard](https://xslt-processor.tradik.com/migrate/), [how-to](https://xslt-processor.tradik.com/blog/migrating-from-native-xslt/))
 - **XSLT 1.0**: Every element and function of the W3C XSLT 1.0 Recommendation, with the few gaps listed under [Known Deviations](docs/CONFORMANCE.md#known-deviations)
 - **XPath 1.0 Engine**: Built-in XPath evaluator with all core functions
 - **`xsl:output` Serialization**: `transformToString()` honors method, indent, doctype, CDATA sections and `disable-output-escaping`
@@ -53,7 +53,9 @@ The documentation is also published as a website with an interactive playground:
 | [Security Limits](docs/SECURITY-LIMITS.md) | XPath and XSLT limits, prototype pollution protection, input validation |
 | [Browser Compatibility](docs/BROWSER-SUPPORT.md) | Minimum browser versions, native XSLT removal timeline, feature detection |
 | [XSLT 2.0 and 3.0](docs/XSLT3.md) | `@tradik/xslt3`: one engine for XSLT 3.0 and 2.0 in a separate package; options, conformance and design |
-| [Migration checker](docs/MIGRATE-CHECK.md) | `npx xslt-migrate-check .`: finds `XSLTProcessor` usages, `<?xml-stylesheet?>` documents and stylesheets in a project, rates the Chrome risk and prints the one-line migration; `--json` and `--fail-on` for CI |
+| [Migration checker](docs/MIGRATE-CHECK.md) | `npx xslt-migrate-check .`: finds `XSLTProcessor` usages, `<?xml-stylesheet?>` documents and stylesheets in a project, rates the Chrome risk and prints the one-line migration; `--json` and `--fail-on` for CI; online at [xslt-processor.tradik.com/check](https://xslt-processor.tradik.com/check/) |
+| [Migration fixes](docs/MIGRATE-FIX.md) | `npx xslt-migrate-check . --fix`: the polyfill import, the script tags and the dependencies written as `migration.patch` for review (`--write` applies it); `xslt-migrate-check/analyze` runs the same analysis in a browser |
+| [Migration test](docs/MIGRATE-TEST.md) | `xslt-migrate-test`: runs every XML + XSL pair on the browser's engine (Chromium) or libxslt and on this library, compares the output and reports the compatibility |
 | [Benchmarks](docs/BENCHMARKS.md) | Every version side by side (1.1.3, 1.2.0, 1.3.0, @tradik/xslt3) in one chart and table; then the detailed runs: 1.1.3 vs 1.2.0 speed-up, time and peak memory per scenario, with charts, tables and `npm run bench` to reproduce; XPath 1.0 of this package vs XPath 3.1 of @tradik/xslt3 (`npm run bench -- --suite xpath`); the XSLT 1.0 engine vs @tradik/xslt3 on the same stylesheets, idiomatic 2.0/3.0 rewrites and 3.0-only scenarios (`npm run bench -- --suite xslt`) |
 | [Development](docs/DEVELOPMENT.md) | Setup, tests, Docker, Makefile, publishing to npm |
 | [Style Guide](docs/STYLE-GUIDE.md) | Project colors with WCAG 2.2 contrast ratios |
@@ -146,6 +148,20 @@ If you prefer local installation:
   // ...
 </script>
 ```
+
+### One import for bundled code
+
+```javascript
+import "@tradik/xslt-processor/polyfill"; // first, before code that uses XSLTProcessor
+
+const processor = new XSLTProcessor(); // the native one, or this library where there is none
+```
+
+The entry exports nothing: it installs this `XSLTProcessor` as the global one
+when the browser has no working native XSLT (`installGlobal()`), and applies an
+`<?xml-stylesheet?>` the browser left unapplied (`autoApplyXmlStylesheet()`).
+In browsers that still have XSLT it changes nothing. CommonJS:
+`require("@tradik/xslt-processor/polyfill")`.
 
 ### ESM Module
 

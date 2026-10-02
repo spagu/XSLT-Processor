@@ -5,8 +5,7 @@
  * @module xslt-migrate-check/migration
  */
 
-import { readFileSync } from "node:fs";
-import { URL } from "node:url";
+import { VERSION } from "./version.js";
 
 /** Chrome's XSLT removal schedule. */
 export const CHROME_SCHEDULE = Object.freeze({
@@ -14,7 +13,8 @@ export const CHROME_SCHEDULE = Object.freeze({
   finalRemoval: "Chrome 176 (17 August 2027)",
 });
 
-const CDN_SCRIPT =
+/** The browser bundle on the jsDelivr CDN, major version 1. */
+export const CDN_SCRIPT =
   "https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js";
 
 /** The suggested migration, also emitted as `suggestion` in `--json`. */
@@ -28,13 +28,11 @@ export const SUGGESTION = Object.freeze({
 });
 
 /**
- * Read this package's version from its package.json.
+ * This package's version (see ./version.js; a test keeps it equal to
+ * package.json).
  *
- * @returns {string} The version, e.g. "0.1.0"
+ * @returns {string} The version, e.g. "0.3.0"
  */
 export function readVersion() {
-  const manifest = JSON.parse(
-    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
-  );
-  return manifest.version;
+  return VERSION;
 }

@@ -39,21 +39,48 @@ export function summarizeVersions(stylesheets) {
 }
 
 /**
+ * Name the MSXML use of a stylesheet: the extensions no runtime runs, or
+ * the msxsl:node-set the library supports.
+ *
+ * @param {object} sheet - A stylesheet entry
+ * @returns {string|null} The flag, or null without MSXML
+ */
+function msxmlFlag(sheet) {
+  const unsupported = [...sheet.msxmlFunctions];
+  if (sheet.msxmlScript) unsupported.unshift("msxsl:script");
+  if (unsupported.length > 0) {
+    return `MSXML ${unsupported.join(", ")}: no browser runtime runs them`;
+  }
+  return sheet.msxml ? "msxsl:node-set" : null;
+}
+
+/**
  * Describe one stylesheet's version and flags for the detail section.
  *
  * @param {object} sheet - A stylesheet entry
- * @returns {string} e.g. "XSLT 1.0, EXSLT, document()"
+ * @returns {string} e.g. "XSLT 1.0, EXSLT common, document()"
  */
 export function describeStylesheet(sheet) {
   const flags = [
     sheet.version === "unknown" ? "unknown version" : `XSLT ${sheet.version}`,
   ];
-  if (sheet.exslt) flags.push("EXSLT");
+  if (sheet.exslt) flags.push(`EXSLT ${sheet.exsltModules.join(", ")}`);
+  if (sheet.unsupportedExslt.length > 0) {
+    flags.push(`unsupported ${sheet.unsupportedExslt.join(", ")}`);
+  }
   if (sheet.disableOutputEscaping) flags.push("disable-output-escaping");
   if (sheet.documentFunction) flags.push("document()");
   if (sheet.key) flags.push("xsl:key");
-  if (sheet.msxml) {
-    flags.push("MSXML extension: will not work in any browser polyfill");
+  const msxml = msxmlFlag(sheet);
+  if (msxml) flags.push(msxml);
+  const extensions = [
+    ...sheet.extensionFunctions,
+    ...sheet.extensionNamespaces,
+  ];
+  if (extensions.length > 0) flags.push(`extensions ${extensions.join(", ")}`);
+  const missing = sheet.includes.filter((include) => include.found === false);
+  if (missing.length > 0) {
+    flags.push(`missing ${missing.map((m) => m.href).join(", ")}`);
   }
   return flags.join(", ");
 }

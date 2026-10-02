@@ -7,8 +7,24 @@ name: Conformance
 on:
   push:
     branches: [main, master, "release/**"]
+    paths:
+      - "src/**"
+      - "scripts/conformance.mjs"
+      - "scripts/conformance/**"
+      - "tests/conformance/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/conformance.yml"
   pull_request:
     branches: [main, master, "release/**"]
+    paths:
+      - "src/**"
+      - "scripts/conformance.mjs"
+      - "scripts/conformance/**"
+      - "tests/conformance/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/conformance.yml"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

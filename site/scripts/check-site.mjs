@@ -10,6 +10,7 @@
  *   Google Tag Manager snippet;
  * - accessibility basics: lang, one <main>, one <h1>, no skipped heading
  *   levels, alt on every image, a title on every iframe;
+ * - no built script quotes a CDN URL with a fingerprinted file name;
  * - WCAG 2.2 contrast of the colour pairs of css/tokens.css (or its
  *   fingerprinted css/tokens.<hash>.css), light and dark.
  *
@@ -17,11 +18,14 @@
  * Exits with 1 and lists the problems when a check fails.
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
-import { URL } from "node:url";
 import { JSDOM } from "jsdom";
+import { hashedCdnUrl, scriptProblems } from "./check-cdn.mjs";
+import { htmlFiles, linkProblems } from "./check-links.mjs";
 import { contrastProblems, parseTokens } from "./contrast.mjs";
+
+export { linkProblems, scriptProblems };
 
 const REQUIRED_META = [
   'meta[name="description"]',
@@ -39,35 +43,32 @@ const REQUIRED_META = [
 ];
 
 /**
- * All HTML files below a directory.
+ * Check one page's landmarks and heading levels.
  *
- * @param {string} dir - Directory
- * @returns {string[]} File paths
+ * @param {Document} doc - Parsed page
+ * @returns {string[]} Problems
  */
-function htmlFiles(dir) {
-  return readdirSync(dir, { recursive: true })
-    .map((name) => join(dir, name))
-    .filter((path) => path.endsWith(".html") && statSync(path).isFile());
-}
-
-/**
- * The output file a site URL path is served from, or null.
- *
- * @param {string} root - Output directory
- * @param {string} path - URL path below the prefix, starting with "/"
- * @returns {string|null} File path
- */
-function fileFor(root, path) {
-  const target = join(root, decodeURIComponent(path));
-  if (path.endsWith("/")) {
-    return existsSync(join(target, "index.html"))
-      ? join(target, "index.html")
-      : null;
+function structureProblems(doc) {
+  const problems = [];
+  if (doc.querySelectorAll("main").length !== 1) {
+    problems.push("expected exactly one <main>");
   }
-  if (existsSync(target) && statSync(target).isFile()) return target;
-  return existsSync(join(target, "index.html"))
-    ? join(target, "index.html")
-    : null;
+  if (doc.querySelectorAll("h1").length !== 1) {
+    problems.push("expected exactly one <h1>");
+  }
+  let previous = 1;
+  for (const heading of doc.querySelectorAll(
+    "main h1, main h2, main h3, main h4, main h5, main h6",
+  )) {
+    const level = Number(heading.tagName[1]);
+    if (level > previous + 1) {
+      problems.push(
+        `heading level skipped: <${heading.tagName.toLowerCase()}> "${heading.textContent.trim()}"`,
+      );
+    }
+    previous = level;
+  }
+  return problems;
 }
 
 /**
@@ -106,80 +107,20 @@ export function pageProblems(doc) {
       "Google Tag Manager on the page: the site uses Google Analytics only",
     );
   }
-  if (doc.querySelectorAll("main").length !== 1) {
-    problems.push("expected exactly one <main>");
-  }
-  if (doc.querySelectorAll("h1").length !== 1) {
-    problems.push("expected exactly one <h1>");
-  }
-  let previous = 1;
-  for (const heading of doc.querySelectorAll(
-    "main h1, main h2, main h3, main h4, main h5, main h6",
-  )) {
-    const level = Number(heading.tagName[1]);
-    if (level > previous + 1) {
-      problems.push(
-        `heading level skipped: <${heading.tagName.toLowerCase()}> "${heading.textContent.trim()}"`,
-      );
-    }
-    previous = level;
-  }
+  problems.push(...structureProblems(doc));
   for (const img of doc.querySelectorAll("img:not([alt])")) {
     problems.push(`image without alt: ${img.getAttribute("src")}`);
   }
   for (const frame of doc.querySelectorAll("iframe:not([title])")) {
     problems.push(`iframe without title: ${frame.id}`);
   }
-  return problems;
-}
-
-/**
- * Check every link, asset reference and anchor of the site.
- *
- * @param {string} root - Output directory
- * @param {string} prefix - Path prefix the site is served under ("" at a root)
- * @param {Map<string, Document>} docs - Parsed pages by file path
- * @returns {string[]} Problems
- */
-export function linkProblems(root, prefix, docs) {
-  const problems = [];
-  for (const [file, doc] of docs) {
-    const pageUrl = new URL(
-      `https://site.test${prefix}/${relative(root, file).replace(/index\.html$/, "")}`,
-    );
-    for (const el of doc.querySelectorAll("[href], [src]")) {
-      const raw = el.getAttribute("href") ?? el.getAttribute("src");
-      if (el.tagName === "LINK" && el.getAttribute("rel") === "preconnect") {
-        continue;
-      }
-      const url = new URL(raw, pageUrl);
-      if (url.host !== "site.test") continue;
-      if (!url.pathname.startsWith(`${prefix}/`)) {
-        problems.push(`${relative(root, file)}: ${raw} is outside ${prefix}/`);
-        continue;
-      }
-      const target = fileFor(root, url.pathname.slice(prefix.length));
-      if (!target) {
-        problems.push(`${relative(root, file)}: broken link ${raw}`);
-      } else if (url.hash.length > 1 && docs.has(target)) {
-        const id = decodeURIComponent(url.hash.slice(1));
-        if (!docs.get(target).getElementById(id)) {
-          problems.push(`${relative(root, file)}: missing anchor ${raw}`);
-        }
-      }
-    }
+  const hashed = hashedCdnUrl(doc);
+  if (hashed) {
+    problems.push(`CDN URL with a fingerprinted file name: ${hashed}`);
   }
   return problems;
 }
 
-/**
- * Run all checks on a built site.
- *
- * @param {string} root - Output directory
- * @param {string} [prefix=""] - Path prefix the site is served under
- * @param {string} tokensCss - Contents of css/tokens.css (fingerprinted or not)
- * @returns {string[]} Problems
- */
 /**
  * Path of a built asset by its source name: the file itself, or the
  * fingerprinted copy ssg writes with `fingerprint: true` (name.<hash8>.ext).
@@ -207,6 +148,14 @@ export function assetPath(root, asset) {
   return join(dir, found);
 }
 
+/**
+ * Run all checks on a built site.
+ *
+ * @param {string} root - Output directory
+ * @param {string} [prefix=""] - Path prefix the site is served under
+ * @param {string} tokensCss - Contents of css/tokens.css (fingerprinted or not)
+ * @returns {string[]} Problems
+ */
 export function checkSite(
   root,
   prefix = "",
@@ -218,14 +167,14 @@ export function checkSite(
       new JSDOM(readFileSync(file, "utf8")).window.document,
     ]),
   );
-  const problems = [];
-  for (const [file, doc] of docs) {
-    for (const problem of pageProblems(doc)) {
-      problems.push(`${relative(root, file)}: ${problem}`);
-    }
-  }
-  problems.push(...linkProblems(root, prefix, docs));
-  problems.push(...contrastProblems(parseTokens(tokensCss)));
+  const problems = [...docs].flatMap(([file, doc]) =>
+    pageProblems(doc).map((problem) => `${relative(root, file)}: ${problem}`),
+  );
+  problems.push(
+    ...linkProblems(root, prefix, docs),
+    ...scriptProblems(root),
+    ...contrastProblems(parseTokens(tokensCss)),
+  );
   return problems;
 }
 

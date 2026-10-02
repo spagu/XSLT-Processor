@@ -5,21 +5,10 @@ import {
   RISK_LEVELS,
   assessRisk,
   needsXslt3,
+  projectRisk,
   shouldFail,
 } from "./risk.js";
-
-/** A ScanResult with the given lists. */
-function scan(overrides = {}) {
-  return {
-    scannedFiles: 0,
-    usages: [],
-    stylesheets: [],
-    xmlDocuments: [],
-    migrated: [],
-    serverSide: [],
-    ...overrides,
-  };
-}
+import { scanResult } from "../test/fixtures.js";
 
 const sheet = (version, msxml = false) => ({ file: "s.xsl", version, msxml });
 
@@ -32,32 +21,30 @@ describe("needsXslt3", () => {
   });
 });
 
+describe("projectRisk", () => {
+  it("is the highest rating, NONE without findings", () => {
+    assert.equal(projectRisk([]), "NONE");
+    assert.equal(projectRisk([{ rating: "LOW" }]), "LOW");
+    assert.equal(
+      projectRisk([{ rating: "LOW" }, { rating: "MEDIUM" }, { rating: "LOW" }]),
+      "MEDIUM",
+    );
+    assert.equal(projectRisk([{ rating: "HIGH" }, { rating: "LOW" }]), "HIGH");
+  });
+});
+
 describe("assessRisk", () => {
-  it("is NONE for an empty scan", () => {
-    assert.deepEqual(assessRisk(scan()), {
+  it("takes the risk from the findings and the flags from the stylesheets", () => {
+    assert.deepEqual(assessRisk(scanResult(), []), {
       risk: "NONE",
       needsXslt3: false,
       msxml: false,
     });
-  });
-
-  it("is MEDIUM with stylesheets only, and flags their versions", () => {
     const result = assessRisk(
-      scan({ stylesheets: [sheet("1.0"), sheet("2.0", true)] }),
+      scanResult({ stylesheets: [sheet("1.0"), sheet("2.0", true)] }),
+      [{ rating: "MEDIUM" }],
     );
     assert.deepEqual(result, { risk: "MEDIUM", needsXslt3: true, msxml: true });
-  });
-
-  it("is HIGH with a rendered XML document or a usage", () => {
-    const withXml = scan({ xmlDocuments: [{ file: "f.xml", line: 2 }] });
-    assert.equal(assessRisk(withXml).risk, "HIGH");
-    const withUsage = scan({ usages: [{ file: "a.js", line: 1, text: "x" }] });
-    assert.equal(assessRisk(withUsage).risk, "HIGH");
-  });
-
-  it("migrated files alone do not raise the risk", () => {
-    const migrated = scan({ migrated: [{ file: "a.js", count: 2 }] });
-    assert.equal(assessRisk(migrated).risk, "NONE");
   });
 });
 
@@ -69,10 +56,12 @@ describe("shouldFail", () => {
     assert.equal(shouldFail("MEDIUM", "medium"), true);
     assert.equal(shouldFail("HIGH", "medium"), true);
     assert.equal(shouldFail("NONE", "medium"), false);
+    assert.equal(shouldFail("LOW", "low"), true);
+    assert.equal(shouldFail("LOW", "medium"), false);
   });
 
   it("exposes the levels in order", () => {
-    assert.deepEqual(RISK_LEVELS, ["NONE", "MEDIUM", "HIGH"]);
-    assert.deepEqual(FAIL_ON_VALUES, ["none", "medium", "high"]);
+    assert.deepEqual(RISK_LEVELS, ["NONE", "LOW", "MEDIUM", "HIGH"]);
+    assert.deepEqual(FAIL_ON_VALUES, ["none", "low", "medium", "high"]);
   });
 });

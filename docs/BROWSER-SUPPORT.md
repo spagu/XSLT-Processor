@@ -53,6 +53,14 @@ document needs nothing) and `autoApplyXmlStylesheet(doc)` (waits for
 
 ## Feature Detection
 
+With a bundler, one import does what the browser bundle does on load:
+
+```javascript
+import "@tradik/xslt-processor/polyfill";
+```
+
+By hand:
+
 ```javascript
 import { isNativeXSLTSupported, installGlobal } from '@tradik/xslt-processor';
 

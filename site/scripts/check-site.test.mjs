@@ -12,7 +12,12 @@ import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
-import { assetPath, checkSite, pageProblems } from "./check-site.mjs";
+import {
+  assetPath,
+  checkSite,
+  pageProblems,
+  scriptProblems,
+} from "./check-site.mjs";
 import { PAIRS, contrast, contrastProblems, parseTokens } from "./contrast.mjs";
 
 const tokensCss = readFileSync(
@@ -42,6 +47,29 @@ describe("pageProblems", () => {
       ),
       [],
     );
+  });
+
+  it("reports a CDN URL whose file name was fingerprinted", () => {
+    const hashed =
+      "https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.c9c8999c.js";
+    const inText = pageProblems(
+      parse(page(`<main><h1>A</h1><pre><code>${hashed}</code></pre></main>`)),
+    );
+    assert.deepEqual(inText, [
+      `CDN URL with a fingerprinted file name: ${hashed.slice(8)}`,
+    ]);
+    const inAttribute = pageProblems(
+      parse(page(`<main><h1>A</h1><a href="${hashed}">x</a></main>`)),
+    );
+    assert.equal(inAttribute.length, 1);
+    const fine = pageProblems(
+      parse(
+        page(
+          "<main><h1>A</h1><code>https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js</code></main>",
+        ),
+      ),
+    );
+    assert.deepEqual(fine, []);
   });
 
   it("reports missing head tags, landmarks and headings", () => {
@@ -133,6 +161,22 @@ describe("checkSite", () => {
       "index.html: broken link /p/missing/",
       "index.html: /elsewhere/ is outside /p/",
     ]);
+  });
+
+  it("finds CDN URLs with a fingerprinted name in built scripts", () => {
+    const dir = mkdtempSync(join(tmpdir(), "site-scripts-"));
+    mkdirSync(join(dir, "vendor"));
+    const cdn = "https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/";
+    writeFileSync(
+      join(dir, "vendor", "ok.js"),
+      `a="${cdn}x.browser.min\\x2ejs"`,
+    );
+    writeFileSync(join(dir, "bad.js"), `a="${cdn}x.browser.min.c9c8999c.js"`);
+    writeFileSync(join(dir, "notes.txt"), `${cdn}x.c9c8999c.js`);
+    assert.deepEqual(scriptProblems(dir), [
+      "bad.js: CDN URL with a fingerprinted file name: cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/x.browser.min.c9c8999c.js",
+    ]);
+    rmSync(dir, { recursive: true, force: true });
   });
 
   it("runs from the command line", () => {

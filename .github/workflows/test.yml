@@ -3,8 +3,32 @@ name: Test
 on:
   push:
     branches: [main, master]
+    paths:
+      - "src/**"
+      - "bin/**"
+      - "packages/**"
+      - "scripts/**"
+      - "tests/**"
+      - "package.json"
+      - "package-lock.json"
+      - "eslint.config.js"
+      - ".prettierrc*"
+      - ".prettierignore"
+      - ".github/workflows/test.yml"
   pull_request:
     branches: [main, master]
+    paths:
+      - "src/**"
+      - "bin/**"
+      - "packages/**"
+      - "scripts/**"
+      - "tests/**"
+      - "package.json"
+      - "package-lock.json"
+      - "eslint.config.js"
+      - ".prettierrc*"
+      - ".prettierignore"
+      - ".github/workflows/test.yml"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

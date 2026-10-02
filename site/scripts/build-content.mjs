@@ -10,8 +10,8 @@
  *   documentation sidebar;
  * - the browser bundle dist/xslt-processor.browser.min.js (run `npm run
  *   build` first) is copied to site/static/vendor/ for the playground, and
- *   @tradik/xslt3 is bundled beside it for the XSLT 3.0 and XPath 3.1 modes
- *   (vendor.mjs).
+ *   @tradik/xslt3 is bundled beside it for the XSLT 3.0 and XPath 3.1 modes,
+ *   and xslt-migrate-check's analysis for the online check (vendor.mjs).
  *
  * Everything written here is generated and ignored by git; edit the sources.
  *
@@ -37,7 +37,13 @@ import {
   pageMap,
   publishImages,
 } from "./pages.mjs";
-import { buildXslt3Bundle, formatSize, XSLT3_BUNDLE } from "./vendor.mjs";
+import {
+  buildMigrateCheckBundle,
+  buildXslt3Bundle,
+  formatSize,
+  MIGRATE_CHECK_BUNDLE,
+  XSLT3_BUNDLE,
+} from "./vendor.mjs";
 
 const siteDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const rootDir = join(siteDir, "..");
@@ -136,7 +142,15 @@ const xslt3 = await buildXslt3Bundle({
   outfile: join(vendorDir, XSLT3_BUNDLE),
 });
 
+const migrateCheck = await buildMigrateCheckBundle({
+  entry: join(siteDir, "scripts", "migrate-check-entry.mjs"),
+  outfile: join(vendorDir, MIGRATE_CHECK_BUNDLE),
+});
+
 console.log(`Site content: ${sources.length} documents, version ${version}.`);
 console.log(
   `@tradik/xslt3 bundle (XSLT 3.0 and XPath 3.1): ${formatSize(xslt3.raw)} (${formatSize(xslt3.gzip)} gzip).`,
+);
+console.log(
+  `xslt-migrate-check bundle (online check): ${formatSize(migrateCheck.raw)} (${formatSize(migrateCheck.gzip)} gzip).`,
 );

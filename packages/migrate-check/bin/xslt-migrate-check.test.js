@@ -3,11 +3,7 @@ import { execFile } from "node:child_process";
 import { URL, fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { after, before, describe, it } from "node:test";
-import {
-  createFixture,
-  removeFixture,
-  renderedXml,
-} from "../test/fixtures.js";
+import { createFixture, removeFixture, renderedXml } from "../test/fixtures.js";
 
 const run = promisify(execFile);
 const binPath = fileURLToPath(
@@ -45,7 +41,7 @@ describe("xslt-migrate-check executable", () => {
   it("exits 1 with --fail-on high and still prints the report", async () => {
     const { code, stdout } = await exec([dir, "--fail-on", "high"]);
     assert.equal(code, 1);
-    assert.ok(stdout.includes("Chrome compatibility risk: HIGH"));
+    assert.ok(stdout.includes("\nRisk: HIGH\n"));
   });
 
   it("exits 2 with the usage on stderr for an unknown option", async () => {

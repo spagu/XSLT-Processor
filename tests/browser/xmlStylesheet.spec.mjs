@@ -53,3 +53,11 @@ test("an XML document with <?xml-stylesheet?> renders through the bundle", async
     globalInstalled: "function",
   });
 });
+
+test('import "@tradik/xslt-processor/polyfill" brings XSLTProcessor back', async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/fixtures/polyfill.html");
+  await page.waitForFunction(() => window.ready === true);
+  expect(await page.textContent("#out")).toBe("2");
+});

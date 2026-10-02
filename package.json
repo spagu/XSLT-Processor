@@ -1,6 +1,6 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "workspaces": [
@@ -27,6 +27,11 @@
         "types": "./dist/xslt-processor.d.cts",
         "default": "./dist/xslt-processor.cjs"
       }
+    },
+    "./polyfill": {
+      "types": "./dist/polyfill.d.ts",
+      "import": "./dist/polyfill.js",
+      "require": "./dist/polyfill.cjs"
     }
   },
   "files": [

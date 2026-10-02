@@ -55,4 +55,7 @@ playwright-report/
 # Project website (not part of the package image)
 site/
 
+# Planning notes (git-ignored, local only)
+tasks/
+
 .wrangler/

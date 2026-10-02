@@ -1,11 +1,23 @@
-{{/* A blog post (site/posts/*.md), at /blog/<slug>/. The shared chrome writes the meta tags and GTM; "Link" marks Blog as the current section. */}}
+{{/* A blog post (site/posts/*.md), at /blog/<slug>/. The shared chrome writes the meta tags and GTM; "Link" marks Blog as the current section. The "Listen" player (js/listen.js) reads the article aloud with the browser's speech synthesis; it stays hidden where there is none. */}}
 {{define "post.html"}}{{template "head-with" (dict "Ctx" . "Title" .Post.Title "Description" .Post.Description "Link" "/blog/" "Robots" "" "Layout" "post" "Canonical" (.Post.GetCanonical .Domain))}}{{ $b := .Vars.base_path }}
 <main id="main" class="wrap post">
   <article class="prose">
-    <p class="post-meta"><a href="{{ $b }}/blog/">Blog</a> · <time datetime="{{ .Post.Date.Format "2006-01-02" }}">{{ .Post.Date.Format "2 January 2006" }}</time> · {{ .Post.ReadingTime }} min read</p>
+    <p class="post-meta" data-listen-skip><a href="{{ $b }}/blog/">Blog</a> · <time datetime="{{ .Post.Date.Format "2006-01-02" }}">{{ .Post.Date.Format "2 January 2006" }}</time> · {{ .Post.ReadingTime }} min read</p>
     <h1>{{ .Post.Title }}</h1>
+    <div class="listen" data-listen data-listen-skip hidden>
+      <button type="button" class="button button--small" data-listen-toggle aria-pressed="false">Listen</button>
+      <button type="button" class="button button--small" data-listen-stop disabled>Stop</button>
+      <label class="listen-rate">Speed <select data-listen-rate>
+        <option value="0.8">0.8×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+      </select></label>
+      <output class="listen-status" data-listen-status aria-live="polite"></output>
+    </div>
     {{ .Post.Content | safeHTML }}
   </article>
   <p class="post-follow">New articles by <a href="{{ $b }}/blog/rss.xml">RSS</a> or <a href="{{ $b }}/blog/feed.xml">Atom</a>.</p>
 </main>
+<script type="module" src="{{ $b }}/js/listen.js"></script>
 {{template "footer" .}}{{end}}

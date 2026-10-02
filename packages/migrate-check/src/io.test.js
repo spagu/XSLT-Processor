@@ -1,38 +1,13 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { describe, it } from "node:test";
-import {
-  createProcessIo,
-  directoryLabel,
-  ignoreBrokenPipe,
-  toJson,
-} from "./cli.js";
-import { SUGGESTION } from "./migration.js";
+import { createProcessIo, directoryLabel, ignoreBrokenPipe } from "./io.js";
 
 describe("helpers", () => {
   it("directoryLabel adds the trailing slash", () => {
     assert.equal(directoryLabel("."), "./");
     assert.equal(directoryLabel("site/templates"), "site/templates/");
     assert.equal(directoryLabel("site/"), "site/");
-  });
-
-  it("toJson keeps the stable key order", () => {
-    const json = toJson({
-      version: "0.1.0",
-      directory: "./",
-      scannedFiles: 1,
-      durationMs: 2,
-      risk: "NONE",
-      needsXslt3: false,
-      msxml: false,
-      usages: [],
-      stylesheets: [],
-      xmlDocuments: [],
-      migrated: [],
-      serverSide: [],
-    });
-    assert.equal("directory" in json, false);
-    assert.equal(json.suggestion, SUGGESTION);
   });
 
   it("ignoreBrokenPipe swallows EPIPE and rethrows anything else", () => {
