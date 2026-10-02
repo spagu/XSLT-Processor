@@ -1,162 +1,59 @@
 /**
- * Project scan: walks a directory, runs the detectors on each file by its
- * extension and collects the findings in one result object.
+ * Project scan on disk: walks a directory, reads the files the analysis
+ * needs and hands their texts to the pure analysis (../analyze.js). Include
+ * targets are checked on disk, so a target in an ignored directory still
+ * counts as found.
  *
  * @module xslt-migrate-check/scan
  */
 
-import { Buffer } from "node:buffer";
-import { open, readFile } from "node:fs/promises";
-import { extname, join } from "node:path";
-import {
-  HEAD_BYTES,
-  SCRIPT_EXTENSIONS,
-  STYLESHEET_EXTENSIONS,
-  XML_EXTENSIONS,
-  detectStylesheet,
-  detectUsages,
-  detectXmlStylesheetPi,
-  isStylesheetHead,
-} from "./detectors.js";
+import { statSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { buildScan, isAnalysed } from "./analyze.js";
 import { walkFiles } from "./walker.js";
 
-/** npm packages that run XSLT on the server or replace the browser's. */
-export const SERVER_SIDE_PACKAGES = Object.freeze([
-  "@tradik/xslt-processor",
-  "xslt-processor",
-  "saxon-js",
-  "libxslt",
-  "xslt3",
-  "xsltproc",
-]);
-
 /**
- * @typedef {object} ScanResult
- * @property {number} scannedFiles - Files read
- * @property {Array<{file: string, line: number, text: string}>} usages -
- *   Browser-side XSLTProcessor usages and HTML links to XSL
- * @property {Array<object>} stylesheets - XSL stylesheets with their facts
- * @property {Array<object>} xmlDocuments - XML files with an xml-stylesheet PI
- * @property {Array<{file: string, count: number}>} migrated - Files that
- *   already load @tradik/xslt-processor
- * @property {string[]} serverSide - Server-side XSLT packages in package.json
- */
-
-/**
- * Read the first HEAD_BYTES of a file as UTF-8 text.
+ * Tell whether a path is a regular file.
  *
  * @param {string} path - File path
- * @returns {Promise<string>} The head of the file
+ * @returns {boolean} True when it exists and is a file
  */
-export async function readHead(path) {
-  const handle = await open(path, "r");
+export function isFile(path) {
   try {
-    const buffer = Buffer.alloc(HEAD_BYTES);
-    const { bytesRead } = await handle.read(buffer, 0, HEAD_BYTES, 0);
-    return buffer.toString("utf8", 0, bytesRead);
-  } finally {
-    await handle.close();
-  }
-}
-
-/**
- * Record the XSLTProcessor usages of a script or template file.
- *
- * @param {string} path - File path
- * @param {string} file - Report path
- * @param {string} extension - Lower-case extension
- * @param {ScanResult} result - Accumulator
- * @returns {Promise<void>} Resolves when recorded
- */
-async function inspectScript(path, file, extension, result) {
-  const content = await readFile(path, "utf8");
-  const { matches, migrated } = detectUsages(content, extension);
-  if (matches.length === 0) return;
-  if (migrated) {
-    result.migrated.push({ file, count: matches.length });
-    return;
-  }
-  for (const match of matches) result.usages.push({ file, ...match });
-}
-
-/**
- * Record the facts of an XSL stylesheet.
- *
- * @param {string} path - File path
- * @param {string} file - Report path
- * @param {ScanResult} result - Accumulator
- * @returns {Promise<void>} Resolves when recorded
- */
-async function inspectStylesheet(path, file, result) {
-  const content = await readFile(path, "utf8");
-  result.stylesheets.push({ file, ...detectStylesheet(content) });
-}
-
-/**
- * Decide what an XML file is (stylesheet, rendered document, other) and
- * record it.
- *
- * @param {string} path - File path
- * @param {string} file - Report path
- * @param {ScanResult} result - Accumulator
- * @returns {Promise<void>} Resolves when recorded
- */
-async function inspectXml(path, file, result) {
-  const head = await readHead(path);
-  if (isStylesheetHead(head)) {
-    await inspectStylesheet(path, file, result);
-    return;
-  }
-  const instruction = detectXmlStylesheetPi(head);
-  if (instruction) result.xmlDocuments.push({ file, ...instruction });
-}
-
-/**
- * Route one file to the detector for its extension.
- *
- * @param {{path: string, relativePath: string}} walked - A walked file
- * @param {ScanResult} result - Accumulator
- * @returns {Promise<void>} Resolves when the file has been inspected
- */
-export async function inspectFile({ path, relativePath }, result) {
-  const extension = extname(path).toLowerCase();
-  if (SCRIPT_EXTENSIONS.has(extension)) {
-    await inspectScript(path, relativePath, extension, result);
-  } else if (STYLESHEET_EXTENSIONS.has(extension)) {
-    await inspectStylesheet(path, relativePath, result);
-  } else if (XML_EXTENSIONS.has(extension)) {
-    await inspectXml(path, relativePath, result);
-  }
-}
-
-/**
- * List the server-side XSLT packages that the root package.json depends on.
- * A missing or unreadable package.json yields an empty list.
- *
- * @param {string} rootDir - Directory holding package.json
- * @returns {Promise<string[]>} Matching package names, in SERVER_SIDE_PACKAGES order
- */
-export async function readServerSidePackages(rootDir) {
-  let manifest;
-  try {
-    // rootDir is the directory the user asked to scan; reading its
-    // package.json is the point. NOSONAR
-    manifest = JSON.parse(
-      await readFile(join(rootDir, "package.json"), "utf8"), // NOSONAR
-    );
+    // The path is inside the directory the user asked to scan (the tool's
+    // input by design); it is only checked, never read. NOSONAR
+    return statSync(path).isFile(); // NOSONAR
   } catch {
-    return [];
+    return false;
   }
-  const declared = new Set();
-  for (const field of [
-    "dependencies",
-    "devDependencies",
-    "peerDependencies",
-    "optionalDependencies",
-  ]) {
-    for (const name of Object.keys(manifest[field] || {})) declared.add(name);
-  }
-  return SERVER_SIDE_PACKAGES.filter((name) => declared.has(name));
+}
+
+/**
+ * Read a walked file when the analysis needs it.
+ *
+ * @param {import("./walker.js").WalkedFile} walked - A walked file
+ * @returns {Promise<import("./analyze.js").ProjectFile>} Its path and text
+ *   (null for a file the analysis does not read)
+ */
+export async function readWalked({ path, relativePath }) {
+  if (!isAnalysed(relativePath)) return { path: relativePath, text: null };
+  // Files below the directory the user asked to scan. NOSONAR
+  return { path: relativePath, text: await readFile(path, "utf8") }; // NOSONAR
+}
+
+/**
+ * List and read the files of a project.
+ *
+ * @param {string} rootDir - Directory to scan
+ * @param {object} [options] - Scan options
+ * @param {string[]} [options.ignore] - Extra directory patterns to skip
+ * @returns {Promise<import("./analyze.js").ProjectFile[]>} The files
+ */
+export async function readProject(rootDir, { ignore = [] } = {}) {
+  const walked = [];
+  for await (const file of walkFiles(rootDir, { ignore })) walked.push(file);
+  return Promise.all(walked.map(readWalked));
 }
 
 /**
@@ -165,21 +62,12 @@ export async function readServerSidePackages(rootDir) {
  * @param {string} rootDir - Directory to scan
  * @param {object} [options] - Scan options
  * @param {string[]} [options.ignore] - Extra directory patterns to skip
- * @returns {Promise<ScanResult>} Everything found
+ * @returns {Promise<import("./analysis/inspect.js").ScanResult>} Everything
+ *   found
  */
-export async function scanDirectory(rootDir, { ignore = [] } = {}) {
-  const result = {
-    scannedFiles: 0,
-    usages: [],
-    stylesheets: [],
-    xmlDocuments: [],
-    migrated: [],
-    serverSide: [],
-  };
-  for await (const walked of walkFiles(rootDir, { ignore })) {
-    result.scannedFiles += 1;
-    await inspectFile(walked, result);
-  }
-  result.serverSide = await readServerSidePackages(rootDir);
-  return result;
+export async function scanDirectory(rootDir, options = {}) {
+  const files = await readProject(rootDir, options);
+  return buildScan(files, {
+    exists: (target) => isFile(join(rootDir, target)),
+  });
 }

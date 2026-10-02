@@ -1,0 +1,261 @@
+/*
+ * The online check (/check/): the drop zone, the status line, the result
+ * (readiness, summary, recommendation blocks) and the findings table.
+ * Colours are the tokens of tokens.css only, so light and dark schemes and
+ * their checked contrast pairs apply. Ratings are written out (HIGH, MEDIUM,
+ * LOW) and outlined, so colour is never the only signal (WCAG 2.2 SC 1.4.1).
+ */
+.check {
+  display: grid;
+  gap: var(--space-4);
+  padding-block-end: var(--space-5);
+}
+
+/* Grid items would otherwise grow to their longest <pre> line or file name */
+.check > * {
+  min-width: 0;
+}
+
+.ck,
+.ck-result {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ck[hidden],
+.ck-result[hidden] {
+  display: none;
+}
+
+.ck h2,
+.ck-result h2 {
+  margin: 0;
+}
+
+/* Drop zone: two <label>s for visually hidden but focusable file inputs */
+.ck-drop {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-4);
+  border: 2px dashed var(--color-control);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.ck-drop--over {
+  border-style: solid;
+  border-color: var(--color-primary);
+}
+
+.ck-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  opacity: 0;
+}
+
+.ck-drop__target {
+  display: grid;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.ck-drop__lead {
+  font: 700 clamp(1.25rem, 3vw, 1.6rem) / 1.2 var(--font-heading);
+}
+
+.ck-drop__sub {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.ck-input:focus-visible + label {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.ck-drop__note {
+  margin: 0;
+  max-width: 50rem;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.ck-status {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ck-error {
+  padding: var(--space-3);
+  border-left: 4px solid var(--color-error);
+  background: var(--color-bg);
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.ck-error[hidden] {
+  display: none;
+}
+
+/* Result */
+.ck-result:focus {
+  outline: none;
+}
+
+.ck-result h2 {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+#ck-percent {
+  color: var(--color-primary);
+}
+
+.ck-sentence,
+.ck-difficulty,
+.ck-runtime {
+  margin: 0;
+  max-width: 50rem;
+}
+
+.ck-summary {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  list-style: none;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+}
+
+.ck-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.ck-action-status {
+  color: var(--color-muted);
+}
+
+.ck-steps {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ck-step {
+  min-width: 0;
+  padding-inline-start: var(--space-2);
+}
+
+.ck-step h4 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.1rem;
+}
+
+.ck-step p {
+  margin: 0 0 var(--space-2);
+  max-width: 50rem;
+}
+
+/* Code wraps instead of scrolling, as in .prose (no horizontal page scroll) */
+.ck-step pre {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: var(--radius);
+  background: var(--color-surface-strong);
+}
+
+.ck-step__files {
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.ck-step__files strong {
+  color: var(--color-text);
+}
+
+.ck-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ck-filters button[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.ck-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-bg);
+}
+
+.ck-table th,
+.ck-table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ck-file {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.ck-fix {
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.ck-badge {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border: 2px solid currentcolor;
+  border-radius: 4px;
+  font: 600 0.85rem var(--font-mono);
+}
+
+.ck-badge--high {
+  color: var(--color-error);
+}
+
+.ck-badge--medium {
+  color: var(--color-warning);
+}
+
+.ck-badge--low {
+  color: var(--color-success);
+}
+
+.ck-skipped {
+  margin: 0;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+/* Phones: less padding; the table keeps its three columns, which wrap */
+@media (max-width: 40rem) {
+  .ck-drop {
+    padding: var(--space-3);
+  }
+
+  .ck-table th,
+  .ck-table td {
+    padding: var(--space-2) var(--space-1);
+  }
+}

@@ -1,47 +1,18 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { HEAD_BYTES } from "./detectors.js";
 import {
   createFixture,
   removeFixture,
   renderedXml,
+  scanResult,
   stylesheetXml,
 } from "../test/fixtures.js";
-import {
-  SERVER_SIDE_PACKAGES,
-  inspectFile,
-  readHead,
-  readServerSidePackages,
-  scanDirectory,
-} from "./scan.js";
+import { buildScan } from "./analyze.js";
+import { isFile, readWalked, scanDirectory } from "./scan.js";
 
-/** A fresh, empty ScanResult. */
-function emptyResult() {
-  return {
-    scannedFiles: 0,
-    usages: [],
-    stylesheets: [],
-    xmlDocuments: [],
-    migrated: [],
-    serverSide: [],
-  };
-}
-
-describe("readHead", () => {
-  it("reads at most HEAD_BYTES", async () => {
-    const dir = await createFixture({
-      "small.xml": "<a/>",
-      "big.xml": "x".repeat(HEAD_BYTES * 2),
-    });
-    try {
-      assert.equal(await readHead(join(dir, "small.xml")), "<a/>");
-      assert.equal((await readHead(join(dir, "big.xml"))).length, HEAD_BYTES);
-    } finally {
-      await removeFixture(dir);
-    }
-  });
-});
+/** The scan of one file that holds nothing. */
+const emptyResult = () => scanResult({ scannedFiles: 1 });
 
 describe("inspectFile", () => {
   let dir;
@@ -56,23 +27,36 @@ describe("inspectFile", () => {
       "feed.xml": renderedXml(),
       "data.xml": "<data/>",
       "notes.md": "XSLTProcessor is mentioned in prose\n",
+      "loaded.xml": `${renderedXml()}<!-- @tradik/xslt-processor -->\n`,
     });
   });
 
   after(() => removeFixture(dir));
 
-  /** Run inspectFile on one fixture file. */
+  /** Read one fixture file and scan it alone. */
   async function inspect(name) {
-    const result = emptyResult();
-    await inspectFile({ path: join(dir, name), relativePath: name }, result);
-    return result;
+    const file = await readWalked({
+      path: join(dir, name),
+      relativePath: name,
+    });
+    return buildScan([file], { exists: () => false });
   }
 
   it("records script usages with their lines", async () => {
     const { usages } = await inspect("app.js");
     assert.deepEqual(usages, [
-      { file: "app.js", line: 1, text: "const p = new XSLTProcessor();" },
-      { file: "app.js", line: 2, text: "p.importStylesheet(x);" },
+      {
+        file: "app.js",
+        line: 1,
+        text: "const p = new XSLTProcessor();",
+        method: "XSLTProcessor",
+      },
+      {
+        file: "app.js",
+        line: 2,
+        text: "p.importStylesheet(x);",
+        method: "importStylesheet",
+      },
     ]);
   });
 
@@ -100,50 +84,17 @@ describe("inspectFile", () => {
     ]);
   });
 
+  it("counts a rendered document with the loader as migrated", async () => {
+    const result = await inspect("loaded.xml");
+    assert.deepEqual(result.xmlDocuments, []);
+    assert.deepEqual(result.migrated, [{ file: "loaded.xml", count: 1 }]);
+    assert.equal(isFile(join(dir, "loaded.xml")), true);
+    assert.equal(isFile(dir), false);
+  });
+
   it("ignores other XML and unrelated extensions", async () => {
     assert.deepEqual(await inspect("data.xml"), emptyResult());
     assert.deepEqual(await inspect("notes.md"), emptyResult());
-  });
-});
-
-describe("readServerSidePackages", () => {
-  it("lists known XSLT packages from every dependency field", async () => {
-    const dir = await createFixture({
-      "package.json": JSON.stringify({
-        dependencies: { "saxon-js": "^2", express: "^4" },
-        devDependencies: { xslt3: "^2" },
-        peerDependencies: { "@tradik/xslt-processor": "^1" },
-        optionalDependencies: { libxslt: "^0.10" },
-      }),
-    });
-    try {
-      assert.deepEqual(await readServerSidePackages(dir), [
-        "@tradik/xslt-processor",
-        "saxon-js",
-        "libxslt",
-        "xslt3",
-      ]);
-    } finally {
-      await removeFixture(dir);
-    }
-  });
-
-  it("returns an empty list without package.json, with invalid JSON or no deps", async () => {
-    const none = await createFixture({});
-    const broken = await createFixture({ "package.json": "{ not json" });
-    const bare = await createFixture({ "package.json": '{"name":"x"}' });
-    try {
-      assert.deepEqual(await readServerSidePackages(none), []);
-      assert.deepEqual(await readServerSidePackages(broken), []);
-      assert.deepEqual(await readServerSidePackages(bare), []);
-    } finally {
-      await Promise.all([none, broken, bare].map(removeFixture));
-    }
-  });
-
-  it("knows the usual server-side packages", () => {
-    assert.ok(SERVER_SIDE_PACKAGES.includes("xsltproc"));
-    assert.ok(SERVER_SIDE_PACKAGES.includes("xslt-processor"));
   });
 });
 
@@ -169,6 +120,35 @@ describe("scanDirectory", () => {
       assert.deepEqual(result.serverSide, ["saxon-js"]);
       const all = await scanDirectory(dir);
       assert.equal(all.scannedFiles, 5);
+    } finally {
+      await removeFixture(dir);
+    }
+  });
+});
+
+describe("scanDirectory context", () => {
+  it("records DOMParser context and checks include targets", async () => {
+    const dir = await createFixture({
+      "app.js": "const d = new DOMParser();\nnew XSLTProcessor();\n",
+      "xsl/main.xsl": stylesheetXml(
+        "1.0",
+        '<xsl:import href="base.xsl"/><xsl:include href="gone.xsl"/>',
+      ),
+      "xsl/base.xsl": stylesheetXml("1.0"),
+    });
+    try {
+      const result = await scanDirectory(dir);
+      assert.deepEqual(result.domParser, [
+        { file: "app.js", line: 1, text: "const d = new DOMParser();" },
+      ]);
+      const main = result.stylesheets.find((s) => s.file === "xsl/main.xsl");
+      assert.deepEqual(
+        main.includes.map((i) => [i.href, i.found]),
+        [
+          ["base.xsl", true],
+          ["gone.xsl", false],
+        ],
+      );
     } finally {
       await removeFixture(dir);
     }

@@ -1,0 +1,98 @@
+/*
+ * The migration wizard: the answers (radio buttons) choose which variants of
+ * the steps are shown, with :has() on the page, so it needs no JavaScript.
+ * Variant classes: mg-v1/mg-v3 (XSLT version), mg-only-js/mg-only-pi (how
+ * XSLT is used; both for "both"), mg-bundler/mg-plain (how JS is built),
+ * mg-only-pi-alone (XML files and no JavaScript).
+ */
+.mg-questions {
+  display: grid;
+  gap: var(--space-3);
+  margin-block: var(--space-4);
+}
+
+.mg-questions fieldset {
+  border: 1px solid var(--color-control);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.mg-questions legend {
+  font-weight: 600;
+  padding-inline: var(--space-1);
+}
+
+.mg-questions label {
+  margin-inline-end: var(--space-2);
+}
+
+.mg-steps {
+  counter-reset: mg-step;
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.mg-step {
+  /* A grid item would otherwise grow to its longest <pre> line */
+  min-width: 0;
+  counter-increment: mg-step;
+  border-inline-start: 4px solid var(--color-primary);
+  padding-inline-start: var(--space-4);
+}
+
+.mg-step h2::before {
+  content: "Step " counter(mg-step) ":\00a0";
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.mg-step pre {
+  overflow-x: auto;
+}
+
+/* Hidden by default; the answers below show what applies */
+.mg-v3,
+.mg-only-pi,
+.mg-only-pi-alone,
+.mg-plain {
+  display: none;
+}
+
+.migrate:has(#mg-version-3:checked) .mg-v3 {
+  display: block;
+}
+
+.migrate:has(#mg-version-3:checked) .mg-v1 {
+  display: none;
+}
+
+.migrate:has(#mg-use-pi:checked) .mg-only-pi,
+.migrate:has(#mg-use-both:checked) .mg-only-pi,
+.migrate:has(#mg-use-pi:checked) .mg-only-pi-alone {
+  display: block;
+}
+
+.migrate:has(#mg-build-plain:checked) .mg-only-js.mg-plain {
+  display: block;
+}
+
+.migrate:has(#mg-build-plain:checked) .mg-only-js.mg-bundler {
+  display: none;
+}
+
+/* A fieldset is display:flex; keep the hidden JS question hidden */
+.migrate:has(#mg-use-pi:checked) fieldset.mg-only-js {
+  display: none;
+}
+
+/* XML files only: no JavaScript step, whatever the build answer says (last,
+   so it wins over the .mg-plain/.mg-bundler rules of equal specificity) */
+.migrate:has(#mg-use-pi:checked) .mg-step .mg-only-js {
+  display: none;
+}

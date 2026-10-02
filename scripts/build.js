@@ -100,6 +100,20 @@ if (typeof window !== 'undefined') {
     },
   });
 
+  // `@tradik/xslt-processor/polyfill`: the calls of src/polyfill.js on the
+  // package's own bundles, so importing both loads the library once
+  console.log("Writing the polyfill entry...");
+  const polyfillCalls = "installGlobal();\nautoApplyXmlStylesheet();\n";
+  writeFileSync(
+    join(distDir, "polyfill.js"),
+    `import { autoApplyXmlStylesheet, installGlobal } from "./xslt-processor.js";\n${polyfillCalls}`,
+  );
+  writeFileSync(
+    join(distDir, "polyfill.cjs"),
+    `"use strict";\nconst { autoApplyXmlStylesheet, installGlobal } = require("./xslt-processor.cjs");\n${polyfillCalls}`,
+  );
+  writeFileSync(join(distDir, "polyfill.d.ts"), "export {};\n");
+
   // Generate TypeScript declarations
   console.log("Generating TypeScript declarations...");
   // Maintained as a real declaration file next to this script
@@ -117,6 +131,9 @@ if (typeof window !== 'undefined') {
   console.log("\nBuild complete! Output files:");
   console.log("  dist/xslt-processor.js         - ESM module");
   console.log("  dist/xslt-processor.cjs        - CommonJS module");
+  console.log(
+    '  dist/polyfill.js, polyfill.cjs  - import "@tradik/xslt-processor/polyfill"',
+  );
   console.log("  dist/xslt-processor.browser.js - Browser bundle");
   console.log("  dist/xslt-processor.browser.min.js - Minified browser bundle");
   console.log(

@@ -63,6 +63,8 @@
 <link rel="preload" as="image" type="image/webp" href="{{ $b }}/images/hero/coast-1024.webp" media="(min-width: 52.001rem) and (max-width: 64rem)">
 <link rel="preload" as="image" type="image/webp" href="{{ $b }}/images/hero/coast-1420.webp" media="(min-width: 64.001rem)">{{ end }}
 {{ if eq .Layout "playground" }}<link rel="stylesheet" href="{{ $b }}/css/playground.css">{{ end }}
+{{ if eq .Layout "migrate" }}<link rel="stylesheet" href="{{ $b }}/css/migrate.css">{{ end }}
+{{ if eq .Layout "check" }}<link rel="stylesheet" href="{{ $b }}/css/check.css">{{ end }}
 </head>
 <body>
 {{/* Google Tag Manager (noscript half), immediately after <body>. */}}
@@ -79,6 +81,7 @@
       <ul>
         <li><a href="{{ $b }}/docs/"{{ if eq .Link "/docs/" }} aria-current="page"{{ else if hasPrefix .Link "/docs/" }} aria-current="true"{{ end }}>Docs</a></li>
         <li><a href="{{ $b }}/playground/"{{ if eq .Link "/playground/" }} aria-current="page"{{ end }}>Playground</a></li>
+        <li><a href="{{ $b }}/migrate/"{{ if eq .Link "/migrate/" }} aria-current="page"{{ end }}>Migrate</a></li>
         <li><a href="{{ $b }}/blog/"{{ if eq .Link "/blog/" }} aria-current="page"{{ end }}>Blog</a></li>
         <li><a href="{{ $b }}/changelog/"{{ if eq .Link "/changelog/" }} aria-current="page"{{ end }}>Changelog</a></li>
         <li><a href="{{ $c.Vars.repo_url }}">GitHub</a></li>

@@ -1,5 +1,5 @@
 ---
-title: "Migrating from native XSLT: a how-to"
+title: "Migrating from native XSLT: how-to"
 description: "Find the pages that break when Chrome drops XSLT with npx xslt-migrate-check, then fix each with one line: XSLTProcessor pages and <?xml-stylesheet?> XML."
 slug: migrating-from-native-xslt
 status: publish
@@ -21,7 +21,9 @@ npx xslt-migrate-check .
 ```
 
 The checker walks the project (skipping `node_modules`, build output and the
-like, nothing leaves your machine) and prints what it found:
+like, nothing leaves your machine) and prints what it found. Without Node.js
+at hand, the [online check](../../check/) runs the same analysis on files you
+drop in the browser:
 
 ```text
 xslt-migrate-check 0.1.0 — scanned 19 files in ./ (0.0 s)
@@ -183,6 +185,9 @@ transform data the server does not have at build time, and for the many
 XML documents nobody is going to rebuild.
 
 ## Checklist
+
+The [migration wizard](../../migrate/) shows these steps for your project's answers.
+
 
 1. `npx xslt-migrate-check .` and keep the list.
 2. Pages with `XSLTProcessor` in JavaScript: one `<script>` tag before your scripts.

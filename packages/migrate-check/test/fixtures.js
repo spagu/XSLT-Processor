@@ -43,3 +43,43 @@ export function stylesheetXml(version = "1.0", extra = "") {
 export function renderedXml(type = "text/xsl", href = "style.xsl") {
   return `<?xml version="1.0"?>\n<?xml-stylesheet type="${type}" href="${href}"?>\n<root/>\n`;
 }
+
+/** A fresh ScanResult with the given lists. */
+export function scanResult(overrides = {}) {
+  return {
+    scannedFiles: 0,
+    usages: [],
+    domParser: [],
+    stylesheets: [],
+    xmlDocuments: [],
+    migrated: [],
+    serverSide: [],
+    ...overrides,
+  };
+}
+
+/** Stylesheet facts as detectStylesheet returns them, with overrides. */
+export function sheetFacts(overrides = {}) {
+  return {
+    file: "s.xsl",
+    version: "1.0",
+    exslt: false,
+    disableOutputEscaping: false,
+    documentFunction: false,
+    key: false,
+    msxml: false,
+    exsltModules: [],
+    unsupportedExslt: [],
+    msxmlScript: false,
+    msxmlFunctions: [],
+    extensionFunctions: [],
+    extensionNamespaces: [],
+    includes: [],
+    ...overrides,
+  };
+}
+
+/** A usage entry of a ScanResult. */
+export function usage(file, line, method = "XSLTProcessor") {
+  return { file, line, text: `call ${method}`, method };
+}

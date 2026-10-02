@@ -1,0 +1,83 @@
+{{/*
+  The online check: the visitor drops files, a folder or a .zip and gets the
+  migration report of xslt-migrate-check, computed in the browser. The
+  analysis is the package's own code, bundled to /vendor/ by
+  site/scripts/vendor.mjs (data-checker below) and loaded when the page
+  opens, so the check keeps working offline. js/check.js reads the files
+  (check-files.js, check-unzip.js), check-render.js shows the result and
+  check-report.js writes its texts. No file content leaves the page.
+  Quotes near file names are written as &quot; (ssg's fingerprinting, see
+  layouts/migrate.html).
+*/}}
+{{define "check.html"}}{{template "head" .}}{{ $b := .Vars.base_path }}
+<main id="main" class="wrap check">
+  <h1>{{ .Page.Title }}</h1>
+  <div class="prose narrow">{{ .Page.Content | safeHTML }}</div>
+  <noscript><p class="notice">This check reads your files with JavaScript, in your browser. Without JavaScript, run <code>npx xslt-migrate-check .</code> in your project folder: the same analysis on your machine, with nothing uploaded either.</p></noscript>
+
+  <section id="ck-app" class="ck" hidden data-checker="{{ $b }}/vendor/migrate-check.browser.min.js" aria-labelledby="ck-input-title">
+    <h2 id="ck-input-title">Your files</h2>
+    <div id="ck-drop" class="ck-drop">
+      <input type="file" id="ck-files" class="ck-input" multiple>
+      <label for="ck-files" class="ck-drop__target">
+        <span class="ck-drop__lead">Drop files, a folder or a .zip here</span>
+        <span class="ck-drop__sub">or choose files</span>
+      </label>
+      <input type="file" id="ck-folder" class="ck-input" webkitdirectory>
+      <label for="ck-folder" class="button ck-drop__folder">Choose a folder</label>
+      <p class="ck-drop__note">Read: scripts and templates (.js, .ts, .html, .php, .vue and more), .xml, .xsl and .xslt, and the root package.json. Left out, as on the command line: node_modules, dist, build, vendor and other generated folders. Up to 50 MB and 5,000 files; zip archives without encryption.</p>
+    </div>
+    <p id="ck-status" class="ck-status" role="status" aria-live="polite">Loading the checker…</p>
+    <div id="ck-error" class="ck-error" hidden></div>
+  </section>
+
+  <section id="ck-result" class="ck-result" hidden aria-labelledby="ck-result-title" tabindex="-1">
+    <h2 id="ck-result-title">Migration readiness: <span id="ck-percent"></span></h2>
+    <p id="ck-sentence" class="ck-sentence"></p>
+    <ul id="ck-summary" class="ck-summary"></ul>
+    <p class="ck-runtime">Recommended migration: <strong id="ck-runtime"></strong></p>
+    <p id="ck-difficulty" class="ck-difficulty"></p>
+    <div class="ck-actions">
+      <button type="button" id="ck-copy" class="button button--primary">Copy report</button>
+      <button type="button" id="ck-download" class="button">Download HTML report</button>
+      <span id="ck-action-status" class="ck-action-status" role="status" aria-live="polite"></span>
+    </div>
+
+    <h3 id="ck-steps-title">What to do</h3>
+    <ol id="ck-steps" class="ck-steps" aria-labelledby="ck-steps-title"></ol>
+
+    <h3 id="ck-findings-title">Findings</h3>
+    <div class="ck-filters" role="group" aria-label="Show findings rated">
+      <button type="button" class="button button--small" data-filter="ALL" aria-pressed="true">All</button>
+      <button type="button" class="button button--small" data-filter="HIGH" aria-pressed="false">HIGH</button>
+      <button type="button" class="button button--small" data-filter="MEDIUM" aria-pressed="false">MEDIUM</button>
+      <button type="button" class="button button--small" data-filter="LOW" aria-pressed="false">LOW</button>
+    </div>
+    <div class="ck-table">
+      <table id="ck-findings" aria-labelledby="ck-findings-title">
+        <thead>
+          <tr>
+            <th scope="col" aria-sort="descending"><button type="button" id="ck-sort" class="link-button">Rating</button></th>
+            <th scope="col">File</th>
+            <th scope="col">Reason and fix</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p id="ck-skipped" class="ck-skipped" hidden></p>
+  </section>
+
+  <section class="ck-next prose" aria-labelledby="ck-next-title">
+    <h2 id="ck-next-title">Next: the full report and the migration</h2>
+    <p>This page shows the summary. On your machine, the command line adds line numbers, the details of every stylesheet, a patch with the changes and a report to send to a client:</p>
+    <pre><code>npx xslt-migrate-check . --html</code></pre>
+    <ul>
+      <li><a href="{{ $b }}/migrate/">Migrate in five steps</a>: scan, install, add one line, test, deploy.</li>
+      <li><a href="{{ $b }}/blog/migrating-from-native-xslt/">Migrating from native XSLT</a>: the how-to, with why each step works.</li>
+      <li><a href="{{ $b }}/docs/migrate-check/">Checker reference</a>: what each rating means and every option.</li>
+    </ul>
+  </section>
+</main>
+<script type="module" src="{{ $b }}/js/check.js"></script>
+{{template "footer" .}}{{end}}

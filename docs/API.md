@@ -99,6 +99,18 @@ skipped, as libxslt does.
 | `VERSION` | The package version, e.g. `'1.1.3'` |
 | `isBrowser`, `isNode` | Environment flags evaluated at load time |
 
+### `@tradik/xslt-processor/polyfill`
+
+A second package entry, imported for its effect only:
+
+```javascript
+import "@tradik/xslt-processor/polyfill";
+```
+
+It runs `installGlobal()` and `autoApplyXmlStylesheet()` on the package's own
+bundle (ESM `dist/polyfill.js`, CommonJS `dist/polyfill.cjs`), so importing it
+next to `@tradik/xslt-processor` loads the library once. It exports nothing.
+
 ## TypeScript
 
 Declarations ship as `dist/xslt-processor.d.ts` (ESM) and

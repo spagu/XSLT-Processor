@@ -1,0 +1,81 @@
+{{/*
+  The migration wizard. Three questions (radio buttons) select which variants
+  of the five steps are shown; the selection works with CSS alone (:has() in
+  migrate.css), js/migrate.js only remembers it. Every variant is in the HTML,
+  so the page works without JavaScript and is searchable. Quotes inside the
+  code samples are written as &quot;: ssg's fingerprinting rewrites an asset
+  file name that follows or precedes a literal quote anywhere in the page,
+  which would turn the CDN URL into a hashed name that does not exist there.
+*/}}
+{{define "migrate.html"}}{{template "head" .}}{{ $b := .Vars.base_path }}
+<main id="main" class="wrap migrate">
+  <h1>{{ .Page.Title }}</h1>
+  <div class="prose narrow">{{ .Page.Content | safeHTML }}</div>
+
+  <form class="mg-questions" aria-label="Your project">
+    <fieldset>
+      <legend>Where does your project use XSLT in the browser?</legend>
+      <input type="radio" name="mg-use" id="mg-use-js" value="js" checked><label for="mg-use-js">JavaScript calls <code>XSLTProcessor</code></label>
+      <input type="radio" name="mg-use" id="mg-use-pi" value="pi"><label for="mg-use-pi">XML files with <code>&lt;?xml-stylesheet?&gt;</code></label>
+      <input type="radio" name="mg-use" id="mg-use-both" value="both"><label for="mg-use-both">Both</label>
+    </fieldset>
+    <fieldset>
+      <legend>Which XSLT version are the stylesheets?</legend>
+      <input type="radio" name="mg-version" id="mg-version-1" value="1" checked><label for="mg-version-1">1.0 (what browsers ran)</label>
+      <input type="radio" name="mg-version" id="mg-version-3" value="3"><label for="mg-version-3">Some are 2.0 or 3.0</label>
+    </fieldset>
+    <fieldset class="mg-only-js">
+      <legend>How is the JavaScript built?</legend>
+      <input type="radio" name="mg-build" id="mg-build-bundler" value="bundler" checked><label for="mg-build-bundler">With a bundler (Vite, webpack, esbuild…)</label>
+      <input type="radio" name="mg-build" id="mg-build-plain" value="plain"><label for="mg-build-plain">Plain <code>&lt;script&gt;</code> tags</label>
+    </fieldset>
+  </form>
+
+  <ol class="mg-steps prose">
+    <li class="mg-step">
+      <h2>Scan</h2>
+      <p>Find every page that depends on the browser's XSLT. Nothing leaves your machine.</p>
+      <pre><code>npx xslt-migrate-check .</code></pre>
+      <p>It rates each finding, says what to install, and with <code>--html</code> writes a report you can send to a client. No Node.js at hand? <a href="{{ $b }}/check/">Check your files online</a>: they are read in your browser, nothing is uploaded. The <a href="{{ $b }}/docs/migrate-check/">checker reference</a> lists what it looks for.</p>
+    </li>
+    <li class="mg-step">
+      <h2>Install</h2>
+      <div class="mg-v1"><pre><code>npm install @tradik/xslt-processor</code></pre></div>
+      <div class="mg-v3"><pre><code>npm install @tradik/xslt-processor @tradik/xslt3</code></pre>
+        <p>The browser never ran XSLT 2.0 or 3.0; <code>@tradik/xslt3</code> does, and <code>@tradik/xslt-processor</code> hands it those stylesheets.</p></div>
+      <p class="mg-only-pi-alone">Plain XML files load the library from the CDN in the next step; installing is optional.</p>
+    </li>
+    <li class="mg-step">
+      <h2>Add one line</h2>
+      <div class="mg-only-js mg-bundler">
+        <p>First in your entry module, before code that uses <code>XSLTProcessor</code>:</p>
+        <pre><code>import "@tradik/xslt-processor/polyfill";</code></pre>
+      </div>
+      <div class="mg-only-js mg-plain">
+        <p>Before your own scripts:</p>
+        <pre><code>&lt;script src=&quot;https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js&quot;&gt;&lt;/script&gt;</code></pre>
+      </div>
+      <div class="mg-only-pi">
+        <p>In each XML file, right after <code>&lt;?xml-stylesheet … ?&gt;</code>, inside the root element:</p>
+        <pre><code>&lt;script xmlns=&quot;http://www.w3.org/1999/xhtml&quot; src=&quot;https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js&quot;&gt;&lt;/script&gt;</code></pre>
+      </div>
+      <div class="mg-v3"><p>Create processors with <code>new XSLTProcessor({ xsltVersion: "auto" })</code>: each stylesheet runs on the engine its <code>version</code> asks for. An XML file whose stylesheet is 2.0 or 3.0 is better rendered on the server (step 5).</p></div>
+      <p>Or let the checker write the change as a patch to review: <code>npx xslt-migrate-check . --fix</code> writes <code>migration.patch</code>.</p>
+    </li>
+    <li class="mg-step">
+      <h2>Test</h2>
+      <p>Run every stylesheet on the browser's engine and on this library and compare the output:</p>
+      <pre><code>npx -p xslt-migrate-check -p @tradik/xslt-processor -p jsdom xslt-migrate-test .</code></pre>
+      <p>Then open the pages in Chrome with XSLT switched off, which is what Chrome 158 ships:</p>
+      <pre><code>chrome --disable-blink-features=XSLT</code></pre>
+    </li>
+    <li class="mg-step">
+      <h2>Deploy</h2>
+      <p>Ship it, and keep it fixed: a pipeline step fails the build when a page without the migration appears.</p>
+      <pre><code>npx xslt-migrate-check . --fail-on high</code></pre>
+      <p>Pages that are the same for every visitor need no XSLT in the browser at all: <code>xslt page.xml page.xsl -o page.html</code> with the <a href="{{ $b }}/docs/cli/">command line tool</a>.</p>
+    </li>
+  </ol>
+</main>
+<script src="{{ $b }}/js/migrate.js" defer></script>
+{{template "footer" .}}{{end}}

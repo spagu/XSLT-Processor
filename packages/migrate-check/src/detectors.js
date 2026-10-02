@@ -1,7 +1,8 @@
 /**
- * Content detectors: given the text of one file, find browser-side
- * XSLTProcessor usages, describe an XSL stylesheet, or spot an XML document
- * that the browser renders through an `<?xml-stylesheet?>` instruction.
+ * File-type detectors shared by the analysers: the extensions each one
+ * reads, whether an XML head is a stylesheet, and the `<?xml-stylesheet?>`
+ * instruction that makes the browser run XSLT on a document. The code and
+ * stylesheet analysers live in ./analysis/.
  *
  * @module xslt-migrate-check/detectors
  */
@@ -37,16 +38,31 @@ export const STYLESHEET_EXTENSIONS = new Set([".xsl", ".xslt"]);
 /** XML extensions inspected for a stylesheet root or an xml-stylesheet PI. */
 export const XML_EXTENSIONS = new Set([".xml", ".rdf", ".rss", ".atom"]);
 
+/**
+ * The lower-case extension of a path, with the dot ("" when it has none).
+ *
+ * @param {string} path - A path with `/` separators
+ * @returns {string} e.g. ".xsl"
+ */
+export function extensionOf(path) {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(dot).toLowerCase() : "";
+}
+
+/**
+ * Marks the HTML report this tool writes, so a later scan of the same
+ * directory skips it instead of reading its quoted code as usages.
+ */
+export const REPORT_GENERATOR = "xslt-migrate-check";
+
 /** How many leading bytes of an XML file decide what it is. */
 export const HEAD_BYTES = 4096;
 
 const LINE_TEXT_LIMIT = 100;
-const USAGE_PATTERN =
-  /XSLTProcessor|importStylesheet\(|transformToFragment\(|transformToDocument\(/;
-const HTML_XSL_PATTERN = /type=["']text\/xsl["']|<\?xml-stylesheet/;
-const MIGRATED_PATTERN = /@tradik\/xslt-processor|XsltProcessorLib/;
-const COMMENT_PATTERN = /^(\/\/|\/?\*|#)/;
-const STYLESHEET_ROOT_PATTERN = /<xsl:(?:stylesheet|transform)\b([^>]*)>/;
+/** The root element of a stylesheet, its attributes in group 1. */
+export const STYLESHEET_ROOT_PATTERN =
+  /<xsl:(?:stylesheet|transform)\b([^>]*)>/;
 const XML_STYLESHEET_PI_PATTERN = /<\?xml-stylesheet\b([\s\S]*?)\?>/;
 const RENDERED_TYPES = new Set([
   "text/xsl",
@@ -69,45 +85,28 @@ export function trimLine(text) {
 }
 
 /**
+ * The 1-based line of a character offset.
+ *
+ * @param {string} text - The text
+ * @param {number} index - Offset into the text
+ * @returns {number} Line number
+ */
+export function lineAt(text, index) {
+  return text.slice(0, index).split("\n").length;
+}
+
+/**
  * Read one pseudo-attribute (`name="value"` or `name='value'`) from a tag.
  *
  * @param {string} attributes - The text between the tag name and `>`
  * @param {string} name - Attribute name
  * @returns {string|null} The value, or null when absent
  */
-function readAttribute(attributes, name) {
+export function readAttribute(attributes, name) {
   const match = new RegExp(String.raw`\b${name}\s*=\s*["']([^"']*)["']`).exec(
     attributes,
   );
   return match ? match[1].trim() : null;
-}
-
-/**
- * @typedef {object} UsageMatch
- * @property {number} line - 1-based line number
- * @property {string} text - The line, trimmed
- */
-
-/**
- * Find browser-side XSLTProcessor usages in a script or template file. HTML
- * files also match `type="text/xsl"` links and `<?xml-stylesheet` PIs.
- * Lines that are clearly comments (`//`, `*`, `/*`, `#`) are ignored.
- *
- * @param {string} content - File text
- * @param {string} extension - Lower-case extension with the dot
- * @returns {{ matches: UsageMatch[], migrated: boolean }} The matching lines
- *   and whether the file already loads @tradik/xslt-processor
- */
-export function detectUsages(content, extension) {
-  const html = HTML_EXTENSIONS.has(extension);
-  const matches = [];
-  content.split(/\r?\n/).forEach((line, index) => {
-    if (COMMENT_PATTERN.test(line.trim())) return;
-    if (USAGE_PATTERN.test(line) || (html && HTML_XSL_PATTERN.test(line))) {
-      matches.push({ line: index + 1, text: trimLine(line) });
-    }
-  });
-  return { matches, migrated: MIGRATED_PATTERN.test(content) };
 }
 
 /**
@@ -118,39 +117,6 @@ export function detectUsages(content, extension) {
  */
 export function isStylesheetHead(head) {
   return STYLESHEET_ROOT_PATTERN.test(head);
-}
-
-/**
- * @typedef {object} StylesheetFacts
- * @property {string} version - Declared XSLT version, or "unknown"
- * @property {boolean} exslt - Uses an EXSLT namespace
- * @property {boolean} disableOutputEscaping - Uses disable-output-escaping
- * @property {boolean} documentFunction - Calls document()
- * @property {boolean} key - Declares xsl:key
- * @property {boolean} msxml - Uses MSXML-only extensions (msxsl:)
- */
-
-/**
- * Describe an XSL stylesheet: its version and the features that matter when
- * a JavaScript processor replaces the browser's.
- *
- * @param {string} content - Stylesheet text
- * @returns {StylesheetFacts} The facts found
- */
-export function detectStylesheet(content) {
-  const root = STYLESHEET_ROOT_PATTERN.exec(content);
-  const version = root ? readAttribute(root[1], "version") : null;
-  return {
-    version: version || "unknown",
-    // A namespace name is an identifier compared as a string, never fetched
-    exslt: content.includes("http://exslt.org/"), // NOSONAR
-    disableOutputEscaping: content.includes("disable-output-escaping"),
-    documentFunction: /\bdocument\s*\(/.test(content),
-    key: content.includes("<xsl:key"),
-    msxml:
-      content.includes("msxsl:") ||
-      content.includes("urn:schemas-microsoft-com:xslt"),
-  };
 }
 
 /**
@@ -173,6 +139,6 @@ export function detectXmlStylesheetPi(head) {
   if (!match) return null;
   const type = readAttribute(match[1], "type");
   if (!type || !RENDERED_TYPES.has(type.toLowerCase())) return null;
-  const line = head.slice(0, match.index).split("\n").length;
+  const line = lineAt(head, match.index);
   return { line, href: readAttribute(match[1], "href") || "", type };
 }

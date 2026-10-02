@@ -1,7 +1,8 @@
 // The @tradik/xslt3 browser bundle of the playground and the mode selection.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { build } from "esbuild";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -16,7 +17,16 @@ import {
   resolveMode,
   saveMode,
 } from "../templates/xslt-site/js/playground-modes.js";
-import { buildXslt3Bundle, formatSize, XSLT3_BUNDLE } from "./vendor.mjs";
+import {
+  buildMigrateCheckBundle,
+  buildXslt3Bundle,
+  formatSize,
+  MIGRATE_CHECK_BUNDLE,
+  noNodeBuiltins,
+  protectCdnNames,
+  XSLT3_BUNDLE,
+} from "./vendor.mjs";
+import { SAMPLE_PROJECT } from "../../packages/migrate-check/test/sample.js";
 
 const { DOMParser } = new JSDOM("").window;
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -53,6 +63,74 @@ describe("xslt3 bundle", () => {
   it("formats sizes in kilobytes", () => {
     assert.equal(formatSize(144731), "144.7 kB");
     assert.equal(formatSize(0), "0.0 kB");
+  });
+});
+
+describe("xslt-migrate-check bundle", () => {
+  it("runs the analysis and the HTML report in one ES module", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "migrate-check-bundle-"));
+    try {
+      const outfile = join(dir, MIGRATE_CHECK_BUNDLE);
+      const size = await buildMigrateCheckBundle({
+        entry: join(rootDir, "site", "scripts", "migrate-check-entry.mjs"),
+        outfile,
+      });
+      assert.ok(size.raw > size.gzip && size.gzip > 0);
+      const code = readFileSync(outfile, "utf8");
+      assert.doesNotMatch(code, /node:/);
+      assert.doesNotMatch(code, /xslt-processor\.browser\.min\.js/);
+      const lib = await import(pathToFileURL(outfile).href);
+      const files = Object.entries(SAMPLE_PROJECT).map(([path, text]) => ({
+        path,
+        text,
+      }));
+      const analysis = lib.analyzeFiles(files);
+      assert.equal(analysis.summary.automatic, 9);
+      assert.match(
+        analysis.recommendations[0].alternative,
+        /dist\/xslt-processor\.browser\.min\.js"><\/script>$/,
+      );
+      assert.match(lib.renderHtml(analysis), /Chrome 158 Migration Report/);
+      assert.equal(lib.isAnalysed("a.xsl"), true);
+      assert.equal(lib.createIgnoreMatcher()("node_modules"), true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a Node.js built-in in the online check's bundle", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "vendor-node-"));
+    try {
+      const entry = join(dir, "entry.mjs");
+      writeFileSync(
+        entry,
+        'import { readFile } from "node:fs/promises";\nexport { readFile };\n',
+      );
+      await assert.rejects(
+        build({
+          entryPoints: [entry],
+          bundle: true,
+          write: false,
+          plugins: [noNodeBuiltins],
+        }),
+        /node:fs\/promises imported by .*not available in the browser/,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("escapes the file name of CDN URLs, not of local ones", () => {
+    const cdn =
+      "https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/x.min.js";
+    assert.equal(
+      protectCdnNames(`a="${cdn}";b=\`${cdn} \`;c="./x.min.js"`),
+      `a="${cdn.replace(/\.js$/, "\\x2ejs")}";b=\`${cdn.replace(/\.js$/, "\\x2ejs")} \`;c="./x.min.js"`,
+    );
+    assert.equal(
+      protectCdnNames('"https://unpkg.com/npm/p/a.js\\"'),
+      '"https://unpkg.com/npm/p/a\\x2ejs\\"',
+    );
   });
 });
 
