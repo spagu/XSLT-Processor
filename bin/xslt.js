@@ -18,7 +18,11 @@ import {
   printHelp,
   printVersion,
 } from "./lib/options.js";
-import { createDomEnvironment, streamTransformation } from "./lib/transform.js";
+import {
+  createDomEnvironment,
+  prepareXsltVersion,
+  streamTransformation,
+} from "./lib/transform.js";
 import { decodeXml } from "./lib/decode.js";
 import { writeResult } from "./lib/output.js";
 import {
@@ -81,10 +85,14 @@ async function main() {
       readFile(xsltFile),
     ]);
 
+    const xsltContent = decodeXml(xsltBytes, xsltFile);
+    // --xslt-version auto: load @tradik/xslt3 for a 2.0/3.0 stylesheet
+    await prepareXsltVersion(dom, xsltContent, args.values);
+
     const { chunks, encoding } = streamTransformation({
       dom,
       xmlContent: decodeXml(xmlBytes, xmlFile),
-      xsltContent: decodeXml(xsltBytes, xsltFile),
+      xsltContent,
       params: parseParameters(args.values.param),
       values: args.values,
       xsltFile,

@@ -18,14 +18,21 @@ plan does.
 - **1.0 stays separate and unchanged.** Pages and applications that replace
   the browser's native `XSLTProcessor` need libxslt's XSLT 1.0 behaviour, not
   a 3.0 processor's backwards-compatible mode, which differs in details
-  (errors, `xsl:number`, serialization). The 1.0 package keeps its size and
-  its zero dependencies: nobody who uses 1.0 downloads or loads 2.0/3.0 code.
-- **Opt-in bridge.** A later 1.x release adds `xsltVersion: "auto"` to
-  `XSLTProcessor`: a stylesheet that declares version 2.0 or 3.0 is then run by
-  `@tradik/xslt3`, loaded with `import()` only at that moment and only when it
-  is installed (optional peer dependency). Without the option nothing changes:
-  a `version="2.0"` stylesheet runs in XSLT 1.0 forwards-compatible mode, as in
-  Chrome.
+  (errors, `xsl:number`, serialization). The 1.0 package keeps its zero
+  dependencies, and nobody who uses 1.0 downloads or loads 2.0/3.0 code: the
+  1.0 bundles carry only the bridge that hands a 2.0/3.0 stylesheet over
+  (about 4 kB of the minified browser bundle).
+- **Opt-in bridge (done).** `XSLTProcessor` takes `xsltVersion: "auto"`: a
+  stylesheet that declares version 2.0 or 3.0 is then run by `@tradik/xslt3`,
+  loaded with `import()` only at that moment and only when it is installed
+  (optional peer dependency). The asynchronous API loads it by itself; the
+  synchronous W3C API needs `await XSLTProcessor.preload()` first. The CLI
+  flag is `--xslt-version auto`. Without the option nothing changes: a
+  `version="2.0"` stylesheet runs in XSLT 1.0 forwards-compatible mode, as in
+  Chrome. The bridge lives in `src/bridge/` of the 1.0 package; the API
+  mapping is in [API Reference](API.md#opt-in-xslt-2030). The standalone
+  `xslt` executables embed `@tradik/xslt3`, so `--xslt-version auto` works
+  there without installing anything.
 - **Inside `@tradik/xslt3`**, rarely used parts (regular expressions,
   date/number formatting, JSON) live in their own modules so bundlers and
   `import()` keep them out of programs that do not use them.

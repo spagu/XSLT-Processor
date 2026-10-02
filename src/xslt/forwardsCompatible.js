@@ -26,7 +26,7 @@ const modes = new WeakMap();
  * @param {Element} element - A stylesheet element
  * @returns {string|null} The declared version, null when none
  */
-function declaredVersion(element) {
+export function declaredVersion(element) {
   const localName = xsltLocalName(element);
   if (localName === "stylesheet" || localName === "transform") {
     return element.getAttribute("version");

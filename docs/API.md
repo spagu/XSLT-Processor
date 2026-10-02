@@ -16,6 +16,7 @@ methods, parameters, `xsl:output` serialization, the module exports, the
 - [Parameters Example](#parameters-example)
 - [Utility Functions](#utility-functions)
 - [XsltEngine options](#xsltengine-options)
+- [Opt-in XSLT 2.0/3.0](#opt-in-xslt-2030)
 
 ## XSLTProcessor
 
@@ -24,6 +25,17 @@ methods, parameters, `xsl:output` serialization, the module exports, the
 ```javascript
 const processor = new XSLTProcessor();
 ```
+
+The native constructor takes no argument; this one takes optional,
+non-W3C options:
+
+| Option | Description |
+|--------|-------------|
+| `xsltVersion` | `"1.0"` (default) or `"auto"`, see [Opt-in XSLT 2.0/3.0](#opt-in-xslt-2030). Other values throw a `RangeError` |
+| `maxTemplateDepth` | Deepest nesting of template instantiations (default 3000) |
+| `enableDynamicEvaluate` | Allow EXSLT `dyn:evaluate()` (trusted input only) |
+| `clock` | `() => Date` used by EXSLT date functions and `current-dateTime()` |
+| `legacyNameTests` | Deprecated: unprefixed name tests also match namespaced nodes, as before 1.2.0 |
 
 ### Methods
 
@@ -40,6 +52,7 @@ const processor = new XSLTProcessor();
 | `reset()` | Resets the processor, removing stylesheet and parameters (the stylesheet and document loaders are kept) |
 | `setStylesheetLoader(loader)` | Sets the loader used to resolve `xsl:import`/`xsl:include` (non-W3C extension). Pass `null` to remove it. Returns the processor for chaining |
 | `setDocumentLoader(loader)` | Sets the loader used to resolve the XSLT `document()` function (non-W3C extension). Pass `null` to remove it. Returns the processor for chaining |
+| `XSLTProcessor.preload(version?)` | Static, non-W3C: loads `@tradik/xslt3` so that the synchronous API can run XSLT 2.0/3.0 stylesheets with `xsltVersion: "auto"`. `version` is `"3.0"` (default) or `"2.0"`; returns a `Promise<void>` |
 
 Like the native implementation, the `transformTo*` methods return `null` when
 the transformation fails (for example `xsl:message terminate="yes"`) and log
@@ -58,7 +71,7 @@ skipped, as libxslt does.
 
 | Property | Description |
 |----------|-------------|
-| `engine` | Read-only access to the underlying `XsltEngine` (advanced usage). It is `null` until `importStylesheet()` has been called |
+| `engine` | Read-only access to the underlying `XsltEngine` (advanced usage). It is `null` until `importStylesheet()` has been called; for a stylesheet run by `@tradik/xslt3` it is the bridge engine, which has `outputSettings` |
 
 ## Module exports
 
@@ -235,6 +248,63 @@ The building blocks are exported as well: `serializeChunks(node, settings?, { ch
 and `transformToStream(engine, node, options)`.
 
 `maxTemplateDepth` (default 3000, exported as `XSLT_MAX_TEMPLATE_DEPTH`) limits the nesting of template instantiations, like libxslt's `xsltMaxDepth`: `new XSLTProcessor({ maxTemplateDepth: 10000 })`.
+
+## Opt-in XSLT 2.0/3.0
+
+`new XSLTProcessor({ xsltVersion: "auto" })` runs a stylesheet whose
+effective version (the `version` attribute of `xsl:stylesheet`, or
+`xsl:version` of a simplified stylesheet) is 2.0 or more with
+[`@tradik/xslt3`](XSLT3.md); stylesheets of version 1.0 keep the XSLT 1.0
+engine. The default, `xsltVersion: "1.0"`, is unchanged: a `version="2.0"`
+stylesheet runs in XSLT 1.0 forwards-compatible mode, as in Chrome.
+
+`@tradik/xslt3` is an optional peer dependency (`npm install @tradik/xslt3`),
+loaded with a dynamic `import()` the first time it is needed. Because
+`import()` is asynchronous:
+
+- the asynchronous API (`importStylesheetAsync`, `transformAsync`,
+  `transformToStream` after an asynchronous import) loads it by itself;
+- the synchronous W3C API needs `await XSLTProcessor.preload()` once
+  beforehand. Without it, `importStylesheet()` of a 2.0/3.0 stylesheet throws
+  `This XSLT 2.0 stylesheet needs @tradik/xslt3: call "await XSLTProcessor.preload()" before importStylesheet(), or use importStylesheetAsync() / transformAsync()`.
+
+When the package is not installed, `preload()` and the asynchronous API
+reject with `Cannot load @tradik/xslt3: install @tradik/xslt3 to run XSLT 2.0/3.0 stylesheets`
+(the import error is the `cause`).
+
+```javascript
+await XSLTProcessor.preload("3.0");
+const processor = new XSLTProcessor({ xsltVersion: "auto" });
+processor.setStylesheetLoader((href) => readFileSync(fileURLToPath(href), "utf8"));
+processor.importStylesheet(xsl30Doc, pathToFileURL("grouping.xsl").href);
+processor.setParameter(null, "title", "Report");
+const xml = processor.transformToString(xmlDoc);
+```
+
+How the API maps onto `@tradik/xslt3`:
+
+| 1.0 API | With `@tradik/xslt3` |
+|---------|----------------------|
+| `importStylesheet` / `importStylesheetAsync` | `compileStylesheet(style, { baseUri: stylesheetUri })`; static errors (`XTSE...`) are thrown |
+| `setParameter` / `getParameter` / `removeParameter` / `clearParameters` / `reset` | Stylesheet parameters by name (`{uri}local` for a namespace). Strings are `xs:string`, numbers `xs:double`, booleans `xs:boolean`; nodes, node lists and arrays are sequences of nodes |
+| `transformToString`, `transformAsync`, `transformToStream` | The principal result serialized with its `xsl:output` (Serialization 3.1) |
+| `transformToDocument` | As for XSLT 1.0: text output in a `pre` page, html output parsed as HTML, xml output with the `xsl:output` doctype |
+| `transformToFragment(source, output)` | A fragment of `output`; html output into an HTML document is parsed by its HTML parser |
+| `setStylesheetLoader` | Loads `xsl:include`/`xsl:import` modules (with the resolved URI) |
+| `setDocumentLoader` | Loads `doc()` and `document()` (with the resolved URI); a missing document is an error (`FODC0002`), not an empty node-set |
+| `clock` option | `current-dateTime()` |
+| `xsl:message` | Logged with `console.log("XSLT Message:", text)` |
+
+As with XSLT 1.0, the `transformTo*` methods return `null` and log the error
+when the transformation fails. `xsl:result-document` secondary results are not
+returned through this API, and `maxTemplateDepth` and `enableDynamicEvaluate`
+apply to the XSLT 1.0 engine only (`xsl:evaluate` is part of XSLT 3.0). A
+string parameter declared with another type (`as="xs:integer"`) is a type
+error (`XTTE0590`); declare it as `xs:string` or untyped, or pass a number.
+
+The library bundles keep `import("@tradik/xslt3")` as an external import: a
+browser page loading the IIFE bundle needs an import map for
+`@tradik/xslt3`; application bundlers resolve it like any dependency.
 
 ## DOM implementations in Node.js
 

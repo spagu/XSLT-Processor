@@ -41,7 +41,7 @@
   },
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=96 --test-coverage-exclude=\"**/*.test.js\" \"src/**/*.test.js\"",
+    "test": "node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=96 --test-coverage-exclude=\"**/*.test.js\" --test-coverage-exclude=\"packages/**\" \"src/**/*.test.js\"",
     "test:xslt3": "npm test --workspace @tradik/xslt3",
     "suites:fetch": "node packages/xslt3/test-suites/fetch.mjs all",
     "test:suites:unit": "node --test --experimental-test-coverage --test-coverage-include=\"packages/xslt3/test-suites/**\" --test-coverage-exclude=\"**/*.test.mjs\" --test-coverage-lines=96 \"packages/xslt3/test-suites/**/*.test.mjs\"",
@@ -100,10 +100,14 @@
     "prettier": "^3.9.9"
   },
   "peerDependencies": {
+    "@tradik/xslt3": ">=0.0.0",
     "@xmldom/xmldom": ">=0.9.0",
     "jsdom": ">=25.0.0"
   },
   "peerDependenciesMeta": {
+    "@tradik/xslt3": {
+      "optional": true
+    },
     "@xmldom/xmldom": {
       "optional": true
     },

@@ -165,6 +165,28 @@ Node.js has no DOM, so bring one such as `jsdom`. The
 is a complete Node.js script, and the [API Reference](docs/API.md) covers every
 method.
 
+### XSLT 2.0 and 3.0 (opt-in)
+
+By default every stylesheet runs with the XSLT 1.0 engine, and a
+`version="2.0"` stylesheet runs in forwards-compatible mode, as in Chrome.
+With `xsltVersion: "auto"`, a stylesheet that declares version 2.0 or 3.0 is
+run by [`@tradik/xslt3`](docs/XSLT3.md), an optional peer dependency loaded
+with `import()` only when such a stylesheet is imported, so the XSLT 1.0
+bundles do not grow by the size of the new engine:
+
+```javascript
+// npm install @tradik/xslt3
+const processor = new XSLTProcessor({ xsltVersion: "auto" });
+const html = await processor.transformAsync(xmlText, { stylesheet: xsl20Text });
+
+// The synchronous W3C API needs the engine loaded first
+await XSLTProcessor.preload();
+processor.importStylesheet(xsl20Doc);
+const fragment = processor.transformToFragment(xmlDoc, document);
+```
+
+The CLI flag is `--xslt-version auto`. Details: [Opt-in XSLT 2.0/3.0](docs/API.md#opt-in-xslt-2030).
+
 ## CLI Usage
 
 The package includes a command-line tool for transforming XML documents.
@@ -201,6 +223,9 @@ xslt data.xml template.xsl -f -o output.html
 # Override the output method and drop the XML declaration
 xslt data.xml template.xsl --method text
 xslt data.xml template.xsl --no-declaration
+
+# Run an XSLT 2.0/3.0 stylesheet with @tradik/xslt3 (npm install -g @tradik/xslt3)
+xslt data.xml grouping.xsl --xslt-version auto
 ```
 
 See [Command Line Tool](docs/CLI.md) for all options, the base directory,
