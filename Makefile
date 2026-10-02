@@ -26,9 +26,9 @@ help:
 	@echo "  site-test    - Test the website's content scripts and playground"
 	@echo "  site-clean   - Remove the website's generated files"
 	@echo "  site-deploy  - Build and deploy the website to Cloudflare Pages"
-	@echo "  publish      - Publish the tagged release to npm by hand: make publish OTP=123456"
+	@echo "  publish      - Publish the tagged release to npm by hand (asks for the OTP after the tests)"
 	@echo "  publish-dry  - Every publish check and npm publish --dry-run, nothing published"
-	@echo "  publish-xslt3 - Publish @tradik/xslt3 from the same release tag: make publish-xslt3 OTP=123456"
+	@echo "  publish-xslt3 - Publish @tradik/xslt3 from the same release tag (asks for the OTP after the tests)"
 	@echo "  publish-xslt3-dry - The same checks for @tradik/xslt3 and a dry run"
 
 # Install dependencies
@@ -153,7 +153,8 @@ docker-clean:
 
 # Publish @tradik/xslt-processor to npm by hand, from a clean checkout of the
 # release tag (git checkout v<version>), with the one-time password of your
-# npm account. Checks, build and tests are in scripts/publish.sh.
+# npm account, asked for after the checks (or OTP=123456). Checks, build and
+# tests are in scripts/publish.sh.
 publish:
 	OTP=$(OTP) bash scripts/publish.sh
 

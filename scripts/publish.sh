@@ -10,7 +10,9 @@
 #   1. the working tree is clean and HEAD carries the tag v<version>;
 #   2. that version is not on npm yet, and you are logged in (npm login);
 #   3. the build, the tests and the conformance suite pass;
-#   4. npm publish runs with the one-time password from your authenticator.
+#   4. npm publish runs with the one-time password from your authenticator,
+#      asked for after the tests (a code is valid for about 30 seconds, the
+#      tests take minutes); OTP=123456 still works for scripted use.
 #
 # DRY_RUN=1 runs every check and `npm publish --dry-run` (no OTP needed).
 # Provenance attestations are only possible from CI, so manual releases have
@@ -43,7 +45,10 @@ fi
 
 if [[ "${DRY_RUN:-0}" != "1" ]]; then
   npm whoami >/dev/null 2>&1 || fail "not logged in to npm (npm login)"
-  [[ "${OTP:-}" =~ ^[0-9]{6}$ ]] || fail "OTP must be the 6-digit code from your authenticator: make publish OTP=123456"
+  if [[ -n "${OTP:-}" && ! "${OTP}" =~ ^[0-9]{6}$ ]]; then
+    fail "OTP must be the 6-digit code from your authenticator"
+  fi
+  [[ -n "${OTP:-}" || -t 0 ]] || fail "no terminal to ask for the one-time password: pass OTP=123456"
 fi
 
 echo "publish: ${name}@${version} from ${tag} ($(git rev-parse --short HEAD))"
@@ -65,6 +70,10 @@ if [[ "${DRY_RUN:-0}" == "1" ]]; then
   npm publish "${workspace[@]}" --dry-run --access public --ignore-scripts
   echo "publish: dry run done, nothing was published"
 else
+  # Asked only now, after the checks: one-time passwords expire in seconds
+  while [[ ! "${OTP:-}" =~ ^[0-9]{6}$ ]]; do
+    read -rp "publish: one-time password for ${name}@${version}: " OTP
+  done
   npm publish "${workspace[@]}" --access public --ignore-scripts --otp="${OTP}"
   echo "publish: npm now has $(npm view "${name}" version)"
 fi

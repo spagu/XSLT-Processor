@@ -91,11 +91,11 @@ run `make publish` with the one-time password from your npm authenticator:
 git checkout v1.3.0
 npm login                  # once
 make publish-dry           # every check, then npm publish --dry-run
-make publish OTP=123456
+make publish               # the same checks, then asks for the one-time password
 ```
 
 `@tradik/xslt3` is released from the same tag: `make publish-xslt3-dry` and
-`make publish-xslt3 OTP=123456` run its tests and both W3C suites instead.
+`make publish-xslt3` run its tests and both W3C suites instead.
 Its first version has to be published this way; afterwards add a Trusted
 Publisher for `@tradik/xslt3` on npmjs.com (same settings as above), and the
 Release workflow publishes both packages, skipping a version npm already has.
@@ -103,7 +103,8 @@ Release workflow publishes both packages, skipping a version npm already has.
 It refuses unless the working tree is clean, HEAD is the tag `v<version>` of
 package.json, that version is not on npm yet and you are logged in; then it
 installs from the lockfile, builds, runs the tests and the libxslt
-conformance suite, and publishes. A manual release has no provenance
+conformance suite, and asks for the one-time password only then (a code is valid for about 30
+seconds, the checks take minutes); `OTP=123456` skips the question. A manual release has no provenance
 attestation (only CI can sign one).
 
 **Release process:**
