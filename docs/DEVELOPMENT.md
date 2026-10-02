@@ -71,8 +71,9 @@ docker compose run --rm build
 
 ## Publishing to npm
 
-The package is published to npm automatically by the `Release` workflow when a
-`v*` tag is pushed (or a GitHub release is published). Publishing uses npm
+The `Release` workflow runs when a GitHub release is **published** (not on
+a tag push alone): it tests, builds the bundles and the standalone binaries,
+attaches them to the release and publishes to npm. Publishing uses npm
 **Trusted Publishing** (OIDC): no token secret and no OTP are involved, and
 every release carries provenance attestations. Tokens are not an option:
 npm stops accepting 2FA-bypass granular tokens for publishing around January
@@ -111,12 +112,20 @@ attestation (only CI can sign one).
 
 ```bash
 # 1. Bump the version in package.json, package-lock.json, src/index.js and
-#    add a CHANGELOG.md entry, then commit to main.
+#    date the CHANGELOG.md section, then merge to main (a release PR).
 
-# 2. Tag and push the tag; the workflow refuses to publish if the tag does
-#    not match package.json.
-git tag v1.1.3
-git push origin v1.1.3
+# 2. Tag main and push the tag.
+git tag v1.3.1
+git push origin v1.3.1
+
+# 3. Publish the GitHub release; this is what starts the Release workflow,
+#    which refuses to publish if the tag does not match package.json. The
+#    notes are the CHANGELOG section of the version.
+gh release create v1.3.1 --title "v1.3.1 — @tradik/xslt-processor 1.3.1" --notes-file notes.md
+
+# 4. When the workflow's publish job fails on the npm one-time password,
+#    publish by hand from the tag (see above).
+git checkout v1.3.1 && make publish
 ```
 
 **Automated workflow** (`.github/workflows/release.yml`):
