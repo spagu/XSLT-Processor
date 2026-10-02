@@ -1,25 +1,81 @@
-# Benchmarks: 1.1.3 vs 1.2.0
+# Benchmarks
+
+How fast each release of @tradik/xslt-processor is, and how the XSLT 3.0
+engine @tradik/xslt3 compares, on the same stylesheets and the same
+machine. Start with [All versions](#all-versions): one chart and one table
+with every version. The sections after it are the detailed runs those
+numbers come from.
+
+## Contents
+
+- [All versions](#all-versions): 1.1.3, 1.2.0, 1.3.0 and @tradik/xslt3 side by side
+- [1.1.3 vs 1.2.0](#113-vs-120): the 1.2.0 release run, including CLI, streaming and the standalone binary
+- [XPath 1.0 vs XPath 3.1](#xpath-10-vs-xpath-31): the 1.0 package against @tradik/xslt3
+- [XSLT 1.0 vs XSLT 3.0 engines](#xslt-10-vs-xslt-30-engines): the 1.0 package against @tradik/xslt3 on the same stylesheets, idiomatic 2.0/3.0 rewrites, 3.0-only scenarios, start-up and bundle size
+
+## All versions
+
+<!-- bench:overview-hero -->
+Against 1.1.3, on the same 9 XSLT 1.0 stylesheets (geometric mean): 1.2.0 **1.40× faster** · 1.3.0 **1.49× faster** · xslt3 1.0.0 **2.89× faster**.
+<!-- /bench:overview-hero -->
+
+Every version runs the same XSLT 1.0 stylesheets on jsdom. Lower is
+faster; the fastest version of each row is in bold. 1.2.1 changed no
+library code, so 1.2.0 stands for both.
+
+<!-- bench:overview -->
+<img src="benchmarks/overview.svg" width="720" alt="Median time of 9 XSLT 1.0 scenarios on 1.1.3, 1.2.0, 1.3.0, xslt3 1.0.0; further left is faster.">
+
+| Scenario | 1.1.3 | 1.2.0 | 1.3.0 | xslt3 1.0.0 |
+| --- | --- | --- | --- | --- |
+| 100 MB text result | 7.14 s | 3.94 s | 3.93 s | **824 ms** |
+| Issue #9 catalogue (3 MB HTML) | 3.73 s | 2.83 s | 2.68 s | **2.67 s** |
+| Identity transform, 5 MB | 2.88 s | 2.13 s | 2.10 s | **2.02 s** |
+| Sort 20,000 by two keys | 548 ms | 407 ms | 411 ms | **166 ms** |
+| apply-templates item[@id], 8,000 | 240 ms | 178 ms | 157 ms | **103 ms** |
+| following-sibling::x[1], 8,000 | 168 ms | 113 ms | 106 ms | **23 ms** |
+| Muenchian grouping, 8,000 | 157 ms | 144 ms | **134 ms** | 138 ms |
+| xsl:number level="any", 8,000 | 153 ms | 96 ms | 83 ms | **34 ms** |
+| call-template depth 3,000 | error | 62 ms | 58 ms | **15 ms** |
+| Speed vs 1.1.3 (geometric mean) | 1.00× | 1.40× | 1.49× | 2.89× |
+<!-- /bench:overview -->
+
+Peak memory (maximum resident set size of the process, including Node.js,
+jsdom and the parsed documents):
+
+<!-- bench:overview-memory -->
+| Scenario | 1.1.3 | 1.2.0 | 1.3.0 | xslt3 1.0.0 |
+| --- | --- | --- | --- | --- |
+| 100 MB text result | 1557 MB | 650 MB | 659 MB | 287 MB |
+| Issue #9 catalogue (3 MB HTML) | 922 MB | 636 MB | 661 MB | 614 MB |
+| Identity transform, 5 MB | 993 MB | 658 MB | 666 MB | 702 MB |
+| Sort 20,000 by two keys | 326 MB | 307 MB | 308 MB | 292 MB |
+| apply-templates item[@id], 8,000 | 297 MB | 277 MB | 278 MB | 260 MB |
+| following-sibling::x[1], 8,000 | 279 MB | 260 MB | 258 MB | 208 MB |
+| Muenchian grouping, 8,000 | 267 MB | 264 MB | 262 MB | 282 MB |
+| xsl:number level="any", 8,000 | 269 MB | 239 MB | 230 MB | 243 MB |
+| call-template depth 3,000 | error | 217 MB | 215 MB | 192 MB |
+<!-- /bench:overview-memory -->
+
+The numbers come from two runs on the same machine, Node.js and jsdom:
+1.1.3 and 1.2.0 from the [1.1.3 vs 1.2.0](#113-vs-120) run (30 September
+2026), 1.3.0 and @tradik/xslt3 from the
+[XSLT engines](#xslt-10-vs-xslt-30-engines) run (2 October 2026). The first
+times stylesheet import and transformation together; for the second the
+table adds its compile and transform medians. Differences of a few percent
+between the two runs are noise, not a change.
+
+## 1.1.3 vs 1.2.0
 
 How much faster and leaner 1.2.0 is than the released 1.1.3 on the same
-inputs, measured with a reproducible benchmark: speed-up per scenario, time
-per scenario and peak memory, each chart followed by its data table.
+inputs: speed-up per scenario, time per scenario and peak memory, each
+chart followed by its data table.
 
 <!-- bench:hero -->
 **1.81× faster** on 100 MB text result, string · **1.39×** geometric mean over 10 scenarios · **58% less peak memory** on 100 MB text result, string (1557 MB to 650 MB) · call-template depth 3,000: runs on 1.2.0, error on 1.1.3.
 <!-- /bench:hero -->
 
-## Contents
-
-- [Method](#method)
-- [Speed-up](#speed-up)
-- [Time per scenario](#time-per-scenario)
-- [Peak memory](#peak-memory)
-- [Scenarios](#scenarios)
-- [Notes and caveats](#notes-and-caveats)
-- [XPath 1.0 vs XPath 3.1](#xpath-10-vs-xpath-31): the 1.0 package against @tradik/xslt3
-- [XSLT 1.0 vs XSLT 3.0 engines](#xslt-10-vs-xslt-30-engines): the 1.0 package against @tradik/xslt3 on the same stylesheets, idiomatic 2.0/3.0 rewrites, 3.0-only scenarios, start-up and bundle size
-
-## Method
+### Method
 
 <!-- bench:method -->
 - Machine: AMD Ryzen 9 7950X 16-Core Processor, 32 logical cores, 31 GB RAM, Linux 6.18.40.1-microsoft-standard-WSL2 (linux)
@@ -54,7 +110,7 @@ node scripts/benchmark/charts.mjs   # redraws docs/benchmarks/*.svg and the tabl
 and tables on this page are generated from
 [scripts/benchmark/results.json](../scripts/benchmark/results.json).
 
-## Speed-up
+### Speed-up
 
 <!-- bench:speedup -->
 <img src="benchmarks/speedup.svg" width="720" alt="1.2.0 is faster than 1.1.3 in 10 of 10 compared scenarios; the largest speed-up is 1.81× (100 MB text result, string).">
@@ -77,7 +133,7 @@ and tables on this page are generated from
 | Standalone binary start-up | 1.2.0 only | 28 ms | n/a |
 <!-- /bench:speedup -->
 
-## Time per scenario
+### Time per scenario
 
 <!-- bench:time -->
 <img src="benchmarks/time.svg" width="720" alt="Median wall time of each scenario for both versions; the slowest is 100 MB text result, string (7.14 s on 1.1.3).">
@@ -100,7 +156,7 @@ and tables on this page are generated from
 | Standalone binary start-up | 1.2.0 only |  |  |  | 28 ms | 30 ms | 25 ms | 2 + 7 |
 <!-- /bench:time -->
 
-## Peak memory
+### Peak memory
 
 <!-- bench:memory -->
 <img src="benchmarks/memory.svg" width="720" alt="Peak resident set size of the process of each scenario; the largest is 100 MB text result, string (1.1.3: 1557 MB, 1.2.0: 650 MB).">
@@ -123,7 +179,7 @@ and tables on this page are generated from
 | Standalone binary start-up | 1.2.0 only | not measured | n/a |
 <!-- /bench:memory -->
 
-## Scenarios
+### Scenarios
 
 | Scenario | What it does |
 |---|---|
@@ -139,7 +195,7 @@ and tables on this page are generated from
 | CLI end to end | `xslt in.xml t.xsl -o out.html` on the catalogue, with jsdom; 1.2.0 also with `XSLT_DOM=xmldom` |
 | Standalone binary start-up | `xslt --version` with the host's single executable (1.2.0 only; built by `make binaries` when missing). Its memory is not measured: the executable ignores the `--import` hook used to read it |
 
-## Notes and caveats
+### Notes and caveats
 
 - **jsdom dominates wall time.** Every DOM access of the engine crosses
   jsdom's wrappers; parsing the inputs is excluded from library runs but not

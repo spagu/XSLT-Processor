@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - **Website wording for XSLT 2.0 and 3.0**: the home page said "XSLT 1.0 · XPath 1.0 · EXSLT" and the title "XSLT 1.0 in JavaScript"; they now name XSLT 1.0, 2.0 and 3.0 and XPath 3.1, with an install hint for `@tradik/xslt3` under the npm command. The playground mode is called "XSLT 2.0 / 3.0", because the 3.0 engine runs `version="2.0"` stylesheets as written (the page says so). "In development" is gone from the site, README.md, docs/README.md and docs/DEVELOPMENT.md, and the social card (og-card.png) is regenerated with the new text.
+- **Benchmarks: every version in one chart** (docs/BENCHMARKS.md): the page opens with "All versions", one chart and two tables (median time, peak memory) with 1.1.3, 1.2.0, 1.3.0 and @tradik/xslt3 1.0.0 on the nine XSLT 1.0 scenarios both recorded runs share, and the geometric mean speed-up of each over 1.1.3 (1.40×, 1.49×, 2.89×). It is built from the existing results.json and results-xslt.json, so nothing was re-measured; each version has its own lane, colour and shape. The detailed runs follow under their own headings. `node scripts/benchmark/charts.mjs --suite overview` redraws it, and the release and xslt suites refresh it too.
 
 ## [1.3.0] - 2026-10-02
 
