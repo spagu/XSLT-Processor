@@ -57,7 +57,7 @@ function status(m) {
  * @param {string[][]} body - Rows
  * @returns {string} The table
  */
-function table(head, body) {
+export function table(head, body) {
   const line = (cells) => `| ${cells.join(" | ")} |`;
   return [line(head), line(head.map(() => "---")), ...body.map(line)].join(
     "\n",

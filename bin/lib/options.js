@@ -27,6 +27,7 @@ export const CLI_OPTIONS = {
   indent: { type: "boolean", default: false },
   method: { type: "string" },
   "no-declaration": { type: "boolean", default: false },
+  "xslt-version": { type: "string", default: "1.0" },
   help: { type: "boolean", short: "h", default: false },
   version: { type: "boolean", short: "v", default: false },
 };
@@ -53,6 +54,10 @@ OPTIONS:
       --indent            Override xsl:output to indent="yes"
       --method <m>        Override xsl:output method (xml|html|xhtml|text)
       --no-declaration    Override xsl:output to omit the XML declaration
+      --xslt-version <v>  1.0 (default): XSLT 1.0 engine, a version="2.0"
+                          stylesheet runs in forwards-compatible mode;
+                          auto: XSLT 2.0/3.0 stylesheets run with
+                          @tradik/xslt3 (npm install @tradik/xslt3)
   -h, --help              Show this help message
   -v, --version           Show version number
 
@@ -83,6 +88,9 @@ EXAMPLES:
 
   # Multiple parameters with formatted output
   xslt data.xml transform.xsl -p lang=en -p debug=true -f -o output.html
+
+  # An XSLT 2.0/3.0 stylesheet (needs @tradik/xslt3)
+  xslt data.xml grouping.xsl --xslt-version auto
 `);
 }
 

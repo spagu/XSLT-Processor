@@ -20,9 +20,11 @@ JavaScript implementation of XSLTProcessor for browser environments and Node.js 
 
 ## Background
 
-Chrome and other browsers are deprecating native XSLTProcessor support:
-- **Chrome 143+**: XSLTProcessor starts showing deprecation warnings
-- **Chrome 164 (August 2027)**: Full removal of native XSLT support
+Chrome and other browsers are removing native XSLT ([Chrome's announcement](https://developer.chrome.com/docs/web-platform/deprecating-xslt)):
+- **Chrome 143 (December 2025)**: `XSLTProcessor` and `<?xml-stylesheet type="text/xsl"?>` are deprecated, with warnings in the console
+- **Chrome 158 (17 November 2026)**: XSLT stops working in stable Chrome, except for sites in the origin trial and browsers under the enterprise policy
+- **Chrome 176 (17 August 2027)**: the origin trial and the enterprise policy end; XSLT is off everywhere
+- Firefox and WebKit support the removal but have not announced dates
 
 This library ensures your XSLT-based applications continue to work regardless of browser support.
 
@@ -38,7 +40,7 @@ This library ensures your XSLT-based applications continue to work regardless of
 
 ## Documentation
 
-The documentation is also published as a website with an interactive playground: <https://xslt-processor.tradik.com/> ([playground](https://xslt-processor.tradik.com/playground/)).
+The documentation is also published as a website with an interactive playground: <https://xslt-processor.tradik.com/> ([playground](https://xslt-processor.tradik.com/playground/): XSLT 1.0 transformations, and with the in-development `@tradik/xslt3` XSLT 3.0 stylesheets at [?mode=xslt3](https://xslt-processor.tradik.com/playground/?mode=xslt3) and XPath 3.1 expressions at [?mode=xpath](https://xslt-processor.tradik.com/playground/?mode=xpath); [blog](https://xslt-processor.tradik.com/blog/) with an [RSS feed](https://xslt-processor.tradik.com/blog/rss.xml)).
 
 | Guide | Contents |
 |-------|----------|
@@ -49,7 +51,8 @@ The documentation is also published as a website with an interactive playground:
 | [Conformance](docs/CONFORMANCE.md) | W3C compliance tables, supported elements and functions, known deviations, test coverage |
 | [Security Limits](docs/SECURITY-LIMITS.md) | XPath and XSLT limits, prototype pollution protection, input validation |
 | [Browser Compatibility](docs/BROWSER-SUPPORT.md) | Minimum browser versions, native XSLT removal timeline, feature detection |
-| [Benchmarks](docs/BENCHMARKS.md) | 1.1.3 vs 1.2.0: speed-up, time and peak memory per scenario, with charts, tables and `npm run bench` to reproduce |
+| [XSLT 2.0 and 3.0](docs/XSLT3.md) | In development: one engine for XSLT 3.0 and 2.0 in a separate package, `@tradik/xslt3`; design, scope and milestones |
+| [Benchmarks](docs/BENCHMARKS.md) | 1.1.3 vs 1.2.0: speed-up, time and peak memory per scenario, with charts, tables and `npm run bench` to reproduce; XPath 1.0 of this package vs XPath 3.1 of @tradik/xslt3 (`npm run bench -- --suite xpath`); the XSLT 1.0 engine vs @tradik/xslt3 on the same stylesheets, idiomatic 2.0/3.0 rewrites and 3.0-only scenarios (`npm run bench -- --suite xslt`) |
 | [Development](docs/DEVELOPMENT.md) | Setup, tests, Docker, Makefile, publishing to npm |
 | [Style Guide](docs/STYLE-GUIDE.md) | Project colors with WCAG 2.2 contrast ratios |
 
@@ -162,6 +165,28 @@ Node.js has no DOM, so bring one such as `jsdom`. The
 is a complete Node.js script, and the [API Reference](docs/API.md) covers every
 method.
 
+### XSLT 2.0 and 3.0 (opt-in)
+
+By default every stylesheet runs with the XSLT 1.0 engine, and a
+`version="2.0"` stylesheet runs in forwards-compatible mode, as in Chrome.
+With `xsltVersion: "auto"`, a stylesheet that declares version 2.0 or 3.0 is
+run by [`@tradik/xslt3`](docs/XSLT3.md), an optional peer dependency loaded
+with `import()` only when such a stylesheet is imported, so the XSLT 1.0
+bundles do not grow by the size of the new engine:
+
+```javascript
+// npm install @tradik/xslt3
+const processor = new XSLTProcessor({ xsltVersion: "auto" });
+const html = await processor.transformAsync(xmlText, { stylesheet: xsl20Text });
+
+// The synchronous W3C API needs the engine loaded first
+await XSLTProcessor.preload();
+processor.importStylesheet(xsl20Doc);
+const fragment = processor.transformToFragment(xmlDoc, document);
+```
+
+The CLI flag is `--xslt-version auto`. Details: [Opt-in XSLT 2.0/3.0](docs/API.md#opt-in-xslt-2030).
+
 ## CLI Usage
 
 The package includes a command-line tool for transforming XML documents.
@@ -198,6 +223,9 @@ xslt data.xml template.xsl -f -o output.html
 # Override the output method and drop the XML declaration
 xslt data.xml template.xsl --method text
 xslt data.xml template.xsl --no-declaration
+
+# Run an XSLT 2.0/3.0 stylesheet with @tradik/xslt3 (npm install -g @tradik/xslt3)
+xslt data.xml grouping.xsl --xslt-version auto
 ```
 
 See [Command Line Tool](docs/CLI.md) for all options, the base directory,

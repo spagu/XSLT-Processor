@@ -18,7 +18,8 @@ import { throwIfAborted } from "./abort.js";
  * Serialize the transformation of a source node in chunks, as
  * `engine.transformToString` does in one piece.
  *
- * @param {import('../xslt/engine.js').XsltEngine} engine - Engine with an imported stylesheet
+ * @param {import('../xslt/engine.js').XsltEngine|import('../bridge/engine.js').Xslt3Engine} engine -
+ *   Engine with an imported stylesheet
  * @param {Node} sourceNode - Source document or element
  * @param {{chunkSize?: number}} [options] - Chunk size in UTF-16 code units
  * @returns {Iterator<string>} The chunks; the result tree is built by this
@@ -28,6 +29,10 @@ import { throwIfAborted } from "./abort.js";
  * for (const chunk of transformToChunks(engine, xmlDoc)) out.write(chunk);
  */
 export function transformToChunks(engine, sourceNode, options = {}) {
+  // The @tradik/xslt3 engine (xsltVersion "auto") serializes on its own
+  if (engine.transformToChunks) {
+    return engine.transformToChunks(sourceNode, options);
+  }
   const fragment = engine.buildResultTree(
     sourceNode,
     engine.createDocument(sourceNode),

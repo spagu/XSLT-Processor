@@ -1,15 +1,29 @@
 /**
- * Playground page wiring: example menu, editors, parameter rows, and the
- * result panel (serialized output, output method, messages and a sandboxed
- * preview). The transformation itself is in playground-core.js.
+ * Playground page wiring: the mode switch, the example menu, the shared XML
+ * and stylesheet editors, the Run button, live runs while typing, the
+ * message list and the link that runs the same stylesheet with the other
+ * engine. Each mode brings its own result handling: playground-xslt.js
+ * (XSLT 1.0), playground-xslt3.js (XSLT 3.0) and playground-xpath.js
+ * (XPath 3.1).
  *
  * Needs the browser bundle (global XsltProcessorLib) loaded before it.
  *
  * @module playground
  */
 
-import { previewDocument, transform } from "./playground-core.js";
-import { presets } from "./presets.js";
+import { lazyImport } from "./playground-library.js";
+import {
+  compareMode,
+  loadMode,
+  MODES,
+  modeUrl,
+  resolveMode,
+  saveMode,
+} from "./playground-modes.js";
+import { createStylesheetEditor } from "./playground-stylesheet.js";
+import { createXPathMode } from "./playground-xpath.js";
+import { createXsltMode } from "./playground-xslt.js";
+import { createXslt3Mode } from "./playground-xslt3.js";
 
 const DEBOUNCE_MS = 300;
 
@@ -21,116 +35,131 @@ const DEBOUNCE_MS = 300;
  */
 const $ = (id) => document.getElementById(id);
 
+const app = $("pg-app");
 const form = $("pg-form");
 const presetSelect = $("pg-preset");
+const runButton = $("pg-run");
 const xmlInput = $("pg-xml");
-const xslInput = $("pg-xsl");
 const live = $("pg-live");
-const paramList = $("pg-params");
 const statusLine = $("pg-status");
 const messageList = $("pg-messages");
-const outputCode = $("pg-output");
-const preview = $("pg-preview");
+const compareLink = $("pg-compare");
+const storage = () => window.localStorage;
 
 /**
- * Add a parameter row with labelled name and value inputs.
+ * Fill the message list. A message with a code (an XPath or XSLT error)
+ * shows the code in place of the level.
  *
- * @param {{ name: string, value: string }} [param] - Initial values
+ * @param {{ level: string, text: string, code?: string }[]} messages - Messages
  */
-function addParam(param = { name: "", value: "" }) {
-  const index = paramList.children.length + 1;
-  const row = document.createElement("li");
-  row.className = "pg-param";
-  for (const [key, label] of [
-    ["name", "Name"],
-    ["value", "Value"],
-  ]) {
-    const input = document.createElement("input");
-    input.type = "text";
-    input.value = param[key];
-    input.dataset.key = key;
-    input.spellcheck = false;
-    input.setAttribute(
-      "aria-label",
-      `Parameter ${index} ${label.toLowerCase()}`,
-    );
-    input.placeholder = label;
-    row.append(input);
-  }
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.className = "button button--small";
-  remove.textContent = "Remove";
-  remove.setAttribute("aria-label", `Remove parameter ${index}`);
-  remove.addEventListener("click", () => {
-    row.remove();
-    run();
-  });
-  row.append(remove);
-  paramList.append(row);
-}
-
-/**
- * The parameters currently entered.
- *
- * @returns {{ name: string, value: string }[]} Parameters
- */
-function readParams() {
-  return [...paramList.querySelectorAll(".pg-param")].map((row) => ({
-    name: row.querySelector('[data-key="name"]').value,
-    value: row.querySelector('[data-key="value"]').value,
-  }));
-}
-
-/**
- * Show a result in the result panel.
- *
- * @param {import("./playground-core.js").TransformResult} result - Result
- */
-function show(result) {
-  const lib = window.XsltProcessorLib;
-  const source = result.declared ? "declared by xsl:output" : "default rule";
-  statusLine.textContent =
-    result.output === null
-      ? "The transformation failed. See the messages below."
-      : `Output method: ${result.method} (${source}). ${result.output.length} characters in ${Math.round(result.ms)} ms with @tradik/xslt-processor ${lib.VERSION}.`;
+function showMessages(messages) {
   messageList.replaceChildren(
-    ...result.messages.map(({ level, text }) => {
+    ...messages.map(({ level, text, code }) => {
       const item = document.createElement("li");
       item.className = `pg-message pg-message--${level}`;
       const label = document.createElement("strong");
-      label.textContent = `${level[0].toUpperCase()}${level.slice(1)}: `;
+      label.textContent = `${code ?? `${level[0].toUpperCase()}${level.slice(1)}`}: `;
       item.append(label, text);
       return item;
     }),
   );
-  outputCode.textContent = result.output ?? "";
-  preview.srcdoc =
-    result.output === null ? "" : previewDocument(result.output, result.method);
 }
 
-/** Transform the current input and show the result. */
+let mode = MODES.xslt;
+const editor = createStylesheetEditor({
+  xmlInput,
+  xslInput: $("pg-xsl"),
+  paramList: $("pg-params"),
+  addButton: $("pg-add-param"),
+  onChange: () => run(),
+});
+const library = lazyImport(() => import(app.dataset.xslt3));
+const shared = { xmlInput, editor, statusLine, showMessages };
+/** Each mode with the texts the page shows for it. */
+const modes = {
+  [MODES.xslt]: {
+    ...createXsltMode(shared),
+    name: "XSLT 1.0",
+    runLabel: "Transform",
+    outputTitle: "transformToString() output",
+  },
+  [MODES.xslt3]: {
+    ...createXslt3Mode({
+      ...shared,
+      library,
+      isActive: () => mode === MODES.xslt3,
+    }),
+    name: "XSLT 3.0",
+    runLabel: "Transform",
+    outputTitle: "serialize() output",
+  },
+  [MODES.xpath]: {
+    ...createXPathMode({
+      ...shared,
+      library,
+      isActive: () => mode === MODES.xpath,
+    }),
+    name: "XPath 3.1",
+    runLabel: "Evaluate",
+  },
+};
+/** The editors of each mode when the visitor left it, and its example. */
+const saved = {};
+
+/** Run the current mode. */
 function run() {
-  show(
-    transform(
-      { xml: xmlInput.value, xsl: xslInput.value, params: readParams() },
-      { lib: window.XsltProcessorLib, DOMParser, now: () => performance.now() },
-    ),
-  );
+  modes[mode].run();
 }
 
 /**
- * Load an example into the editors and run it.
+ * Switch to a mode: show its editors and result panel, restore what it had
+ * or load its first example, and remember the choice in the URL and storage.
+ * With `carry`, the XML, stylesheet and parameters stay as they are, so the
+ * same stylesheet runs with the other engine.
  *
- * @param {string} id - Preset id
+ * @param {string} next - Mode id
+ * @param {{ carry?: boolean }} [options] - Keep the current input
  */
-function loadPreset(id) {
-  const preset = presets.find((p) => p.id === id) ?? presets[0];
-  xmlInput.value = preset.xml;
-  xslInput.value = preset.xsl;
-  paramList.replaceChildren();
-  preset.params.forEach((param) => addParam(param));
-  run();
+function setMode(next, { carry = false } = {}) {
+  const from = mode;
+  if (presetSelect.options.length > 0) {
+    saved[from] = { ...editor.read(), preset: presetSelect.value };
+  }
+  mode = next;
+  $(`pg-mode-${next}`).checked = true;
+  for (const el of app.querySelectorAll("[data-mode]")) {
+    el.hidden = !el.dataset.mode.split(" ").includes(next);
+  }
+  runButton.textContent = modes[next].runLabel;
+  $("pg-xsl-label").textContent = `${modes[next].name} stylesheet`;
+  $("pg-output-title").textContent = modes[next].outputTitle ?? "";
+  const other = compareMode(next);
+  if (other) {
+    compareLink.href = modeUrl(location.href, other);
+    compareLink.textContent = `Run this stylesheet with ${modes[other].name}`;
+  }
+  presetSelect.replaceChildren(
+    ...modes[next].presets.map(({ id, label }) => new Option(label, id)),
+  );
+  showMessages([]);
+  history.replaceState(null, "", modeUrl(location.href, next));
+  saveMode(storage, next);
+  if (carry) {
+    presetSelect.prepend(new Option(`Your ${modes[from].name} input`, ""));
+    presetSelect.value = "";
+    run();
+  } else if (saved[next]) {
+    presetSelect.value = saved[next].preset;
+    if (presetSelect.value !== saved[next].preset) {
+      presetSelect.prepend(new Option("Your earlier input", ""));
+      presetSelect.value = "";
+    }
+    if (other) editor.load(saved[next]);
+    else xmlInput.value = saved[next].xml;
+    run();
+  } else {
+    modes[next].loadPreset(modes[next].presets[0].id);
+  }
 }
 
 let timer = 0;
@@ -141,10 +170,16 @@ function scheduleRun() {
   timer = setTimeout(run, DEBOUNCE_MS);
 }
 
-presetSelect.replaceChildren(
-  ...presets.map(({ id, label }) => new Option(label, id)),
-);
-presetSelect.addEventListener("change", () => loadPreset(presetSelect.value));
+for (const radio of document.querySelectorAll('input[name="pg-mode"]')) {
+  radio.addEventListener("change", () => setMode(radio.value));
+}
+compareLink.addEventListener("click", (event) => {
+  event.preventDefault();
+  setMode(compareMode(mode), { carry: true });
+});
+presetSelect.addEventListener("change", () => {
+  if (presetSelect.value) modes[mode].loadPreset(presetSelect.value);
+});
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   run();
@@ -152,9 +187,5 @@ form.addEventListener("submit", (event) => {
 form.addEventListener("input", (event) => {
   if (event.target !== presetSelect && event.target !== live) scheduleRun();
 });
-$("pg-add-param").addEventListener("click", () => {
-  addParam();
-  paramList.lastElementChild.querySelector("input").focus();
-});
-$("pg-app").hidden = false;
-loadPreset(presets[0].id);
+app.hidden = false;
+setMode(resolveMode(location.search, loadMode(storage)));

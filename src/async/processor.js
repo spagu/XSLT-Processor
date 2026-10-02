@@ -104,6 +104,8 @@ export async function importStylesheetAsync(
   checkLoader(documentLoader);
 
   const node = await readSource(style, { signal });
+  // XSLT 2.0/3.0 with xsltVersion "auto": load @tradik/xslt3 first
+  await processor._prepareEngine(node);
   const modules = await preloadModules(
     node,
     stylesheetUri,

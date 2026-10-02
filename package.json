@@ -1,8 +1,11 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "main": "dist/xslt-processor.cjs",
   "module": "dist/xslt-processor.js",
   "browser": "dist/xslt-processor.js",
@@ -38,18 +41,27 @@
   },
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=96 --test-coverage-exclude=\"**/*.test.js\" \"src/**/*.test.js\"",
+    "test": "node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=96 --test-coverage-exclude=\"**/*.test.js\" --test-coverage-exclude=\"packages/**\" \"src/**/*.test.js\"",
+    "test:xslt3": "npm test --workspace @tradik/xslt3",
+    "suites:fetch": "node packages/xslt3/test-suites/fetch.mjs all",
+    "test:suites:unit": "node --test --experimental-test-coverage --test-coverage-include=\"packages/xslt3/test-suites/**\" --test-coverage-exclude=\"**/*.test.mjs\" --test-coverage-lines=96 \"packages/xslt3/test-suites/**/*.test.mjs\"",
+    "test:qt3:parse": "node packages/xslt3/test-suites/run.mjs qt3 --parse-only",
+    "test:qt3": "node packages/xslt3/test-suites/run.mjs qt3",
+    "test:xslt30": "node packages/xslt3/test-suites/run.mjs xslt30",
     "test:watch": "node --test --watch src/**/*.test.js",
     "test:conformance": "node scripts/conformance.mjs",
     "test:dom": "node scripts/test-dom.mjs",
     "test:conformance:unit": "node --test \"scripts/conformance/*.test.mjs\"",
     "conformance:fetch": "node scripts/fetch-conformance.mjs",
-    "lint": "eslint src/ bin/ scripts/ tests/browser/ site/",
-    "format": "prettier --write \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\" \"site/scripts/*.mjs\" \"site/templates/**/js/*.js\"",
-    "format:check": "prettier --check \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\" \"site/scripts/*.mjs\" \"site/templates/**/js/*.js\"",
+    "lint": "eslint src/ bin/ scripts/ tests/browser/ site/ packages/",
+    "format": "prettier --write \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\" \"site/scripts/*.mjs\" \"site/templates/**/js/*.js\" \"packages/*/src/**/*.js\" \"packages/*/test-suites/**/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"bin/**/*.js\" \"scripts/**/*.{js,mjs}\" \"tests/browser/**/*.mjs\" \"site/scripts/*.mjs\" \"site/templates/**/js/*.js\" \"packages/*/src/**/*.js\" \"packages/*/test-suites/**/*.mjs\"",
     "prepublishOnly": "npm run build && npm run test",
     "docs:check": "node scripts/check-links.mjs",
     "bench": "node scripts/benchmark/run.mjs",
+    "bench:xpath": "node scripts/benchmark/run.mjs --suite xpath",
+    "bench:xslt": "node scripts/benchmark/run.mjs --suite xslt",
+    "test:bench": "node --test \"scripts/benchmark/*.test.mjs\"",
     "test:browser": "playwright test -c tests/browser/playwright.config.mjs",
     "test:binaries": "node --test \"scripts/binaries/*.test.mjs\" \"scripts/lib/*.test.mjs\"",
     "test:site": "node --test --experimental-test-coverage --test-coverage-include=\"site/**\" --test-coverage-lines=96 \"site/scripts/*.test.mjs\"",
@@ -89,10 +101,14 @@
     "prettier": "^3.9.9"
   },
   "peerDependencies": {
+    "@tradik/xslt3": "^1.0.0",
     "@xmldom/xmldom": ">=0.9.0",
     "jsdom": ">=25.0.0"
   },
   "peerDependenciesMeta": {
+    "@tradik/xslt3": {
+      "optional": true
+    },
     "@xmldom/xmldom": {
       "optional": true
     },

@@ -8,24 +8,43 @@
  * is hand-written.
  *
  * Usage: node scripts/benchmark/charts.mjs [--results scripts/benchmark/results.json]
+ *        node scripts/benchmark/charts.mjs --suite xpath [--results scripts/benchmark/results-xpath.json]
+ * (the XPath charts and sections, see xpathCharts.mjs)
+ *        node scripts/benchmark/charts.mjs --suite xslt [--results scripts/benchmark/results-xslt.json]
+ * (the XSLT engine charts and sections, see xsltCharts.mjs)
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { REPO_ROOT, confinePath } from "../lib/fsSafety.mjs";
+import { confinePath } from "../lib/fsSafety.mjs";
 import { hero, memoryTable, rows, speedupTable, timeTable } from "./data.mjs";
 import { speedupChart, timeChart } from "./figures.mjs";
 import { memoryChart } from "./memory.mjs";
+import { DOCS, PAGE, chart, fill } from "./page.mjs";
+import { writeXPathCharts } from "./xpathCharts.mjs";
+import { writeXsltCharts } from "./xsltCharts.mjs";
 
 const { values } = parseArgs({
   options: {
-    results: { type: "string", default: "scripts/benchmark/results.json" },
+    results: { type: "string" },
+    suite: { type: "string", default: "release" },
   },
 });
 
-const DOCS = join(REPO_ROOT, "docs");
-const PAGE = join(DOCS, "BENCHMARKS.md");
+if (values.suite === "xpath") {
+  writeXPathCharts(values.results ?? "scripts/benchmark/results-xpath.json");
+  process.exit();
+}
+if (values.suite === "xslt") {
+  writeXsltCharts(values.results ?? "scripts/benchmark/results-xslt.json");
+  process.exit();
+}
+if (values.suite !== "release") {
+  throw new Error(
+    `Unknown benchmark suite: ${values.suite} (release, xpath or xslt)`,
+  );
+}
 
 /**
  * Method facts from the recorded environment.
@@ -42,42 +61,12 @@ function method(env) {
   ].join("\n");
 }
 
-/**
- * Replace the generated part NAME of the page.
- *
- * @param {string} page - Markdown
- * @param {string} name - Part name
- * @param {string} content - New content
- * @returns {string} Updated Markdown
- * @throws {Error} When the markers are missing
- */
-function fill(page, name, content) {
-  const open = `<!-- bench:${name} -->`;
-  const close = `<!-- /bench:${name} -->`;
-  const start = page.indexOf(open);
-  const end = page.indexOf(close);
-  if (start === -1 || end < start) {
-    throw new Error(`Missing ${open} ... ${close} in docs/BENCHMARKS.md`);
-  }
-  return `${page.slice(0, start + open.length)}\n${content}\n${page.slice(end)}`;
-}
-
-/**
- * Write one chart and return its Markdown: the image (alt text = the
- * chart's description) followed by its data table.
- *
- * @param {string} name - File name without extension
- * @param {string} svg - SVG source
- * @param {string} dataTable - Markdown table of the chart's data
- * @returns {string} Markdown
- */
-function chart(name, svg, dataTable) {
-  writeFileSync(join(DOCS, "benchmarks", `${name}.svg`), svg);
-  const alt = /<desc id="d">([^<]*)<\/desc>/.exec(svg)[1];
-  return `<img src="benchmarks/${name}.svg" width="720" alt="${alt}">\n\n${dataTable}`;
-}
-
-const data = JSON.parse(readFileSync(confinePath(values.results), "utf8"));
+const data = JSON.parse(
+  readFileSync(
+    confinePath(values.results ?? "scripts/benchmark/results.json"),
+    "utf8",
+  ),
+);
 const list = rows(data);
 mkdirSync(join(DOCS, "benchmarks"), { recursive: true });
 

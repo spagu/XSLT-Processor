@@ -17,11 +17,15 @@ and `Array.prototype.at()`, which set the minimum browser versions below.
 
 ## Native XSLT Deprecation Timeline
 
-| Browser | Deprecation Warning | Full Removal |
-|---------|---------------------|--------------|
-| Chrome | v143 (2026) | v164 (August 2027) |
-| Edge | v143 (2026) | v164 (August 2027) |
-| Other Chromium | v143 (2026) | v164 (August 2027) |
+From [Chrome's announcement](https://developer.chrome.com/docs/web-platform/deprecating-xslt) (updated 29 October 2025):
+
+| Browser | Deprecated | Off in stable | Off for everyone |
+|---------|------------|---------------|------------------|
+| Chrome | 143 (2 December 2025) | 158 (17 November 2026) | 176 (17 August 2027), when the origin trial and enterprise policy end |
+| Edge and other Chromium browsers | follow Chromium | follow Chromium | follow Chromium |
+| Chrome WebView (Android) | | off by default in Canary, Dev and Beta from 154 (22 September 2026) | |
+| Firefox | positive standards position, tracking [bug 1990759](https://bugzilla.mozilla.org/show_bug.cgi?id=1990759) | no date | no date |
+| Safari (WebKit) | supports the removal | no date | no date |
 
 ## Feature Detection
 

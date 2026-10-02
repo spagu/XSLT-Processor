@@ -12,6 +12,7 @@
 import { XSLTProcessor } from "../../src/XSLTProcessor.js";
 import { transformToChunks } from "../../src/async/stream.js";
 import { findParseError } from "../../src/xslt/domParsing.js";
+import { XSLT_VERSION_MODES, usesXslt3 } from "../../src/bridge/version.js";
 import {
   createDocumentLoader,
   createStylesheetLoader,
@@ -90,6 +91,40 @@ export function applyOutputOverrides(processor, values) {
 }
 
 /**
+ * The `xsltVersion` option selected by `--xslt-version`.
+ *
+ * @param {object} values - Parsed command line option values
+ * @returns {"1.0"|"auto"} The mode, "1.0" by default
+ * @throws {Error} When the flag is neither 1.0 nor auto
+ */
+export function xsltVersionOf(values) {
+  const mode = values["xslt-version"] ?? "1.0";
+  if (!XSLT_VERSION_MODES.includes(mode)) {
+    throw new Error(`Invalid --xslt-version "${mode}": expected 1.0 or auto`);
+  }
+  return mode;
+}
+
+/**
+ * Load @tradik/xslt3 (dynamic import) when `--xslt-version auto` is given
+ * and the stylesheet declares version 2.0 or more, so that the synchronous
+ * transformation can use it.
+ *
+ * @param {import("./dom.js").DomEnvironment} dom - DOM environment
+ * @param {string} xsltContent - XSLT stylesheet text
+ * @param {object} values - Parsed command line option values
+ * @returns {Promise<void>} Resolves once the engine is available
+ * @throws {Error} For an invalid flag, or when @tradik/xslt3 is missing
+ */
+export async function prepareXsltVersion(dom, xsltContent, values) {
+  const mode = xsltVersionOf(values);
+  if (mode === "auto") {
+    const xsltDoc = parseDocument(dom, xsltContent, "XSLT");
+    if (usesXslt3(xsltDoc, mode)) await XSLTProcessor.preload();
+  }
+}
+
+/**
  * @typedef {Object} TransformationInputs
  * @property {import("./dom.js").DomEnvironment} dom - DOM environment
  * @property {string} xmlContent - XML source text
@@ -134,7 +169,7 @@ export function streamTransformation({
   const xmlDoc = parseDocument(dom, xmlContent, "XML");
   const xsltDoc = parseDocument(dom, xsltContent, "XSLT");
 
-  const processor = new XSLTProcessor();
+  const processor = new XSLTProcessor({ xsltVersion: xsltVersionOf(values) });
   if (xsltFile) {
     processor.setStylesheetLoader(createStylesheetLoader(baseDir));
     processor.setDocumentLoader(createDocumentLoader(baseDir, warn));

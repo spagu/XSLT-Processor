@@ -12,7 +12,7 @@ import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
-import { checkSite, pageProblems } from "./check-site.mjs";
+import { assetPath, checkSite, pageProblems } from "./check-site.mjs";
 import { PAIRS, contrast, contrastProblems, parseTokens } from "./contrast.mjs";
 
 const tokensCss = readFileSync(
@@ -28,9 +28,10 @@ const head = `<meta name="viewport" content="x"><meta name="description" content
 <meta property="og:title" content="t"><meta property="og:description" content="d">
 <meta property="og:url" content="u"><meta property="og:image" content="i"><meta property="og:type" content="website">
 <meta name="twitter:card" content="summary"><meta name="twitter:title" content="t"><meta name="twitter:description" content="d">
-<script>j.src='https://www.googletagmanager.com/gtm.js?id='</script>`;
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TEST"></script>
+<script>gtag('config', 'G-TEST');</script>`;
 const page = (body, lang = ' lang="en"') =>
-  `<!DOCTYPE html><html${lang}><head><title>T</title>${head}</head><body><noscript><iframe title="g" src="https://www.googletagmanager.com/ns.html?id=G"></iframe></noscript>${body}</body></html>`;
+  `<!DOCTYPE html><html${lang}><head><title>T</title>${head}</head><body>${body}</body></html>`;
 const parse = (html) => new JSDOM(html).window.document;
 
 describe("pageProblems", () => {
@@ -53,8 +54,7 @@ describe("pageProblems", () => {
       "missing <html lang>",
       "empty <title>",
       'missing meta[name="description"]',
-      "missing Google Tag Manager <script> in <head>",
-      "missing Google Tag Manager <noscript> in <body>",
+      "missing Google Analytics gtag.js in <head>",
       "expected exactly one <main>",
       "expected exactly one <h1>",
       "image without alt: x",
@@ -64,11 +64,45 @@ describe("pageProblems", () => {
     }
   });
 
+  it("reports a Google Tag Manager snippet, which the site does not use", () => {
+    const gtm =
+      "<script>j.src='https://www.googletagmanager.com/gtm.js?id=G'</script>";
+    const problems = pageProblems(
+      parse(
+        page("<main><h1>A</h1></main>").replace("</head>", `${gtm}</head>`),
+      ),
+    );
+    assert.deepEqual(problems, [
+      "Google Tag Manager on the page: the site uses Google Analytics only",
+    ]);
+  });
+
   it("reports skipped heading levels", () => {
     const problems = pageProblems(
       parse(page("<main><h1>A</h1><h3>C</h3></main>")),
     );
     assert.deepEqual(problems, ['heading level skipped: <h3> "C"']);
+  });
+});
+
+describe("assetPath", () => {
+  it("finds an asset by its plain or its fingerprinted name", () => {
+    const root = mkdtempSync(join(tmpdir(), "site-asset-"));
+    mkdirSync(join(root, "css"));
+    writeFileSync(join(root, "css", "tokens.css"), "");
+    assert.equal(
+      assetPath(root, "css/tokens.css"),
+      join(root, "css", "tokens.css"),
+    );
+    rmSync(join(root, "css", "tokens.css"));
+    writeFileSync(join(root, "css", "tokens.f55532e6.css"), "");
+    writeFileSync(join(root, "css", "tokens-extra.0123abcd.css"), "");
+    assert.equal(
+      assetPath(root, "css/tokens.css"),
+      join(root, "css", "tokens.f55532e6.css"),
+    );
+    assert.throws(() => assetPath(root, "css/missing.css"), /missing\.css/);
+    rmSync(root, { recursive: true, force: true });
   });
 });
 

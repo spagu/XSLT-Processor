@@ -5,7 +5,9 @@
  * legend, log scales and number formatting.
  *
  * Series colours were validated for colour-vision deficiencies:
- * 1.2.0 blue, 1.1.3 orange. Text never uses a series colour.
+ * 1.2.0 blue, 1.1.3 orange. The XPath charts reuse the pair, one colour per
+ * engine: the root package (whose current tree 1.2.0 is) blue, xslt3
+ * orange. Text never uses a series colour.
  *
  * @module scripts/benchmark/svg
  */
@@ -26,8 +28,13 @@ font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
 .new{fill:var(--new)}.old{fill:var(--old)}
 .ring{stroke:var(--surface);stroke-width:2}`;
 
-/** CSS class of each version's series colour. */
-export const SERIES = Object.freeze({ "1.2.0": "new", "1.1.3": "old" });
+/** CSS class of each version's (or XPath engine's) series colour. */
+export const SERIES = Object.freeze({
+  "1.2.0": "new",
+  "1.1.3": "old",
+  "1.0 package": "new",
+  xslt3: "old",
+});
 
 /**
  * Escape text for SVG content and attributes.
@@ -51,14 +58,15 @@ export function esc(value) {
  * @param {string} options.title - Accessible title (also drawn)
  * @param {string} options.desc - Accessible summary of the finding
  * @param {string[]} options.body - Elements
+ * @param {string} [options.style=""] - Extra CSS appended to the tokens
  * @returns {string} SVG source
  */
-export function svgDocument({ height, title, desc, body }) {
+export function svgDocument({ height, title, desc, body, style = "" }) {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" ` +
     `viewBox="0 0 ${WIDTH} ${height}" role="img" aria-labelledby="t d">\n` +
     `<title id="t">${esc(title)}</title>\n<desc id="d">${esc(desc)}</desc>\n` +
-    `<style>${STYLE}\n</style>\n` +
+    `<style>${STYLE}${style}\n</style>\n` +
     `<rect class="bg" width="${WIDTH}" height="${height}" rx="8"/>\n` +
     `<text class="title" x="16" y="24">${esc(title)}</text>\n` +
     `${body.join("\n")}\n</svg>\n`
@@ -99,11 +107,12 @@ export function dot(x, y, version, tooltip) {
  * @param {number} y - Centre y
  * @param {string[]} versions - Versions in legend order
  * @param {"dot"|"bar"} [shape="dot"] - Swatch shape, as the marks
+ * @param {number} [step=72] - Distance between two entries, px
  * @returns {string[]} Elements
  */
-export function legend(x, y, versions, shape = "dot") {
+export function legend(x, y, versions, shape = "dot", step = 72) {
   return versions.flatMap((version, index) => {
-    const left = x + index * 72;
+    const left = x + index * step;
     const swatch =
       shape === "dot"
         ? `<circle class="${SERIES[version]}" cx="${left + 5}" cy="${y}" r="5"/>`

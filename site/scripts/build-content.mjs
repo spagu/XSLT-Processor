@@ -9,7 +9,9 @@
  * - site/data/landing.json and site/data/nav.json feed the home page and the
  *   documentation sidebar;
  * - the browser bundle dist/xslt-processor.browser.min.js (run `npm run
- *   build` first) is copied to site/static/vendor/ for the playground.
+ *   build` first) is copied to site/static/vendor/ for the playground, and
+ *   @tradik/xslt3 is bundled beside it for the XSLT 3.0 and XPath 3.1 modes
+ *   (vendor.mjs).
  *
  * Everything written here is generated and ignored by git; edit the sources.
  *
@@ -35,6 +37,7 @@ import {
   pageMap,
   publishImages,
 } from "./pages.mjs";
+import { buildXslt3Bundle, formatSize, XSLT3_BUNDLE } from "./vendor.mjs";
 
 const siteDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const rootDir = join(siteDir, "..");
@@ -99,6 +102,14 @@ for (const name of readdirSync(handWritten).filter((n) => n.endsWith(".md"))) {
   copyFileSync(join(handWritten, name), join(pagesDir, name));
 }
 
+// Blog posts: ssg reads posts from a directory below posts/
+const postsSource = join(siteDir, "posts");
+const postsDir = join(contentDir, "posts", "blog");
+mkdirSync(postsDir, { recursive: true });
+for (const name of readdirSync(postsSource).filter((n) => n.endsWith(".md"))) {
+  copyFileSync(join(postsSource, name), join(postsDir, name));
+}
+
 const { version } = JSON.parse(read("package.json"));
 const landing = landingData({ readme: read("README.md"), pages, version });
 write(join(dataDir, "landing.json"), JSON.stringify(landing, null, 2));
@@ -120,4 +131,12 @@ if (!existsSync(built)) {
 mkdirSync(vendorDir, { recursive: true });
 copyFileSync(built, join(vendorDir, bundle));
 
+const xslt3 = await buildXslt3Bundle({
+  entry: join(rootDir, "packages", "xslt3", "src", "index.js"),
+  outfile: join(vendorDir, XSLT3_BUNDLE),
+});
+
 console.log(`Site content: ${sources.length} documents, version ${version}.`);
+console.log(
+  `@tradik/xslt3 bundle (XSLT 3.0 and XPath 3.1): ${formatSize(xslt3.raw)} (${formatSize(xslt3.gzip)} gzip).`,
+);

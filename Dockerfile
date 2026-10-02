@@ -14,8 +14,9 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files (the root and every workspace: npm ci needs them all)
 COPY package*.json ./
+COPY packages/xslt3/package.json ./packages/xslt3/
 
 # Install dependencies
 RUN npm ci --ignore-scripts

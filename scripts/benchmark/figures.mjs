@@ -93,7 +93,7 @@ export function speedupChart(list) {
  * @param {number[]} values - Times in ms
  * @returns {{value: number, label: string}[]} Ticks from 1 ms to 100 s
  */
-function timeTicks(values) {
+export function timeTicks(values) {
   const lo = 10 ** Math.floor(Math.log10(Math.min(...values)));
   const hi = 10 ** Math.ceil(Math.log10(Math.max(...values)));
   const labels = ["1 ms", "10 ms", "100 ms", "1 s", "10 s", "100 s"];
@@ -174,7 +174,7 @@ export function timeChart(list) {
  * @param {number} y - Row centre
  * @returns {string[]} Elements
  */
-function directLabels(points, x, y) {
+export function directLabels(points, x, y) {
   const sorted = [...points].sort((a, b) => a.m.medianMs - b.m.medianMs);
   return sorted.map((p, index) => {
     const outward = sorted.length === 1 ? "middle" : ["end", "start"][index];

@@ -47,25 +47,56 @@ marketing:
 minify_html: true
 minify_css: true
 
-# Cache policy of the generated _headers (Cloudflare Pages). ssg caches
-# /css/*, /js/* and /images/* for a year as immutable, which is only safe for
-# content-hashed names. The theme's CSS and JS keep their names, and
-# fingerprint: true breaks the playground's module imports
-# (https://github.com/spagu/ssg/issues/309), so CSS and JS are revalidated on
-# every visit (a 304 when unchanged). Images keep ssg's year: replace an image
-# under a new file name.
-headers:
-  /css/*:
-    Cache-Control: "public, max-age=0, must-revalidate"
-  /js/*:
-    Cache-Control: "public, max-age=0, must-revalidate"
+# Content-hashed CSS and JS names (style.<hash>.css), rewritten in every page
+# and in the playground's ES module imports. The generated _headers caches
+# /css/* and /js/* for a year as immutable, which is safe only with hashed
+# names. Images keep their names: replace an image under a new name.
+# (ssg 1.8.64 or newer: 1.8.63 left some module imports unrewritten, #309.)
+fingerprint: true
+
+# Blog: hand-written posts from site/posts/ (copied by build-content.mjs) at
+# /blog/<slug>/, listed by site/pages/blog.md, with an RSS and an Atom feed.
+# ssg adds the feed autodiscovery <link> tags to every page itself.
+permalinks:
+  post: /blog/:slug/
+feeds:
+  - path: /blog/rss.xml
+    title: "@tradik/xslt-processor blog"
+    format: rss
+  - path: /blog/feed.xml
+    title: "@tradik/xslt-processor blog"
+    format: atom
+
+# Cookie consent: ssg's cookie-consent worker (scaffolded with
+# `ssg new worker cookie-consent` into site/workers/cookie-consent). Its
+# public/ files are served at /cookie-consent.js and .css; its Pages Function
+# /api/consent/geo tells the banner whether the visitor is in the EEA or the
+# UK, where consent is required. variables.cookie_consent is the banner's
+# client configuration; the theme writes it into every page.
+workers:
+  - name: cookie-consent
+    dir: workers/cookie-consent
+    routes_include: [/api/consent/*]
 
 variables:
   # Path prefix of the site on its host, no trailing slash ("" at a root).
   base_path: ""
   repo_url: https://github.com/spagu/XSLT-Processor
   npm_url: https://www.npmjs.com/package/@tradik/xslt-processor
-  # Google Tag Manager container. GTM-XXXXXXX is a placeholder: replace it
-  # with the real container id. The theme renders both halves of the snippet
-  # (head script and body noscript) on every page.
-  gtm_id: GTM-XXXXXXX
+  # Google Analytics 4 measurement id (gtag.js), the site's only tracking, on
+  # every page. It starts in
+  # Consent Mode v2 with every storage type denied; the cookie banner grants
+  # analytics_storage when the visitor accepts the analytics category.
+  ga_id: G-QX8Y8L1B20
+  # Cookie banner (ssg's cookie-consent worker, keys as in its README). No
+  # marketing category: the site runs no advertising. No audit log endpoint:
+  # it needs a CONSENT_LOG KV namespace (see wrangler.snippet.toml).
+  cookie_consent:
+    version: "1"
+    policyUrl: /cookie-policy/
+    position: bottom
+    geoMode: edge
+    expiryDays: 180
+    categories:
+      - { id: necessary, required: true }
+      - { id: analytics }

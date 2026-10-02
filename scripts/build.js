@@ -22,6 +22,10 @@ const rootDir = join(__dirname, "..");
 const srcDir = join(rootDir, "src");
 const distDir = join(rootDir, "dist");
 
+// @tradik/xslt3 (XSLT 2.0/3.0, xsltVersion "auto") is an optional peer
+// dependency loaded with import() at run time: never bundled
+const external = ["@tradik/xslt3"];
+
 // Ensure dist directory exists
 mkdirSync(distDir, { recursive: true });
 
@@ -34,6 +38,7 @@ async function buildAll() {
     entryPoints: [join(srcDir, "index.js")],
     outfile: join(distDir, "xslt-processor.js"),
     bundle: true,
+    external,
     format: "esm",
     platform: "neutral",
     target: ["es2022"],
@@ -46,6 +51,7 @@ async function buildAll() {
     entryPoints: [join(srcDir, "index.js")],
     outfile: join(distDir, "xslt-processor.cjs"),
     bundle: true,
+    external,
     format: "cjs",
     platform: "node",
     target: ["node20"],
@@ -58,6 +64,7 @@ async function buildAll() {
     entryPoints: [join(srcDir, "index.js")],
     outfile: join(distDir, "xslt-processor.browser.js"),
     bundle: true,
+    external,
     format: "iife",
     globalName: "XsltProcessorLib",
     platform: "browser",
@@ -79,6 +86,7 @@ if (typeof window !== 'undefined') {
     entryPoints: [join(srcDir, "index.js")],
     outfile: join(distDir, "xslt-processor.browser.min.js"),
     bundle: true,
+    external,
     format: "iife",
     globalName: "XsltProcessorLib",
     platform: "browser",

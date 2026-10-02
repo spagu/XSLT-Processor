@@ -16,8 +16,12 @@ threat model and how to report a vulnerability are in
 Exceeding a limit throws an `Error` (`Maximum recursion depth exceeded (100)`,
 `Result set exceeds maximum size (10000)`).
 
-These limits apply to the standalone XPath API (`evaluateXPath`, `selectXPath`,
-`selectFirstXPath` always use the defaults; `XPathEvaluator` accepts the options), where expressions may come from untrusted input. Inside an
+These limits apply to the standalone XPath API, where expressions may come
+from untrusted input. `evaluateXPath`, `selectXPath` and `selectFirstXPath`
+use the defaults unless you pass `maxResultSize`, `maxRecursionDepth` or
+`maxStringLength` in their options (since 1.3.0), for example
+`selectXPath("//item", doc, { maxResultSize: 100000 })`; `XPathEvaluator`
+takes the same options. Inside an
 XSLT transformation the stylesheet is trusted program code, so `XsltEngine`
 allows up to 5,000,000 nodes per location step (`XSLT_MAX_RESULT_SIZE`), which
 lets stylesheets process large catalogs and exports, and allows XPath

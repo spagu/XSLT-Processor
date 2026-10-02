@@ -69,7 +69,11 @@ export default [
         performance: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
-        Option: 'readonly'
+        Option: 'readonly',
+        history: 'readonly',
+        location: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly'
       }
     }
   },
@@ -83,6 +87,9 @@ export default [
       'site/content/**',
       'site/data/**',
       'site/static/vendor/**',
+      // Vendored from ssg (ssg new worker cookie-consent): kept as shipped so
+      // an ssg update can replace it; linted upstream
+      'site/workers/**',
       'site/static/assets/**',
       'site/public/**',
       'site/public-local/**'

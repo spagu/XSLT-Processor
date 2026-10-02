@@ -170,6 +170,9 @@ export async function bundleCli(outfile) {
     target: ["node22"],
     minify: true,
     legalComments: "eof",
+    // @tradik/xslt3 is embedded (the workspace package) so that
+    // `--xslt-version auto` runs XSLT 2.0/3.0 stylesheets: users of a
+    // standalone executable cannot npm install it next to the binary
     external: ["canvas"],
     plugins: [singleExecutablePlugin(version)],
     metafile: true,

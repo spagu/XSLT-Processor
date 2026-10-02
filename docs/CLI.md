@@ -17,7 +17,7 @@ together with jsdom, so they behave exactly like `npx xslt`.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/spagu/XSLT-Processor/main/scripts/install.sh | bash
 # pin a version or location:
-XSLT_VERSION=1.2.1 XSLT_INSTALL_DIR=$HOME/.local/bin bash install.sh
+XSLT_VERSION=1.3.0 XSLT_INSTALL_DIR=$HOME/.local/bin bash install.sh
 ```
 
 The installer detects the operating system and CPU, downloads over HTTPS and
@@ -114,10 +114,29 @@ stdout is an interactive terminal is a final newline added if missing.
 | `--indent` | Override `xsl:output` to `indent="yes"` |
 | `--method <m>` | Override the `xsl:output` method (`xml`, `html`, `xhtml`, `text`) |
 | `--no-declaration` | Override `xsl:output` to omit the XML declaration |
+| `--xslt-version <v>` | `1.0` (default): the XSLT 1.0 engine runs every stylesheet, a `version="2.0"` one in forwards-compatible mode. `auto`: a 2.0/3.0 stylesheet runs with `@tradik/xslt3` |
 | `-h, --help` | Show help message |
 | `-v, --version` | Show version number |
 
 A complete example is in [Complete Example](EXAMPLES.md).
+
+## XSLT 2.0 and 3.0
+
+`--xslt-version auto` runs a stylesheet that declares version 2.0 or 3.0
+with [`@tradik/xslt3`](XSLT3.md), installed next to the package
+(`npm install -g @tradik/xslt3`); without it the CLI exits with
+`Cannot load @tradik/xslt3: install @tradik/xslt3 to run XSLT 2.0/3.0 stylesheets`.
+Version 1.0 stylesheets keep the XSLT 1.0 engine. Parameters, `--indent`,
+`--method`, `--no-declaration`, includes and `doc()`/`document()` (confined
+to the base directory) work as for XSLT 1.0, except that a missing
+`doc()`/`document()` file fails the transformation (`FODC0002`). There is no environment
+variable for this flag (`XSLT_VERSION` is used by the install script for the
+release to install). The standalone executables do not contain
+`@tradik/xslt3`.
+
+```bash
+xslt data.xml grouping.xsl --xslt-version auto -p title=Report --indent
+```
 
 ## DOM implementation
 

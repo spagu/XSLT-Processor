@@ -4,6 +4,9 @@
  * Native-compatible XSLTProcessor implementation for browser environments.
  * Based on W3C DOM Level 3 XSL Transformations and XSLT 1.0 Specification.
  *
+ * With the `xsltVersion: "auto"` option, XSLT 2.0/3.0 stylesheets are run by
+ * the optional peer dependency @tradik/xslt3 (see bridge/).
+ *
  * Reference: https://developer.mozilla.org/en-US/docs/Web/API/XSLTProcessor
  * XSLT 1.0: http://www.w3.org/TR/1999/REC-xslt-19991116
  * XPath 1.0: http://www.w3.org/TR/1999/REC-xpath-19991116
@@ -21,6 +24,9 @@ import {
   transformAsync,
   transformToStream,
 } from "./async/processor.js";
+import { createXslt3Engine } from "./bridge/engine.js";
+import { loadXslt3 } from "./bridge/loader.js";
+import { usesXslt3, xsltVersionMode } from "./bridge/version.js";
 
 /**
  * The native XSLTProcessor constructor that installGlobal() replaced, kept so
@@ -54,10 +60,21 @@ export class XSLTProcessor {
    * @param {number} [options.maxTemplateDepth] - Deepest nesting of template
    *   instantiations; deeper recursion throws "Template recursion too deep"
    *   (default 3000, libxslt's limit).
+   * @param {"1.0"|"auto"} [options.xsltVersion] - "1.0" (default): every
+   *   stylesheet runs with the XSLT 1.0 engine, a `version="2.0"` one in
+   *   forwards-compatible mode, as in Chrome. "auto": a stylesheet whose
+   *   version is 2.0 or more runs with @tradik/xslt3 (an optional peer
+   *   dependency, loaded on demand; see {@link XSLTProcessor.preload}).
+   * @throws {RangeError} For an invalid `xsltVersion`
    *
    * @example
    * // Temporary migration aid for stylesheets written against 1.1.x
    * const processor = new XSLTProcessor({ legacyNameTests: true });
+   *
+   * @example
+   * // XSLT 2.0/3.0 stylesheets through the same API
+   * const processor = new XSLTProcessor({ xsltVersion: "auto" });
+   * await processor.importStylesheetAsync(xsl20Doc);
    */
   constructor(options = {}) {
     this._options = {
@@ -65,6 +82,7 @@ export class XSLTProcessor {
       enableDynamicEvaluate: options?.enableDynamicEvaluate === true,
       clock: options?.clock ?? null,
       maxTemplateDepth: options?.maxTemplateDepth,
+      xsltVersion: xsltVersionMode(options?.xsltVersion),
     };
     this._engine = null;
     this._stylesheet = null;
@@ -79,14 +97,41 @@ export class XSLTProcessor {
   }
 
   /**
+   * Load @tradik/xslt3, so that the synchronous API of processors created
+   * with `xsltVersion: "auto"` can run XSLT 2.0/3.0 stylesheets (the
+   * asynchronous API loads it by itself). Non-W3C.
+   *
+   * @param {"2.0"|"3.0"} [version] - The XSLT version to prepare for
+   * @returns {Promise<void>} Resolves once the engine is loaded
+   * @throws {RangeError} For another version (synchronously)
+   * @throws {Error} Rejects with "Cannot load @tradik/xslt3: install
+   *   @tradik/xslt3 to run XSLT 2.0/3.0 stylesheets" when it is missing
+   *
+   * @example
+   * await XSLTProcessor.preload("3.0");
+   * const processor = new XSLTProcessor({ xsltVersion: "auto" });
+   * processor.importStylesheet(xsl30Doc);
+   */
+  static preload(version = "3.0") {
+    if (version !== "2.0" && version !== "3.0") {
+      throw new RangeError(
+        `Invalid XSLT version "${version}": expected "2.0" or "3.0"`,
+      );
+    }
+    return loadXslt3().then(() => undefined);
+  }
+
+  /**
    * The underlying XSLT engine (advanced usage).
    *
    * The engine is created lazily by {@link XSLTProcessor#importStylesheet},
    * so this getter returns `null` until a stylesheet has been imported.
    * Prefer the public {@link XSLTProcessor#setStylesheetLoader} over reaching
-   * into the engine directly.
+   * into the engine directly. A stylesheet run by @tradik/xslt3
+   * (`xsltVersion: "auto"`) has an `Xslt3Engine` (bridge/engine.js).
    *
-   * @returns {import('./xslt/engine.js').XsltEngine|null} The engine, or null before import
+   * @returns {import('./xslt/engine.js').XsltEngine|import('./bridge/engine.js').Xslt3Engine|null}
+   *   The engine, or null before import
    *
    * @example
    * processor.importStylesheet(xslDoc, '/styles/main.xsl');
@@ -196,7 +241,9 @@ export class XSLTProcessor {
    *   omitted, hrefs are passed to the loader unresolved.
    * @returns {void}
    * @throws {Error} When the stylesheet is malformed or invalid, e.g. has an
-   *   invalid pattern (XSLT 1.0 section 5.2)
+   *   invalid pattern (XSLT 1.0 section 5.2), or, with `xsltVersion: "auto"`,
+   *   is an XSLT 2.0/3.0 stylesheet and @tradik/xslt3 has not been loaded
+   *   ({@link XSLTProcessor.preload})
    *
    * @example
    * const parser = new DOMParser();
@@ -275,14 +322,17 @@ export class XSLTProcessor {
       modules = [style],
       documents = null,
     } = preloaded;
-    const engine = new XsltEngine({
+    const engineOptions = {
       legacyNameTests: this._options.legacyNameTests,
       enableDynamicEvaluate: this._options.enableDynamicEvaluate,
       clock: this._options.clock,
       maxTemplateDepth: this._options.maxTemplateDepth,
       stylesheetLoader,
       documentLoader: this._engineDocumentLoader(documents),
-    });
+    };
+    const engine = this._usesXslt3(style)
+      ? createXslt3Engine(style, engineOptions)
+      : new XsltEngine(engineOptions);
 
     // Apply any previously set parameters
     for (const [key, value] of this._parameters) {
@@ -299,6 +349,29 @@ export class XSLTProcessor {
     this._stylesheetUri = stylesheetUri;
     this._modules = modules;
     this._preloadedDocuments = documents;
+  }
+
+  /**
+   * Whether a stylesheet is run by @tradik/xslt3 (`xsltVersion: "auto"` and
+   * version 2.0 or more).
+   *
+   * @param {Node} style - The stylesheet
+   * @returns {boolean} True for @tradik/xslt3
+   * @private
+   */
+  _usesXslt3(style) {
+    return usesXslt3(style, this._options.xsltVersion);
+  }
+
+  /**
+   * Load the engine a stylesheet needs before compiling it (async API).
+   *
+   * @param {Node} style - The stylesheet
+   * @returns {Promise<void>} Resolves once the engine is available
+   * @private
+   */
+  async _prepareEngine(style) {
+    if (this._usesXslt3(style)) await loadXslt3();
   }
 
   /**

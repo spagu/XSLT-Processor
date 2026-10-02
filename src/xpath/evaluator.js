@@ -32,7 +32,7 @@ import {
   DocumentOrderIndex,
   compareDomPositions,
   compareNodeOrder,
-  hasPositionComparison,
+  hasNativePositionComparison,
 } from "./documentOrder.js";
 import { createNodeSetFunctions } from "./nodeSetFunctions.js";
 import {
@@ -254,6 +254,11 @@ export class XPathEvaluator {
       throw new Error("Invalid AST: missing type property");
     }
 
+    // An index created during an earlier evaluation may describe trees
+    // that have changed since; one set with resetDocumentOrder() stays
+    if (this.recursionDepth === 0 && this.ownsDocumentOrder) {
+      this.resetDocumentOrder();
+    }
     this.recursionDepth++;
     if (this.recursionDepth > this.maxRecursionDepth) {
       this.recursionDepth = 0;
@@ -1032,8 +1037,12 @@ export class XPathEvaluator {
    */
   sortByDocumentOrder(nodes) {
     if (nodes.length <= 1) return nodes;
-    if (!this.documentOrder && !hasPositionComparison(nodes[0])) {
+    // Number the trees once per evaluation unless the DOM compares positions
+    // natively: compareDocumentPosition written in JavaScript (xmldom,
+    // jsdom) costs a tree walk per comparison
+    if (!this.documentOrder && !hasNativePositionComparison(nodes[0])) {
       this.documentOrder = new DocumentOrderIndex();
+      this.ownsDocumentOrder = true;
     }
     if (this.documentOrder) return this.documentOrder.sort(nodes);
 
@@ -1053,6 +1062,7 @@ export class XPathEvaluator {
    */
   resetDocumentOrder(index = null) {
     this.documentOrder = index;
+    this.ownsDocumentOrder = false;
   }
 
   /**

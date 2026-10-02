@@ -28,10 +28,12 @@ const MATRIX_TESTS = Object.freeze([
   "src/XSLTProcessor.test.js",
   "src/XSLTProcessor.serialization.test.js",
   "src/async/processor.test.js",
+  "src/bridge/*.test.js",
   "src/regressions.test.js",
   "src/xslt/**/*.test.js",
   "src/cli.test.js",
   "src/cliStreaming.test.js",
+  "src/cliXsltVersion.test.js",
 ]);
 
 /**

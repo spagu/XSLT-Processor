@@ -10,14 +10,15 @@
  *   Google Tag Manager snippet;
  * - accessibility basics: lang, one <main>, one <h1>, no skipped heading
  *   levels, alt on every image, a title on every iframe;
- * - WCAG 2.2 contrast of the colour pairs of css/tokens.css, light and dark.
+ * - WCAG 2.2 contrast of the colour pairs of css/tokens.css (or its
+ *   fingerprinted css/tokens.<hash>.css), light and dark.
  *
  * Usage: node site/scripts/check-site.mjs <output dir> [path prefix]
  * Exits with 1 and lists the problems when a check fails.
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { basename, dirname, extname, join, relative } from "node:path";
 import { URL } from "node:url";
 import { JSDOM } from "jsdom";
 import { contrastProblems, parseTokens } from "./contrast.mjs";
@@ -89,15 +90,21 @@ export function pageProblems(doc) {
   const scripts = [...doc.querySelectorAll("head script")].map(
     (s) => s.textContent,
   );
-  if (!scripts.some((s) => s.includes("googletagmanager.com/gtm.js"))) {
-    problems.push("missing Google Tag Manager <script> in <head>");
+  const gtagLoaded = [...doc.querySelectorAll("head script[src]")].some((s) =>
+    s.getAttribute("src").includes("googletagmanager.com/gtag/js?id="),
+  );
+  if (!gtagLoaded || !scripts.some((s) => s.includes("gtag('config'"))) {
+    problems.push("missing Google Analytics gtag.js in <head>");
   }
-  const noscript = doc.body.querySelector("noscript");
-  if (
-    !noscript ||
-    !noscript.innerHTML.includes("googletagmanager.com/ns.html")
-  ) {
-    problems.push("missing Google Tag Manager <noscript> in <body>");
+  const gtm = [...doc.querySelectorAll("script, noscript")].some((el) =>
+    /googletagmanager\.com\/(gtm\.js|ns\.html)/.test(
+      el.getAttribute("src") ?? el.innerHTML,
+    ),
+  );
+  if (gtm) {
+    problems.push(
+      "Google Tag Manager on the page: the site uses Google Analytics only",
+    );
   }
   if (doc.querySelectorAll("main").length !== 1) {
     problems.push("expected exactly one <main>");
@@ -170,13 +177,40 @@ export function linkProblems(root, prefix, docs) {
  *
  * @param {string} root - Output directory
  * @param {string} [prefix=""] - Path prefix the site is served under
- * @param {string} tokensCss - Contents of css/tokens.css
+ * @param {string} tokensCss - Contents of css/tokens.css (fingerprinted or not)
  * @returns {string[]} Problems
  */
+/**
+ * Path of a built asset by its source name: the file itself, or the
+ * fingerprinted copy ssg writes with `fingerprint: true` (name.<hash8>.ext).
+ *
+ * @param {string} root - Output directory of the site
+ * @param {string} asset - Asset path relative to the root, e.g. "css/tokens.css"
+ * @returns {string} Absolute path of the built file
+ * @throws {Error} When neither form exists
+ */
+export function assetPath(root, asset) {
+  const plain = join(root, asset);
+  if (existsSync(plain)) return plain;
+  const dir = dirname(plain);
+  const ext = extname(asset);
+  const stem = basename(asset, ext);
+  const found =
+    existsSync(dir) &&
+    readdirSync(dir).find(
+      (name) =>
+        name.startsWith(`${stem}.`) &&
+        name.endsWith(ext) &&
+        /^[0-9a-f]{8}$/.test(name.slice(stem.length + 1, -ext.length)),
+    );
+  if (!found) throw new Error(`${asset} not found in ${root}`);
+  return join(dir, found);
+}
+
 export function checkSite(
   root,
   prefix = "",
-  tokensCss = readFileSync(join(root, "css", "tokens.css"), "utf8"),
+  tokensCss = readFileSync(assetPath(root, "css/tokens.css"), "utf8"),
 ) {
   const docs = new Map(
     htmlFiles(root).map((file) => [

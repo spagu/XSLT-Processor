@@ -41,6 +41,21 @@ npm run format:check
 The `Makefile` wraps the same commands (`make test`, `make build`, `make lint`,
 `make docker-test`, ...; `make help` lists them).
 
+## Repository layout
+
+The repository is an npm workspace. The root is the published
+`@tradik/xslt-processor` (XSLT 1.0; `src/`, `bin/`), and `packages/` holds
+further packages, built and tested on their own:
+
+| Directory | Package | Tests |
+|---|---|---|
+| `.` | `@tradik/xslt-processor` | `npm test` |
+| `packages/xslt3` | `@tradik/xslt3` (XSLT 3.0 / XPath 3.1, in development, [design](XSLT3.md)) | `npm run test:xslt3` |
+
+`npm ci` at the root installs every package. A workspace never becomes a
+dependency of `@tradik/xslt-processor`: its tarball holds only `dist/`,
+`src/` and `bin/`.
+
 ## Docker
 
 ```bash
@@ -67,9 +82,29 @@ and a token that enforces 2FA fails in CI with `EOTP`.
 **One-time prerequisite** (npmjs.com -> package `@tradik/xslt-processor` ->
 Settings -> Trusted Publisher): provider *GitHub Actions*, owner `spagu`,
 repository `XSLT-Processor`, workflow `release.yml`, environment left empty.
-Until that is configured the `publish` job fails with `E404`, and the package
-has to be published manually from the tag with
-`npm publish --provenance --access public --otp=CODE`.
+Until that is configured the `publish` job fails with `E404`.
+
+**Publishing by hand** (`scripts/publish.sh`): check out the release tag and
+run `make publish` with the one-time password from your npm authenticator:
+
+```sh
+git checkout v1.3.0
+npm login                  # once
+make publish-dry           # every check, then npm publish --dry-run
+make publish OTP=123456
+```
+
+`@tradik/xslt3` is released from the same tag: `make publish-xslt3-dry` and
+`make publish-xslt3 OTP=123456` run its tests and both W3C suites instead.
+Its first version has to be published this way; afterwards add a Trusted
+Publisher for `@tradik/xslt3` on npmjs.com (same settings as above), and the
+Release workflow publishes both packages, skipping a version npm already has.
+
+It refuses unless the working tree is clean, HEAD is the tag `v<version>` of
+package.json, that version is not on npm yet and you are logged in; then it
+installs from the lockfile, builds, runs the tests and the libxslt
+conformance suite, and publishes. A manual release has no provenance
+attestation (only CI can sign one).
 
 **Release process:**
 
@@ -144,8 +179,54 @@ same workflow publishes `site/redirect/index.html` to GitHub Pages as
 `index.html` and `404.html`, which sends every old URL to the same path on
 the new domain (Settings > Pages > Source stays "GitHub Actions").
 
-The Google Tag Manager container id is a placeholder (`variables.gtm_id` in
-`site/ssg.yaml`).
+The blog lives in `site/posts/`: one Markdown file per article, with
+frontmatter `title`, `description` (also the summary in the list and the
+feeds), `slug`, `status: publish`, `type: post` and `date` (ISO 8601; posts on
+the same day are ordered by time). `build-content.mjs` copies the posts into
+the ssg content, ssg publishes them at `/blog/<slug>/`, lists them on `/blog/`
+(`site/pages/blog.md`, layout `layouts/blog.html`) and writes the feeds
+`/blog/rss.xml` (RSS 2.0) and `/blog/feed.xml` (Atom). Charts for articles go
+in `site/templates/xslt-site/images/blog/` as SVG with light and dark colours,
+referenced relative to the post (`../../images/blog/chart.svg`). Don't add
+`tags:` to posts: the theme has no tag archive template.
+
+The playground has three modes, kept in the address (`?mode=xslt3`,
+`?mode=xpath`; XSLT 1.0 has no parameter) and remembered in localStorage.
+XSLT 1.0 uses `dist/xslt-processor.browser.min.js` (copied to
+`site/static/vendor/`, so run `npm run build` first). XSLT 3.0 and XPath 3.1
+use `@tradik/xslt3`, which `site/scripts/vendor.mjs` bundles with esbuild from
+`packages/xslt3/src/` into `site/static/vendor/xslt3.browser.min.js` (one
+minified ES module for both modes; `npm run site:content` prints its size).
+The page loads it with `import()` the first time one of those two modes runs
+(`playground-library.js`). XSLT 1.0 and 3.0 share the XML, stylesheet and
+parameter editors (`playground-stylesheet.js`), and a link runs the current
+stylesheet with the other engine. The mode logic lives in
+`site/templates/xslt-site/js/`: `playground-modes.js`, `xslt3-core.js` (compile,
+transform and serialize with `xsl:output`, `xsl:result-document` outputs,
+`xsl:message`, errors with their code and a line guess), `xslt3-presets*.js`,
+`xpath-core.js`, `xpath-items.js` and `xpath-presets.js`. Tests:
+`site/scripts/xslt3.test.mjs`, `xpath.test.mjs` and `vendor.test.mjs` run
+every example under jsdom; `playground-ui.test.mjs` covers the shared page
+helpers. A new XSLT 3.0 example goes in one of the `xslt3-presets*.js` files
+with a test of its output.
+
+**Cookie consent** comes from ssg's cookie-consent worker in
+`site/workers/cookie-consent/` (scaffolded with `ssg new worker
+cookie-consent`; see its README). `variables.cookie_consent` in
+`site/ssg.yaml` configures the banner; the theme writes it into every page
+with `/cookie-consent.js` and `.css`. The banner opens by itself in the EEA
+and the UK: the Pages Function `/api/consent/geo` answers from the visitor's
+country (without the Function, as in a local preview, it always opens). Google
+Analytics starts in Consent Mode v2 with storage denied. The policy page is `site/pages/cookie-policy.md`; list any new cookie
+there. ssg copies the worker's `functions/` into `site/public`, so the site is
+deployed from that directory (`make site-deploy`, and the Site workflow's
+`workingDirectory`), where wrangler builds the Functions.
+
+Google Analytics 4 runs on every page with the measurement id in
+`variables.ga_id` (`site/ssg.yaml`); the redirect page in `site/redirect/`
+has the same id written in. It is the site's only tracking: there is no Google
+Tag Manager, and `check-site.mjs` fails a page that lacks the Google Analytics
+snippet or carries a Tag Manager one.
 
 ## DOM matrix
 
@@ -158,3 +239,5 @@ the conformance suite with jsdom and with @xmldom/xmldom.
 ## Benchmarks
 
 `npm run bench` (about 6 minutes) measures 1.1.3 against the working tree and writes `scripts/benchmark/results.json`; `node scripts/benchmark/charts.mjs` redraws `docs/benchmarks/*.svg` and the tables in [BENCHMARKS.md](BENCHMARKS.md).
+
+`npm run bench -- --suite xpath` and `npm run bench -- --suite xslt` run the XPath 1.0 vs 3.1 and the XSLT 1.0 package vs @tradik/xslt3 benchmarks (`--suite release`, the default, is the one above); `node scripts/benchmark/charts.mjs --suite xpath` or `--suite xslt` redraws their charts and sections. `npm run test:bench` runs the unit tests of the benchmark helpers.

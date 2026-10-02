@@ -57,3 +57,5 @@ temp/
 
 # Wrangler (Cloudflare Pages) local state
 .wrangler/
+# Starter wrangler config ssg writes next to its config on --watch when workers are set
+site/wrangler.toml

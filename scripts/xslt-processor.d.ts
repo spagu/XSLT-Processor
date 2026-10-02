@@ -107,6 +107,9 @@ export interface TransformAsyncOptions {
   fetchDocument?: AsyncLoader;
 }
 
+/** The `xsltVersion` option of XSLTProcessor. */
+export type XsltVersionMode = "1.0" | "auto";
+
 /**
  * XSLTProcessor - Applies XSLT stylesheet transformations to XML documents.
  */
@@ -127,11 +130,31 @@ export class XSLTProcessor {
      * "Template recursion too deep" (default 3000, as in libxslt).
      */
     maxTemplateDepth?: number;
+    /**
+     * "1.0" (default): every stylesheet runs with the XSLT 1.0 engine, a
+     * version="2.0" one in forwards-compatible mode (as in Chrome).
+     * "auto": a stylesheet whose version is 2.0 or more runs with the
+     * optional peer dependency @tradik/xslt3, loaded with import() by the
+     * asynchronous API or by {@link XSLTProcessor.preload}.
+     * @throws RangeError for any other value
+     */
+    xsltVersion?: XsltVersionMode;
   });
 
   /**
+   * Load @tradik/xslt3 so that the synchronous API of processors created
+   * with `xsltVersion: "auto"` can run XSLT 2.0/3.0 stylesheets (non-W3C).
+   * Rejects with "Cannot load @tradik/xslt3: install @tradik/xslt3 to run
+   * XSLT 2.0/3.0 stylesheets" when the package is missing.
+   * @param version - "3.0" (default) or "2.0"
+   */
+  static preload(version?: "2.0" | "3.0"): Promise<void>;
+
+  /**
    * The underlying XSLT engine (advanced usage).
-   * Null until a stylesheet has been imported.
+   * Null until a stylesheet has been imported. With `xsltVersion: "auto"`
+   * and an XSLT 2.0/3.0 stylesheet it is the @tradik/xslt3 bridge engine,
+   * which has `outputSettings` but not the other XsltEngine members.
    */
   readonly engine: XsltEngine | null;
 

@@ -159,6 +159,21 @@ img {
   margin: 0;
 }
 
+/* A button that looks like a link: "Cookie settings" opens the consent dialog */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration-thickness: 2px;
+}
+
 /* Buttons */
 
 .button {
@@ -320,4 +335,52 @@ img {
     scroll-behavior: auto !important;
     transition: none !important;
   }
+}
+
+/* Blog: the index and articles (post.html, layouts/blog.html) */
+
+.post {
+  padding-block: var(--space-5);
+}
+
+.post .prose {
+  max-width: 46rem;
+}
+
+.post-meta {
+  margin: 0 0 var(--space-2);
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.post-list {
+  max-width: 46rem;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.post-list li + li {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.post-list h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 1.35rem;
+}
+
+.post .prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-block: var(--space-4);
+  border-radius: var(--radius);
+}
+
+.post-follow {
+  max-width: 46rem;
+  margin-top: var(--space-5);
+  color: var(--color-muted);
 }
