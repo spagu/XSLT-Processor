@@ -33,12 +33,15 @@ export function formatSize(bytes) {
  * @param {object} options - Paths
  * @param {string} options.entry - The package entry (packages/xslt3/src/index.js)
  * @param {string} options.outfile - Where to write the bundle
+ * @param {string[]} [options.external] - Packages left as imports (the 1.0
+ *   package's dynamic `import("@tradik/xslt3")` stays out of its bundle)
  * @returns {Promise<{ raw: number, gzip: number }>} Size of the bundle in
  *   bytes, as written and gzip-compressed
  */
-export async function buildXslt3Bundle({ entry, outfile }) {
+export async function buildXslt3Bundle({ entry, outfile, external = [] }) {
   await build({
     entryPoints: [entry],
+    external,
     outfile,
     bundle: true,
     format: "esm",

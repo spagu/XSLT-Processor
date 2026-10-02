@@ -1,8 +1,8 @@
 # XSLT 2.0 and 3.0: design decision
 
-Status: **in development**, nothing released yet. This page records how
-XSLT 2.0, XSLT 3.0 and XPath 3.1 are being added and why; it changes when the
-plan does.
+Status: **released**, `@tradik/xslt3` 1.0.0 alongside
+`@tradik/xslt-processor` 1.3.0. This page records how XSLT 2.0, XSLT 3.0 and
+XPath 3.1 were added, why, and how far the engine conforms.
 
 ## Decision
 

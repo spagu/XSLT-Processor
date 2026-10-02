@@ -38,7 +38,7 @@ export function xsltMethod(env) {
   const lines = [
     `- Machine: ${env.cpu}, ${env.cores} logical cores, ${env.ramGb} GB RAM, ${env.os}`,
     `- Node.js ${env.node.replace(/^v/, "")}; DOM: jsdom ${env.dom.jsdom}, @xmldom/xmldom ${env.dom.xmldom}`,
-    `- Engines: ${one[0]} ${one[1]} (\`${env.entries[one[0]]}\`), ${three[0]} ${three[1]} (\`${env.entries[three[0]]}\`, in development)`,
+    `- Engines: ${one[0]} ${one[1]} (\`${env.entries[one[0]]}\`), ${three[0]} ${three[1]} (\`${env.entries[three[0]]}\`)`,
     `- Runs: ${env.warmup} warm-up + ${env.runs} measured per phase (compile, then transform), each scenario, DOM and engine in its own process; a run over ${env.timeoutMs / 1000} s counts as a timeout. Phases slower than 10 s per run use 1 warm-up + 3 runs`,
     `- Recorded ${env.date.slice(0, 10)}; the whole run took ${env.durationMin} minutes`,
   ];

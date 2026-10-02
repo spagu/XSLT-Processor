@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="412" viewBox="0 0 720 412" role="img" aria-labelledby="t d">
 <title id="t">XPath median time per scenario on jsdom, 1.0 package and xslt3 (log scale)</title>
-<desc id="d">Median time of each compiled expression on jsdom: xslt3 (XPath 3.1) is slower than the 1.0 package (XPath 1.0) in 8 of 11 scenarios.</desc>
+<desc id="d">Median time of each compiled expression on jsdom: xslt3 (XPath 3.1) is slower than the 1.0 package (XPath 1.0) in 0 of 11 scenarios.</desc>
 <style>
 svg{--surface:#ffffff;--text:#1f2937;--muted:#5f6368;--grid:#e8eaed;--axis:#bdc1c6;--new:#2a78d6;--old:#eb6834;
 font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
@@ -27,50 +27,50 @@ font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:12px}
 <text class="t2" x="516.7" y="402" text-anchor="middle">100 ms</text>
 <line class="grid" x1="650" x2="650" y1="78" y2="386"/>
 <text class="t2" x="650" y="402" text-anchor="middle">1 s</text>
-<text class="t1" x="234" y="96" text-anchor="end">//a | //b</text>
-<line class="link" x1="551" x2="589.9" y1="92" y2="92"/>
-<circle class="new ring" cx="551" cy="92" r="5"><title>//a | //b, 1.0 package on jsdom: median 181 ms</title></circle>
-<circle class="old ring" cx="589.9" cy="92" r="5"><title>//a | //b, xslt3 on jsdom: median 354 ms</title></circle>
-<text class="t2" x="551" y="82" text-anchor="end">1.0 package</text>
-<text class="t2" x="589.9" y="82" text-anchor="start">xslt3</text>
-<text class="t1" x="234" y="124" text-anchor="end">//item[last()]</text>
-<line class="link" x1="505.3" x2="556" y1="120" y2="120"/>
-<circle class="new ring" cx="505.3" cy="120" r="5"><title>//item[last()], 1.0 package on jsdom: median 82 ms</title></circle>
-<circle class="old ring" cx="556" cy="120" r="5"><title>//item[last()], xslt3 on jsdom: median 197 ms</title></circle>
-<text class="t1" x="234" y="152" text-anchor="end">//item[contains(name, 'abc')]</text>
-<line class="link" x1="534.5" x2="552.4" y1="148" y2="148"/>
-<circle class="new ring" cx="534.5" cy="148" r="5"><title>//item[contains(name, 'abc')], 1.0 package on jsdom: median 136 ms</title></circle>
-<circle class="old ring" cx="552.4" cy="148" r="5"><title>//item[contains(name, 'abc')], xslt3 on jsdom: median 185 ms</title></circle>
+<text class="t1" x="234" y="96" text-anchor="end">sum(//item/@price)</text>
+<line class="link" x1="559.1" x2="480.8" y1="92" y2="92"/>
+<circle class="new ring" cx="559.1" cy="92" r="5"><title>sum(//item/@price), 1.0 package on jsdom: median 208 ms</title></circle>
+<circle class="old ring" cx="480.8" cy="92" r="5"><title>sum(//item/@price), xslt3 on jsdom: median 54 ms</title></circle>
+<text class="t2" x="480.8" y="82" text-anchor="end">xslt3</text>
+<text class="t2" x="559.1" y="82" text-anchor="start">1.0 package</text>
+<text class="t1" x="234" y="124" text-anchor="end">//a | //b</text>
+<line class="link" x1="558" x2="503.4" y1="120" y2="120"/>
+<circle class="new ring" cx="558" cy="120" r="5"><title>//a | //b, 1.0 package on jsdom: median 204 ms</title></circle>
+<circle class="old ring" cx="503.4" cy="120" r="5"><title>//a | //b, xslt3 on jsdom: median 79 ms</title></circle>
+<text class="t1" x="234" y="152" text-anchor="end">count(//item[@price &gt; 50])</text>
+<line class="link" x1="553.9" x2="477.5" y1="148" y2="148"/>
+<circle class="new ring" cx="553.9" cy="148" r="5"><title>count(//item[@price &gt; 50]), 1.0 package on jsdom: median 190 ms</title></circle>
+<circle class="old ring" cx="477.5" cy="148" r="5"><title>count(//item[@price &gt; 50]), xslt3 on jsdom: median 51 ms</title></circle>
 <text class="t1" x="234" y="180" text-anchor="end">translate/concat/substring × 20,000</text>
-<line class="link" x1="549.7" x2="551.8" y1="176" y2="176"/>
-<circle class="new ring" cx="549.7" cy="176" r="5"><title>translate/concat/substring × 20,000, 1.0 package on jsdom: median 177 ms</title></circle>
-<circle class="old ring" cx="551.8" cy="176" r="5"><title>translate/concat/substring × 20,000, xslt3 on jsdom: median 184 ms</title></circle>
-<text class="t1" x="234" y="208" text-anchor="end">sum(//item/@price)</text>
-<line class="link" x1="543.1" x2="551" y1="204" y2="204"/>
-<circle class="new ring" cx="543.1" cy="204" r="5"><title>sum(//item/@price), 1.0 package on jsdom: median 158 ms</title></circle>
-<circle class="old ring" cx="551" cy="204" r="5"><title>sum(//item/@price), xslt3 on jsdom: median 181 ms</title></circle>
-<text class="t1" x="234" y="236" text-anchor="end">count(//item[@price &gt; 50])</text>
-<line class="link" x1="540.3" x2="550.8" y1="232" y2="232"/>
-<circle class="new ring" cx="540.3" cy="232" r="5"><title>count(//item[@price &gt; 50]), 1.0 package on jsdom: median 150 ms</title></circle>
-<circle class="old ring" cx="550.8" cy="232" r="5"><title>count(//item[@price &gt; 50]), xslt3 on jsdom: median 180 ms</title></circle>
-<text class="t1" x="234" y="264" text-anchor="end">//item[@id = 'i10000']</text>
-<line class="link" x1="537.7" x2="542.1" y1="260" y2="260"/>
-<circle class="new ring" cx="537.7" cy="260" r="5"><title>//item[@id = 'i10000'], 1.0 package on jsdom: median 144 ms</title></circle>
-<circle class="old ring" cx="542.1" cy="260" r="5"><title>//item[@id = 'i10000'], xslt3 on jsdom: median 155 ms</title></circle>
+<line class="link" x1="553.2" x2="522.7" y1="176" y2="176"/>
+<circle class="new ring" cx="553.2" cy="176" r="5"><title>translate/concat/substring × 20,000, 1.0 package on jsdom: median 188 ms</title></circle>
+<circle class="old ring" cx="522.7" cy="176" r="5"><title>translate/concat/substring × 20,000, xslt3 on jsdom: median 111 ms</title></circle>
+<text class="t1" x="234" y="208" text-anchor="end">//item[contains(name, 'abc')]</text>
+<line class="link" x1="550" x2="478.5" y1="204" y2="204"/>
+<circle class="new ring" cx="550" cy="204" r="5"><title>//item[contains(name, 'abc')], 1.0 package on jsdom: median 178 ms</title></circle>
+<circle class="old ring" cx="478.5" cy="204" r="5"><title>//item[contains(name, 'abc')], xslt3 on jsdom: median 52 ms</title></circle>
+<text class="t1" x="234" y="236" text-anchor="end">//item[@id = 'i10000']</text>
+<line class="link" x1="541.8" x2="462.4" y1="232" y2="232"/>
+<circle class="new ring" cx="541.8" cy="232" r="5"><title>//item[@id = 'i10000'], 1.0 package on jsdom: median 154 ms</title></circle>
+<circle class="old ring" cx="462.4" cy="232" r="5"><title>//item[@id = 'i10000'], xslt3 on jsdom: median 39 ms</title></circle>
+<text class="t1" x="234" y="264" text-anchor="end">(//item)[1000]</text>
+<line class="link" x1="532.9" x2="430.1" y1="260" y2="260"/>
+<circle class="new ring" cx="532.9" cy="260" r="5"><title>(//item)[1000], 1.0 package on jsdom: median 132 ms</title></circle>
+<circle class="old ring" cx="430.1" cy="260" r="5"><title>(//item)[1000], xslt3 on jsdom: median 22 ms</title></circle>
 <text class="t1" x="234" y="292" text-anchor="end">//item</text>
-<line class="link" x1="508.9" x2="511.9" y1="288" y2="288"/>
-<circle class="new ring" cx="508.9" cy="288" r="5"><title>//item, 1.0 package on jsdom: median 87 ms</title></circle>
-<circle class="old ring" cx="511.9" cy="288" r="5"><title>//item, xslt3 on jsdom: median 92 ms</title></circle>
-<text class="t1" x="234" y="320" text-anchor="end">(//item)[1000]</text>
-<line class="link" x1="511.3" x2="500.1" y1="316" y2="316"/>
-<circle class="new ring" cx="511.3" cy="316" r="5"><title>(//item)[1000], 1.0 package on jsdom: median 91 ms</title></circle>
-<circle class="old ring" cx="500.1" cy="316" r="5"><title>(//item)[1000], xslt3 on jsdom: median 75 ms</title></circle>
+<line class="link" x1="528.8" x2="430.4" y1="288" y2="288"/>
+<circle class="new ring" cx="528.8" cy="288" r="5"><title>//item, 1.0 package on jsdom: median 123 ms</title></circle>
+<circle class="old ring" cx="430.4" cy="288" r="5"><title>//item, xslt3 on jsdom: median 23 ms</title></circle>
+<text class="t1" x="234" y="320" text-anchor="end">//item[last()]</text>
+<line class="link" x1="505.1" x2="445.4" y1="316" y2="316"/>
+<circle class="new ring" cx="505.1" cy="316" r="5"><title>//item[last()], 1.0 package on jsdom: median 82 ms</title></circle>
+<circle class="old ring" cx="445.4" cy="316" r="5"><title>//item[last()], xslt3 on jsdom: median 29 ms</title></circle>
 <text class="t1" x="234" y="348" text-anchor="end">following-sibling::item[1] × 20,000</text>
-<line class="link" x1="494.6" x2="449.9" y1="344" y2="344"/>
-<circle class="new ring" cx="494.6" cy="344" r="5"><title>following-sibling::item[1] × 20,000, 1.0 package on jsdom: median 68 ms</title></circle>
-<circle class="old ring" cx="449.9" cy="344" r="5"><title>following-sibling::item[1] × 20,000, xslt3 on jsdom: median 32 ms</title></circle>
+<line class="link" x1="494.4" x2="425.6" y1="344" y2="344"/>
+<circle class="new ring" cx="494.4" cy="344" r="5"><title>following-sibling::item[1] × 20,000, 1.0 package on jsdom: median 68 ms</title></circle>
+<circle class="old ring" cx="425.6" cy="344" r="5"><title>following-sibling::item[1] × 20,000, xslt3 on jsdom: median 21 ms</title></circle>
 <text class="t1" x="234" y="376" text-anchor="end">ancestor::* from 1,000 deep nodes</text>
-<line class="link" x1="383" x2="361.4" y1="372" y2="372"/>
-<circle class="new ring" cx="383" cy="372" r="5"><title>ancestor::* from 1,000 deep nodes, 1.0 package on jsdom: median 9.9 ms</title></circle>
-<circle class="old ring" cx="361.4" cy="372" r="5"><title>ancestor::* from 1,000 deep nodes, xslt3 on jsdom: median 6.8 ms</title></circle>
+<line class="link" x1="387.3" x2="364" y1="372" y2="372"/>
+<circle class="new ring" cx="387.3" cy="372" r="5"><title>ancestor::* from 1,000 deep nodes, 1.0 package on jsdom: median 11 ms</title></circle>
+<circle class="old ring" cx="364" cy="372" r="5"><title>ancestor::* from 1,000 deep nodes, xslt3 on jsdom: median 7.2 ms</title></circle>
 </svg>

@@ -94,6 +94,12 @@ make publish-dry           # every check, then npm publish --dry-run
 make publish OTP=123456
 ```
 
+`@tradik/xslt3` is released from the same tag: `make publish-xslt3-dry` and
+`make publish-xslt3 OTP=123456` run its tests and both W3C suites instead.
+Its first version has to be published this way; afterwards add a Trusted
+Publisher for `@tradik/xslt3` on npmjs.com (same settings as above), and the
+Release workflow publishes both packages, skipping a version npm already has.
+
 It refuses unless the working tree is clean, HEAD is the tag `v<version>` of
 package.json, that version is not on npm yet and you are logged in; then it
 installs from the lockfile, builds, runs the tests and the libxslt

@@ -97,7 +97,13 @@ export async function measureStartup(tmp, settings) {
   const rows = [];
   for (const [engine, entry] of Object.entries(ENTRIES)) {
     const outfile = join(tmp, `${engine.replaceAll(" ", "-")}.min.js`);
-    await buildXslt3Bundle({ entry: join(REPO_ROOT, entry), outfile });
+    // As in scripts/build.js: the 1.0 package loads @tradik/xslt3 with
+    // import() only for 2.0/3.0 stylesheets, so it is not part of its bundle
+    await buildXslt3Bundle({
+      entry: join(REPO_ROOT, entry),
+      outfile,
+      external: entry.startsWith("src/") ? ["@tradik/xslt3"] : [],
+    });
     const row = {
       engine,
       entry,

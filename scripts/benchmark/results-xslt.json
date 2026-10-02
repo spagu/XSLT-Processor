@@ -1,6 +1,6 @@
 {
   "environment": {
-    "date": "2026-10-02T05:38:48.735Z",
+    "date": "2026-10-02T07:52:07.799Z",
     "cpu": "AMD Ryzen 9 7950X 16-Core Processor",
     "cores": 32,
     "ramGb": 31,
@@ -9,11 +9,11 @@
     "runs": 7,
     "warmup": 2,
     "timeoutMs": 120000,
-    "durationMin": 20.62,
-    "provisional": true,
+    "durationMin": 8.25,
+    "provisional": false,
     "engines": {
-      "1.0 package": "1.2.1",
-      "xslt3": "0.0.0"
+      "1.0 package": "1.3.0",
+      "xslt3": "1.0.0"
     },
     "entries": {
       "1.0 package": "src/index.js",
@@ -46,36 +46,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.75,
-              "p95Ms": 0.95,
-              "minMs": 0.65
+              "medianMs": 0.71,
+              "p95Ms": 0.89,
+              "minMs": 0.62
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 2649.75,
-              "p95Ms": 2697.9,
-              "minMs": 2611.65
+              "medianMs": 2676.69,
+              "p95Ms": 2749.77,
+              "minMs": 2662.93
             },
-            "maxRssMb": 654
+            "maxRssMb": 661
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 2.13,
-              "p95Ms": 2.92,
-              "minMs": 1.88
+              "medianMs": 2.52,
+              "p95Ms": 2.72,
+              "minMs": 2.23
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 2570.19,
-              "p95Ms": 2601.55,
-              "minMs": 2550.14
+              "medianMs": 2664.41,
+              "p95Ms": 2731.99,
+              "minMs": 2596.67
             },
-            "maxRssMb": 605
+            "maxRssMb": 614
           }
         },
         "xmldom": {
@@ -84,16 +84,16 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.55,
-              "p95Ms": 0.73,
-              "minMs": 0.47
+              "medianMs": 0.54,
+              "p95Ms": 0.68,
+              "minMs": 0.49
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 990.54,
-              "p95Ms": 1021.41,
-              "minMs": 956.58
+              "medianMs": 972.03,
+              "p95Ms": 1014.4,
+              "minMs": 956.16
             },
             "maxRssMb": 485
           },
@@ -102,18 +102,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1.92,
-              "p95Ms": 2.46,
-              "minMs": 1.72
+              "medianMs": 2.19,
+              "p95Ms": 2.61,
+              "minMs": 1.85
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1090.51,
-              "p95Ms": 1101.81,
-              "minMs": 1082.37
+              "medianMs": 1042.23,
+              "p95Ms": 1075.34,
+              "minMs": 1027.05
             },
-            "maxRssMb": 444
+            "maxRssMb": 443
           }
         }
       }
@@ -134,36 +134,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.45,
-              "p95Ms": 0.53,
-              "minMs": 0.41
+              "medianMs": 0.53,
+              "p95Ms": 0.61,
+              "minMs": 0.45
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 159.23,
-              "p95Ms": 166.23,
-              "minMs": 156.06
+              "medianMs": 156.6,
+              "p95Ms": 172.28,
+              "minMs": 152.37
             },
-            "maxRssMb": 270
+            "maxRssMb": 278
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.93,
-              "p95Ms": 1.04,
-              "minMs": 0.78
+              "medianMs": 0.85,
+              "p95Ms": 0.9,
+              "minMs": 0.72
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 106.81,
-              "p95Ms": 121.41,
-              "minMs": 101.01
+              "medianMs": 102.25,
+              "p95Ms": 110.44,
+              "minMs": 99.09
             },
-            "maxRssMb": 251
+            "maxRssMb": 260
           }
         },
         "xmldom": {
@@ -172,34 +172,34 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.3,
-              "p95Ms": 0.34,
-              "minMs": 0.3
+              "medianMs": 0.32,
+              "p95Ms": 0.53,
+              "minMs": 0.28
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 72.11,
-              "p95Ms": 85.62,
-              "minMs": 68.29
+              "medianMs": 69.95,
+              "p95Ms": 85.74,
+              "minMs": 65.61
             },
-            "maxRssMb": 186
+            "maxRssMb": 187
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.71,
-              "p95Ms": 0.83,
-              "minMs": 0.48
+              "medianMs": 0.59,
+              "p95Ms": 0.78,
+              "minMs": 0.49
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 39.45,
-              "p95Ms": 54.91,
-              "minMs": 37.84
+              "medianMs": 43.54,
+              "p95Ms": 54.45,
+              "minMs": 39.88
             },
             "maxRssMb": 203
           }
@@ -223,35 +223,35 @@
               "warmup": 2,
               "runs": 7,
               "medianMs": 0.49,
-              "p95Ms": 0.65,
+              "p95Ms": 0.76,
               "minMs": 0.43
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 140.36,
-              "p95Ms": 142.85,
-              "minMs": 134.22
+              "medianMs": 133.48,
+              "p95Ms": 141.31,
+              "minMs": 131.79
             },
-            "maxRssMb": 253
+            "maxRssMb": 262
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1.16,
-              "p95Ms": 1.77,
-              "minMs": 1.08
+              "medianMs": 1.08,
+              "p95Ms": 1.24,
+              "minMs": 0.96
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 135.48,
-              "p95Ms": 139.58,
-              "minMs": 134.7
+              "medianMs": 136.44,
+              "p95Ms": 144.43,
+              "minMs": 131.8
             },
-            "maxRssMb": 274
+            "maxRssMb": 282
           }
         },
         "xmldom": {
@@ -261,33 +261,33 @@
               "warmup": 2,
               "runs": 7,
               "medianMs": 0.31,
-              "p95Ms": 0.36,
-              "minMs": 0.3
+              "p95Ms": 0.49,
+              "minMs": 0.29
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 67.08,
-              "p95Ms": 85.17,
-              "minMs": 61.1
+              "medianMs": 70.77,
+              "p95Ms": 86.51,
+              "minMs": 64.89
             },
-            "maxRssMb": 151
+            "maxRssMb": 150
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.76,
-              "p95Ms": 0.97,
-              "minMs": 0.61
+              "medianMs": 0.75,
+              "p95Ms": 0.91,
+              "minMs": 0.58
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 80.14,
-              "p95Ms": 100.72,
-              "minMs": 74.88
+              "medianMs": 79.8,
+              "p95Ms": 99.81,
+              "minMs": 77.07
             },
             "maxRssMb": 150
           }
@@ -311,17 +311,17 @@
               "warmup": 2,
               "runs": 7,
               "medianMs": 0.5,
-              "p95Ms": 0.57,
-              "minMs": 0.46
+              "p95Ms": 0.7,
+              "minMs": 0.44
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 84.29,
-              "p95Ms": 90.66,
-              "minMs": 81.65
+              "medianMs": 82.59,
+              "p95Ms": 84.02,
+              "minMs": 78.57
             },
-            "maxRssMb": 237
+            "maxRssMb": 230
           },
           "xslt3": {
             "status": "ok",
@@ -329,17 +329,17 @@
               "warmup": 2,
               "runs": 7,
               "medianMs": 0.78,
-              "p95Ms": 0.93,
-              "minMs": 0.66
+              "p95Ms": 0.96,
+              "minMs": 0.68
             },
             "transform": {
-              "warmup": 1,
-              "runs": 3,
-              "medianMs": 41442.63,
-              "p95Ms": 41861.27,
-              "minMs": 39708.46
+              "warmup": 2,
+              "runs": 7,
+              "medianMs": 33.35,
+              "p95Ms": 35.51,
+              "minMs": 31.12
             },
-            "maxRssMb": 263
+            "maxRssMb": 243
           }
         },
         "xmldom": {
@@ -348,34 +348,34 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.4,
-              "p95Ms": 0.51,
+              "medianMs": 0.34,
+              "p95Ms": 0.41,
               "minMs": 0.3
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 28.57,
-              "p95Ms": 36.25,
-              "minMs": 26.76
+              "medianMs": 29.82,
+              "p95Ms": 35.98,
+              "minMs": 26.59
             },
-            "maxRssMb": 129
+            "maxRssMb": 128
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.55,
-              "p95Ms": 0.6,
-              "minMs": 0.39
+              "medianMs": 0.5,
+              "p95Ms": 0.62,
+              "minMs": 0.43
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 10261.52,
-              "p95Ms": 10530.05,
-              "minMs": 9987.44
+              "medianMs": 21.58,
+              "p95Ms": 25.13,
+              "minMs": 21.01
             },
             "maxRssMb": 146
           }
@@ -398,36 +398,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.45,
-              "p95Ms": 0.5,
-              "minMs": 0.39
+              "medianMs": 0.47,
+              "p95Ms": 0.73,
+              "minMs": 0.41
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 104.97,
-              "p95Ms": 110.51,
-              "minMs": 101.54
+              "medianMs": 105.75,
+              "p95Ms": 110.36,
+              "minMs": 100.88
             },
-            "maxRssMb": 249
+            "maxRssMb": 258
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.78,
-              "p95Ms": 1.1,
-              "minMs": 0.67
+              "medianMs": 0.74,
+              "p95Ms": 0.8,
+              "minMs": 0.66
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 22.94,
-              "p95Ms": 24.27,
-              "minMs": 22.19
+              "medianMs": 22.67,
+              "p95Ms": 24.37,
+              "minMs": 22.14
             },
-            "maxRssMb": 203
+            "maxRssMb": 208
           }
         },
         "xmldom": {
@@ -436,16 +436,16 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.27,
-              "p95Ms": 0.28,
+              "medianMs": 0.26,
+              "p95Ms": 0.29,
               "minMs": 0.25
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 50.88,
-              "p95Ms": 86.65,
-              "minMs": 43.62
+              "medianMs": 50.81,
+              "p95Ms": 59.95,
+              "minMs": 41.66
             },
             "maxRssMb": 152
           },
@@ -454,18 +454,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.52,
-              "p95Ms": 0.99,
-              "minMs": 0.4
+              "medianMs": 0.43,
+              "p95Ms": 0.5,
+              "minMs": 0.39
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 6.84,
-              "p95Ms": 10.37,
-              "minMs": 6.58
+              "medianMs": 7.88,
+              "p95Ms": 9.59,
+              "minMs": 6.64
             },
-            "maxRssMb": 112
+            "maxRssMb": 113
           }
         }
       }
@@ -486,36 +486,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.48,
-              "p95Ms": 0.59,
-              "minMs": 0.44
+              "medianMs": 0.46,
+              "p95Ms": 0.5,
+              "minMs": 0.42
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 404.1,
-              "p95Ms": 419.43,
-              "minMs": 399.02
+              "medianMs": 410.39,
+              "p95Ms": 421.19,
+              "minMs": 402.17
             },
-            "maxRssMb": 301
+            "maxRssMb": 308
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.96,
-              "p95Ms": 1.77,
-              "minMs": 0.85
+              "medianMs": 0.95,
+              "p95Ms": 1.12,
+              "minMs": 0.78
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 172.09,
-              "p95Ms": 179.4,
-              "minMs": 161.7
+              "medianMs": 164.79,
+              "p95Ms": 178.82,
+              "minMs": 154.71
             },
-            "maxRssMb": 282
+            "maxRssMb": 292
           }
         },
         "xmldom": {
@@ -524,36 +524,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.34,
-              "p95Ms": 0.45,
-              "minMs": 0.34
+              "medianMs": 0.35,
+              "p95Ms": 0.4,
+              "minMs": 0.32
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 191.79,
-              "p95Ms": 200,
-              "minMs": 186.85
+              "medianMs": 191.76,
+              "p95Ms": 193.54,
+              "minMs": 185.69
             },
-            "maxRssMb": 238
+            "maxRssMb": 237
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.67,
-              "p95Ms": 0.71,
-              "minMs": 0.55
+              "medianMs": 0.73,
+              "p95Ms": 0.88,
+              "minMs": 0.66
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 109.2,
-              "p95Ms": 148.48,
-              "minMs": 104.85
+              "medianMs": 116.32,
+              "p95Ms": 139.82,
+              "minMs": 103.49
             },
-            "maxRssMb": 233
+            "maxRssMb": 234
           }
         }
       }
@@ -574,36 +574,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.48,
-              "p95Ms": 0.56,
-              "minMs": 0.43
+              "medianMs": 0.59,
+              "p95Ms": 0.68,
+              "minMs": 0.53
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 2047.99,
-              "p95Ms": 2077.65,
-              "minMs": 1999.26
+              "medianMs": 2102.12,
+              "p95Ms": 2111.34,
+              "minMs": 1992.57
             },
-            "maxRssMb": 660
+            "maxRssMb": 666
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.8,
-              "p95Ms": 0.87,
-              "minMs": 0.65
+              "medianMs": 1.08,
+              "p95Ms": 1.47,
+              "minMs": 0.77
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 2036.11,
-              "p95Ms": 2069.47,
-              "minMs": 1995.96
+              "medianMs": 2017.07,
+              "p95Ms": 2040.76,
+              "minMs": 2003.85
             },
-            "maxRssMb": 697
+            "maxRssMb": 702
           }
         },
         "xmldom": {
@@ -612,36 +612,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.43,
-              "p95Ms": 0.48,
+              "medianMs": 0.44,
+              "p95Ms": 0.49,
               "minMs": 0.42
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 907.53,
-              "p95Ms": 933.62,
-              "minMs": 875.59
+              "medianMs": 903.69,
+              "p95Ms": 909.55,
+              "minMs": 866.07
             },
-            "maxRssMb": 536
+            "maxRssMb": 542
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.77,
-              "p95Ms": 0.81,
-              "minMs": 0.61
+              "medianMs": 0.84,
+              "p95Ms": 0.92,
+              "minMs": 0.62
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 730.88,
-              "p95Ms": 744.95,
-              "minMs": 714.88
+              "medianMs": 702.25,
+              "p95Ms": 714.85,
+              "minMs": 690.17
             },
-            "maxRssMb": 567
+            "maxRssMb": 566
           }
         }
       }
@@ -662,36 +662,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.43,
-              "p95Ms": 0.58,
-              "minMs": 0.4
+              "medianMs": 0.39,
+              "p95Ms": 0.48,
+              "minMs": 0.38
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 58.11,
-              "p95Ms": 62.8,
-              "minMs": 56.76
+              "medianMs": 57.38,
+              "p95Ms": 65.35,
+              "minMs": 56.78
             },
-            "maxRssMb": 208
+            "maxRssMb": 215
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.91,
-              "p95Ms": 1.01,
-              "minMs": 0.75
+              "medianMs": 0.76,
+              "p95Ms": 0.94,
+              "minMs": 0.74
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 13.18,
-              "p95Ms": 14.3,
-              "minMs": 12.46
+              "medianMs": 13.85,
+              "p95Ms": 14.19,
+              "minMs": 11.98
             },
-            "maxRssMb": 188
+            "maxRssMb": 192
           }
         },
         "xmldom": {
@@ -700,36 +700,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.34,
-              "p95Ms": 0.4,
-              "minMs": 0.26
+              "medianMs": 0.27,
+              "p95Ms": 0.39,
+              "minMs": 0.24
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 33.21,
-              "p95Ms": 37.22,
-              "minMs": 28.19
+              "medianMs": 31.46,
+              "p95Ms": 37.77,
+              "minMs": 30.4
             },
-            "maxRssMb": 104
+            "maxRssMb": 106
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.52,
-              "p95Ms": 0.89,
-              "minMs": 0.43
+              "medianMs": 0.54,
+              "p95Ms": 0.7,
+              "minMs": 0.47
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 10.94,
-              "p95Ms": 15.7,
-              "minMs": 8.4
+              "medianMs": 10.73,
+              "p95Ms": 15.37,
+              "minMs": 8.92
             },
-            "maxRssMb": 101
+            "maxRssMb": 100
           }
         }
       }
@@ -751,35 +751,35 @@
               "warmup": 2,
               "runs": 7,
               "medianMs": 0.42,
-              "p95Ms": 0.46,
+              "p95Ms": 0.45,
               "minMs": 0.39
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 3834.7,
-              "p95Ms": 3918.92,
-              "minMs": 3746.14
+              "medianMs": 3926.59,
+              "p95Ms": 3972.11,
+              "minMs": 3792.56
             },
-            "maxRssMb": 654
+            "maxRssMb": 659
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.83,
-              "p95Ms": 0.96,
-              "minMs": 0.67
+              "medianMs": 0.82,
+              "p95Ms": 0.91,
+              "minMs": 0.7
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 826.23,
-              "p95Ms": 839.37,
-              "minMs": 801.03
+              "medianMs": 823.58,
+              "p95Ms": 833.71,
+              "minMs": 805.89
             },
-            "maxRssMb": 279
+            "maxRssMb": 287
           }
         },
         "xmldom": {
@@ -788,36 +788,36 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.26,
-              "p95Ms": 0.37,
-              "minMs": 0.25
+              "medianMs": 0.29,
+              "p95Ms": 0.31,
+              "minMs": 0.23
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1504.28,
-              "p95Ms": 1527.91,
-              "minMs": 1496.54
+              "medianMs": 1529.32,
+              "p95Ms": 1544.62,
+              "minMs": 1524
             },
-            "maxRssMb": 461
+            "maxRssMb": 465
           },
           "xslt3": {
             "status": "ok",
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.5,
-              "p95Ms": 0.68,
-              "minMs": 0.4
+              "medianMs": 0.54,
+              "p95Ms": 0.69,
+              "minMs": 0.42
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 284.93,
-              "p95Ms": 301.66,
-              "minMs": 270.86
+              "medianMs": 292.63,
+              "p95Ms": 305.85,
+              "minMs": 287.45
             },
-            "maxRssMb": 231
+            "maxRssMb": 233
           }
         }
       }
@@ -839,18 +839,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 2.07,
-              "p95Ms": 2.61,
-              "minMs": 1.76
+              "medianMs": 2.3,
+              "p95Ms": 2.58,
+              "minMs": 2.1
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1698.97,
-              "p95Ms": 1760.72,
-              "minMs": 1683.41
+              "medianMs": 1743.45,
+              "p95Ms": 1767.24,
+              "minMs": 1721.77
             },
-            "maxRssMb": 592
+            "maxRssMb": 599
           }
         },
         "xmldom": {
@@ -859,18 +859,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1.86,
-              "p95Ms": 1.99,
-              "minMs": 1.49
+              "medianMs": 1.94,
+              "p95Ms": 2.14,
+              "minMs": 1.41
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 634.28,
-              "p95Ms": 644.26,
-              "minMs": 622.53
+              "medianMs": 646.74,
+              "p95Ms": 688.82,
+              "minMs": 633.24
             },
-            "maxRssMb": 428
+            "maxRssMb": 426
           }
         }
       }
@@ -892,18 +892,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.84,
-              "p95Ms": 0.94,
-              "minMs": 0.75
+              "medianMs": 0.85,
+              "p95Ms": 0.93,
+              "minMs": 0.81
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 35.34,
-              "p95Ms": 41.77,
-              "minMs": 31.97
+              "medianMs": 34.93,
+              "p95Ms": 37.01,
+              "minMs": 32.43
             },
-            "maxRssMb": 210
+            "maxRssMb": 214
           }
         },
         "xmldom": {
@@ -912,18 +912,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.48,
-              "p95Ms": 0.61,
-              "minMs": 0.46
+              "medianMs": 0.58,
+              "p95Ms": 0.67,
+              "minMs": 0.47
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 18.21,
-              "p95Ms": 25.55,
-              "minMs": 16.8
+              "medianMs": 19.49,
+              "p95Ms": 20.76,
+              "minMs": 18.71
             },
-            "maxRssMb": 113
+            "maxRssMb": 115
           }
         }
       }
@@ -945,18 +945,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.88,
-              "p95Ms": 0.95,
-              "minMs": 0.73
+              "medianMs": 0.85,
+              "p95Ms": 0.88,
+              "minMs": 0.77
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 26.45,
-              "p95Ms": 27.85,
-              "minMs": 25.27
+              "medianMs": 26.91,
+              "p95Ms": 27.81,
+              "minMs": 26.27
             },
-            "maxRssMb": 219
+            "maxRssMb": 229
           }
         },
         "xmldom": {
@@ -965,18 +965,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.57,
-              "p95Ms": 0.65,
-              "minMs": 0.43
+              "medianMs": 0.51,
+              "p95Ms": 0.71,
+              "minMs": 0.45
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 15.64,
-              "p95Ms": 16.78,
+              "medianMs": 15.38,
+              "p95Ms": 15.56,
               "minMs": 14.86
             },
-            "maxRssMb": 113
+            "maxRssMb": 114
           }
         }
       }
@@ -998,18 +998,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1.01,
-              "p95Ms": 1.04,
+              "medianMs": 0.93,
+              "p95Ms": 1,
               "minMs": 0.89
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 161.85,
-              "p95Ms": 167.08,
-              "minMs": 155.66
+              "medianMs": 152.13,
+              "p95Ms": 155.84,
+              "minMs": 141.56
             },
-            "maxRssMb": 283
+            "maxRssMb": 282
           }
         },
         "xmldom": {
@@ -1018,18 +1018,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.66,
-              "p95Ms": 0.72,
-              "minMs": 0.57
+              "medianMs": 0.75,
+              "p95Ms": 0.99,
+              "minMs": 0.69
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 93.36,
-              "p95Ms": 110.2,
-              "minMs": 92.29
+              "medianMs": 91.71,
+              "p95Ms": 118.26,
+              "minMs": 88.4
             },
-            "maxRssMb": 234
+            "maxRssMb": 232
           }
         }
       }
@@ -1051,18 +1051,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.69,
-              "p95Ms": 0.9,
-              "minMs": 0.55
+              "medianMs": 0.67,
+              "p95Ms": 0.69,
+              "minMs": 0.52
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1672.5,
-              "p95Ms": 1701.64,
-              "minMs": 1664.1
+              "medianMs": 1701.06,
+              "p95Ms": 1731.59,
+              "minMs": 1653.21
             },
-            "maxRssMb": 651
+            "maxRssMb": 658
           }
         },
         "xmldom": {
@@ -1071,18 +1071,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.45,
+              "medianMs": 0.46,
               "p95Ms": 0.5,
-              "minMs": 0.38
+              "minMs": 0.41
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 493.14,
-              "p95Ms": 511.34,
-              "minMs": 484.32
+              "medianMs": 499.97,
+              "p95Ms": 517.27,
+              "minMs": 485.72
             },
-            "maxRssMb": 522
+            "maxRssMb": 523
           }
         }
       }
@@ -1104,18 +1104,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.84,
-              "p95Ms": 1.11,
-              "minMs": 0.73
+              "medianMs": 0.83,
+              "p95Ms": 0.97,
+              "minMs": 0.69
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 6.8,
-              "p95Ms": 7.46,
-              "minMs": 6.06
+              "medianMs": 6.36,
+              "p95Ms": 6.78,
+              "minMs": 5.96
             },
-            "maxRssMb": 193
+            "maxRssMb": 188
           }
         },
         "xmldom": {
@@ -1124,18 +1124,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.45,
-              "p95Ms": 0.55,
-              "minMs": 0.36
+              "medianMs": 0.49,
+              "p95Ms": 0.63,
+              "minMs": 0.38
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 2.74,
-              "p95Ms": 3.26,
-              "minMs": 2.22
+              "medianMs": 2.93,
+              "p95Ms": 3.88,
+              "minMs": 2.06
             },
-            "maxRssMb": 77
+            "maxRssMb": 76
           }
         }
       }
@@ -1155,18 +1155,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.96,
-              "p95Ms": 1.3,
-              "minMs": 0.94
+              "medianMs": 0.98,
+              "p95Ms": 1.2,
+              "minMs": 0.93
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 206.7,
-              "p95Ms": 220.91,
-              "minMs": 198.77
+              "medianMs": 216.13,
+              "p95Ms": 220.05,
+              "minMs": 203.36
             },
-            "maxRssMb": 336
+            "maxRssMb": 343
           }
         },
         "xmldom": {
@@ -1175,18 +1175,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.87,
-              "p95Ms": 1.17,
-              "minMs": 0.76
+              "medianMs": 0.82,
+              "p95Ms": 0.9,
+              "minMs": 0.77
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 88.95,
-              "p95Ms": 97.08,
-              "minMs": 85.43
+              "medianMs": 90.84,
+              "p95Ms": 103.43,
+              "minMs": 81.02
             },
-            "maxRssMb": 278
+            "maxRssMb": 275
           }
         }
       }
@@ -1207,17 +1207,17 @@
               "warmup": 2,
               "runs": 7,
               "medianMs": 0.86,
-              "p95Ms": 0.88,
-              "minMs": 0.75
+              "p95Ms": 1.36,
+              "minMs": 0.73
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 404.47,
-              "p95Ms": 431.44,
-              "minMs": 401.33
+              "medianMs": 408.55,
+              "p95Ms": 418.52,
+              "minMs": 405.1
             },
-            "maxRssMb": 333
+            "maxRssMb": 338
           }
         },
         "xmldom": {
@@ -1226,16 +1226,16 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.6,
-              "p95Ms": 0.65,
-              "minMs": 0.44
+              "medianMs": 0.56,
+              "p95Ms": 0.69,
+              "minMs": 0.5
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 181.85,
-              "p95Ms": 187.24,
-              "minMs": 177.35
+              "medianMs": 183.86,
+              "p95Ms": 190.88,
+              "minMs": 173.47
             },
             "maxRssMb": 286
           }
@@ -1257,18 +1257,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1.1,
-              "p95Ms": 1.3,
-              "minMs": 0.86
+              "medianMs": 1,
+              "p95Ms": 1.22,
+              "minMs": 0.93
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 370.13,
-              "p95Ms": 379.52,
-              "minMs": 367.47
+              "medianMs": 383.96,
+              "p95Ms": 393.64,
+              "minMs": 377.37
             },
-            "maxRssMb": 372
+            "maxRssMb": 378
           }
         },
         "xmldom": {
@@ -1277,18 +1277,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.74,
-              "p95Ms": 0.82,
-              "minMs": 0.59
+              "medianMs": 0.79,
+              "p95Ms": 0.87,
+              "minMs": 0.73
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 243.51,
-              "p95Ms": 254.22,
-              "minMs": 241.87
+              "medianMs": 250.17,
+              "p95Ms": 253.48,
+              "minMs": 245.01
             },
-            "maxRssMb": 332
+            "maxRssMb": 328
           }
         }
       }
@@ -1309,17 +1309,17 @@
               "warmup": 2,
               "runs": 7,
               "medianMs": 1.02,
-              "p95Ms": 1.12,
-              "minMs": 0.9
+              "p95Ms": 1.1,
+              "minMs": 0.91
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 2963.64,
-              "p95Ms": 3023.48,
-              "minMs": 2845.25
+              "medianMs": 3054.24,
+              "p95Ms": 3149.66,
+              "minMs": 2962.37
             },
-            "maxRssMb": 1716
+            "maxRssMb": 1391
           }
         },
         "xmldom": {
@@ -1328,18 +1328,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.7,
-              "p95Ms": 0.95,
-              "minMs": 0.55
+              "medianMs": 0.74,
+              "p95Ms": 0.93,
+              "minMs": 0.62
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1283.42,
-              "p95Ms": 1334.17,
-              "minMs": 1257.68
+              "medianMs": 1098.1,
+              "p95Ms": 1128.85,
+              "minMs": 1070.44
             },
-            "maxRssMb": 2254
+            "maxRssMb": 2018
           }
         }
       }
@@ -1359,18 +1359,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.94,
-              "p95Ms": 1.22,
-              "minMs": 0.76
+              "medianMs": 0.95,
+              "p95Ms": 1.28,
+              "minMs": 0.83
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 473.96,
-              "p95Ms": 529.05,
-              "minMs": 454.04
+              "medianMs": 285.75,
+              "p95Ms": 309.11,
+              "minMs": 279.4
             },
-            "maxRssMb": 611
+            "maxRssMb": 382
           }
         },
         "xmldom": {
@@ -1380,17 +1380,17 @@
               "warmup": 2,
               "runs": 7,
               "medianMs": 0.68,
-              "p95Ms": 0.8,
-              "minMs": 0.52
+              "p95Ms": 0.78,
+              "minMs": 0.5
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 459.13,
-              "p95Ms": 486.42,
-              "minMs": 435.15
+              "medianMs": 271.89,
+              "p95Ms": 277.24,
+              "minMs": 267.92
             },
-            "maxRssMb": 557
+            "maxRssMb": 322
           }
         }
       }
@@ -1410,18 +1410,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.78,
-              "p95Ms": 1.11,
-              "minMs": 0.73
+              "medianMs": 0.73,
+              "p95Ms": 0.76,
+              "minMs": 0.65
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1709.54,
-              "p95Ms": 1728.08,
-              "minMs": 1651.16
+              "medianMs": 1686.33,
+              "p95Ms": 1693.57,
+              "minMs": 1667.62
             },
-            "maxRssMb": 1294
+            "maxRssMb": 1298
           }
         },
         "xmldom": {
@@ -1430,18 +1430,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.67,
-              "p95Ms": 0.8,
-              "minMs": 0.57
+              "medianMs": 0.61,
+              "p95Ms": 0.67,
+              "minMs": 0.52
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 488.6,
-              "p95Ms": 492.09,
-              "minMs": 483.01
+              "medianMs": 483.26,
+              "p95Ms": 495.18,
+              "minMs": 474.9
             },
-            "maxRssMb": 862
+            "maxRssMb": 851
           }
         }
       }
@@ -1461,16 +1461,16 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.93,
-              "p95Ms": 1.29,
-              "minMs": 0.89
+              "medianMs": 1.05,
+              "p95Ms": 1.17,
+              "minMs": 0.96
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 243.43,
-              "p95Ms": 248.8,
-              "minMs": 235.88
+              "medianMs": 248.81,
+              "p95Ms": 254.65,
+              "minMs": 241.85
             },
             "maxRssMb": 423
           }
@@ -1481,18 +1481,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.9,
-              "p95Ms": 1.07,
-              "minMs": 0.76
+              "medianMs": 0.81,
+              "p95Ms": 1.27,
+              "minMs": 0.69
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 169.49,
-              "p95Ms": 173.86,
-              "minMs": 164.2
+              "medianMs": 167.84,
+              "p95Ms": 181.41,
+              "minMs": 162.93
             },
-            "maxRssMb": 392
+            "maxRssMb": 393
           }
         }
       }
@@ -1512,18 +1512,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.92,
-              "p95Ms": 1.31,
-              "minMs": 0.8
+              "medianMs": 0.98,
+              "p95Ms": 1.46,
+              "minMs": 0.92
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 308.8,
-              "p95Ms": 323.98,
-              "minMs": 302.97
+              "medianMs": 323.13,
+              "p95Ms": 348.16,
+              "minMs": 304.64
             },
-            "maxRssMb": 351
+            "maxRssMb": 358
           }
         },
         "xmldom": {
@@ -1532,18 +1532,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.66,
-              "p95Ms": 0.78,
-              "minMs": 0.56
+              "medianMs": 0.71,
+              "p95Ms": 0.87,
+              "minMs": 0.51
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 324.45,
-              "p95Ms": 357.46,
-              "minMs": 306.26
+              "medianMs": 310,
+              "p95Ms": 333.43,
+              "minMs": 303.66
             },
-            "maxRssMb": 299
+            "maxRssMb": 302
           }
         }
       }
@@ -1563,18 +1563,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.85,
-              "p95Ms": 1.15,
-              "minMs": 0.82
+              "medianMs": 0.93,
+              "p95Ms": 1.07,
+              "minMs": 0.76
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 83.05,
-              "p95Ms": 85.19,
-              "minMs": 79
+              "medianMs": 83.59,
+              "p95Ms": 86.76,
+              "minMs": 80.34
             },
-            "maxRssMb": 284
+            "maxRssMb": 283
           }
         },
         "xmldom": {
@@ -1583,16 +1583,16 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.6,
-              "p95Ms": 0.67,
-              "minMs": 0.59
+              "medianMs": 0.75,
+              "p95Ms": 1.43,
+              "minMs": 0.62
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 57.75,
-              "p95Ms": 71.41,
-              "minMs": 54.7
+              "medianMs": 63.35,
+              "p95Ms": 76.69,
+              "minMs": 58.16
             },
             "maxRssMb": 198
           }
@@ -1614,18 +1614,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1.1,
-              "p95Ms": 1.25,
-              "minMs": 1.07
+              "medianMs": 1.19,
+              "p95Ms": 1.4,
+              "minMs": 1.06
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 131.56,
-              "p95Ms": 135.9,
-              "minMs": 128.78
+              "medianMs": 140.87,
+              "p95Ms": 144.11,
+              "minMs": 137.29
             },
-            "maxRssMb": 283
+            "maxRssMb": 291
           }
         },
         "xmldom": {
@@ -1634,18 +1634,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.96,
-              "p95Ms": 1.02,
-              "minMs": 0.76
+              "medianMs": 0.9,
+              "p95Ms": 1.06,
+              "minMs": 0.89
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 94.64,
-              "p95Ms": 103.14,
-              "minMs": 92.39
+              "medianMs": 94.39,
+              "p95Ms": 99.81,
+              "minMs": 91.35
             },
-            "maxRssMb": 165
+            "maxRssMb": 164
           }
         }
       }
@@ -1665,18 +1665,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1.3,
-              "p95Ms": 1.93,
+              "medianMs": 1.27,
+              "p95Ms": 1.5,
               "minMs": 1.13
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 899.95,
-              "p95Ms": 931.94,
-              "minMs": 818.22
+              "medianMs": 691.8,
+              "p95Ms": 762.13,
+              "minMs": 677.34
             },
-            "maxRssMb": 638
+            "maxRssMb": 521
           }
         },
         "xmldom": {
@@ -1685,18 +1685,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1.19,
-              "p95Ms": 1.38,
-              "minMs": 0.98
+              "medianMs": 1.21,
+              "p95Ms": 1.24,
+              "minMs": 0.99
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 648.23,
-              "p95Ms": 691.43,
-              "minMs": 616.07
+              "medianMs": 487.03,
+              "p95Ms": 509.94,
+              "minMs": 469.15
             },
-            "maxRssMb": 600
+            "maxRssMb": 477
           }
         }
       }
@@ -1716,18 +1716,18 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 1.27,
-              "p95Ms": 1.53,
-              "minMs": 1.16
+              "medianMs": 1.07,
+              "p95Ms": 1.27,
+              "minMs": 0.94
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 358.29,
-              "p95Ms": 367.16,
-              "minMs": 349.11
+              "medianMs": 345.97,
+              "p95Ms": 352.28,
+              "minMs": 343.29
             },
-            "maxRssMb": 403
+            "maxRssMb": 410
           }
         },
         "xmldom": {
@@ -1736,16 +1736,16 @@
             "compile": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 0.97,
-              "p95Ms": 1.26,
-              "minMs": 0.93
+              "medianMs": 1.01,
+              "p95Ms": 1.36,
+              "minMs": 0.91
             },
             "transform": {
               "warmup": 2,
               "runs": 7,
-              "medianMs": 236.36,
-              "p95Ms": 247.16,
-              "minMs": 231.06
+              "medianMs": 240.57,
+              "p95Ms": 249.71,
+              "minMs": 231.6
             },
             "maxRssMb": 364
           }
@@ -1758,26 +1758,26 @@
       "engine": "1.0 package",
       "entry": "src/index.js",
       "bundle": {
-        "raw": 143491,
-        "gzip": 45464,
-        "brotli": 39776
+        "raw": 147046,
+        "gzip": 46510,
+        "brotli": 40734
       },
       "importSource": {
         "status": "ok",
         "warmup": 1,
         "runs": 7,
-        "medianMs": 29.57,
-        "p95Ms": 31.33,
-        "minMs": 28.71,
+        "medianMs": 29.26,
+        "p95Ms": 31.48,
+        "minMs": 25.56,
         "maxRssMb": null
       },
       "importBundle": {
         "status": "ok",
         "warmup": 1,
         "runs": 7,
-        "medianMs": 5.98,
-        "p95Ms": 6.17,
-        "minMs": 5.75,
+        "medianMs": 6.07,
+        "p95Ms": 6.31,
+        "minMs": 5.96,
         "maxRssMb": null
       }
     },
@@ -1785,26 +1785,26 @@
       "engine": "xslt3",
       "entry": "packages/xslt3/src/index.js",
       "bundle": {
-        "raw": 323947,
-        "gzip": 111170,
-        "brotli": 95072
+        "raw": 338981,
+        "gzip": 116734,
+        "brotli": 99874
       },
       "importSource": {
         "status": "ok",
         "warmup": 1,
         "runs": 7,
-        "medianMs": 75.31,
-        "p95Ms": 82.43,
-        "minMs": 73.03,
+        "medianMs": 77.42,
+        "p95Ms": 83.46,
+        "minMs": 76.47,
         "maxRssMb": null
       },
       "importBundle": {
         "status": "ok",
         "warmup": 1,
         "runs": 7,
-        "medianMs": 22.46,
-        "p95Ms": 23.18,
-        "minMs": 19.76,
+        "medianMs": 20.75,
+        "p95Ms": 25.29,
+        "minMs": 19.66,
         "maxRssMb": null
       }
     }

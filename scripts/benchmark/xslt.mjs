@@ -138,7 +138,7 @@ export async function runXsltSuite(argv) {
     ...machine(),
     ...settings,
     durationMin: minutes,
-    provisional: true,
+    provisional: false,
     engines: {
       "1.0 package": versionOf("package.json"),
       xslt3: versionOf("packages/xslt3/package.json"),

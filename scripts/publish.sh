@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Publish @tradik/xslt-processor to npm by hand (make publish OTP=123456).
+# Publish to npm by hand: @tradik/xslt-processor (make publish OTP=123456) or,
+# with PACKAGE=xslt3, @tradik/xslt3 (make publish-xslt3 OTP=123456). Both are
+# released from the same tag, v<version of the root package.json>.
 #
 # The Release workflow publishes with Trusted Publishing when a GitHub release
 # is created; this is the manual path for when that is not possible. It
@@ -22,9 +24,14 @@ fail() {
   exit 1
 }
 
-name=$(node -p "require('./package.json').name")
-version=$(node -p "require('./package.json').version")
-tag="v${version}"
+tag="v$(node -p "require('./package.json').version")"
+case "${PACKAGE:-root}" in
+  root) manifest="./package.json" workspace=() ;;
+  xslt3) manifest="./packages/xslt3/package.json" workspace=(--workspace @tradik/xslt3) ;;
+  *) fail "PACKAGE must be root or xslt3" ;;
+esac
+name=$(node -p "require('${manifest}').name")
+version=$(node -p "require('${manifest}').version")
 
 [[ -z "$(git status --porcelain)" ]] || fail "the working tree has changes; commit or stash them first"
 git rev-parse -q --verify "refs/tags/${tag}" >/dev/null || fail "tag ${tag} does not exist (git tag ${tag})"
@@ -41,15 +48,23 @@ fi
 
 echo "publish: ${name}@${version} from ${tag} ($(git rev-parse --short HEAD))"
 npm ci --ignore-scripts
-npm run build
-npm test
-npm run conformance:fetch
-npm run test:conformance
+if [[ "${PACKAGE:-root}" == "xslt3" ]]; then
+  npm run test:xslt3
+  npm run test:suites:unit
+  npm run suites:fetch
+  npm run test:qt3
+  npm run test:xslt30
+else
+  npm run build
+  npm test
+  npm run conformance:fetch
+  npm run test:conformance
+fi
 
 if [[ "${DRY_RUN:-0}" == "1" ]]; then
-  npm publish --dry-run --access public --ignore-scripts
+  npm publish "${workspace[@]}" --dry-run --access public --ignore-scripts
   echo "publish: dry run done, nothing was published"
 else
-  npm publish --access public --ignore-scripts --otp="${OTP}"
+  npm publish "${workspace[@]}" --access public --ignore-scripts --otp="${OTP}"
   echo "publish: npm now has $(npm view "${name}" version)"
 fi

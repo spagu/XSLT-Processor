@@ -11,7 +11,7 @@
  */
 
 /** Version of this package, kept equal to package.json. */
-export const VERSION = "0.0.0";
+export const VERSION = "1.0.0";
 
 export {
   compileXPath,

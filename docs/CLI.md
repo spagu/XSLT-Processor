@@ -17,7 +17,7 @@ together with jsdom, so they behave exactly like `npx xslt`.
 ```sh
 curl -fsSL https://raw.githubusercontent.com/spagu/XSLT-Processor/main/scripts/install.sh | bash
 # pin a version or location:
-XSLT_VERSION=1.2.1 XSLT_INSTALL_DIR=$HOME/.local/bin bash install.sh
+XSLT_VERSION=1.3.0 XSLT_INSTALL_DIR=$HOME/.local/bin bash install.sh
 ```
 
 The installer detects the operating system and CPU, downloads over HTTPS and

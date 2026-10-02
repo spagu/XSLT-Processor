@@ -124,6 +124,19 @@ jobs:
       - name: Publish to npm
         run: npm publish --provenance --access public
 
+      # @tradik/xslt3 is released from the same tag. Its first version was
+      # published by hand (make publish-xslt3), because npm configures a
+      # Trusted Publisher only for a package that exists; a version that is
+      # already on npm is skipped.
+      - name: Publish @tradik/xslt3 to npm
+        run: |
+          version=$(node -p "require('./packages/xslt3/package.json').version")
+          if npm view "@tradik/xslt3@${version}" version >/dev/null 2>&1; then
+            echo "@tradik/xslt3@${version} is already on npm"
+          else
+            npm publish --workspace @tradik/xslt3 --provenance --access public
+          fi
+
   # Standalone `xslt` executables (Node.js Single Executable Applications,
   # see scripts/binaries/build.mjs). Each target is built on its own OS and
   # CPU: the V8 code cache is platform specific and macOS binaries must be

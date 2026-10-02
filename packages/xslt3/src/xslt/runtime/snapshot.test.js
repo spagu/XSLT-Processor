@@ -1,6 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { checkBodies } from "../testing.test.js";
+import { performance } from "node:perf_hooks";
+import { JSDOM } from "jsdom";
+import { compileStylesheet } from "../api.js";
+import { checkBodies, stylesheet } from "../testing.test.js";
 import { originalNode } from "./copyOrigins.js";
 
 const options = {
@@ -58,10 +61,55 @@ describe("originalNode", () => {
   it("maps the nodes of a copy to the original", () => {
     const original = { childNodes: [{}, { name: "second" }] };
     const copy = { nodeType: 1, parentNode: null, childNodes: [] };
-    const child = { nodeType: 1, parentNode: copy };
-    copy.childNodes.push({}, child);
+    const first = { previousSibling: null };
+    const child = { nodeType: 1, parentNode: copy, previousSibling: first };
+    copy.childNodes.push(first, child);
     const origins = new WeakMap([[copy, original]]);
     assert.equal(originalNode(origins, child).name, "second");
     assert.equal(originalNode(new WeakMap(), child), null);
+  });
+});
+
+describe("accumulators on a large jsdom tree", () => {
+  const parseJsdom = (text) =>
+    new JSDOM(text, { contentType: "application/xml" }).window.document;
+  const items = Array.from({ length: 20000 }, (_, i) => `<i n="${i}"/>`);
+  const source = parseJsdom(`<r>${items.join("")}</r>`);
+  const declarations =
+    '<xsl:mode use-accumulators="#all"/>' +
+    '<xsl:accumulator name="c" as="xs:integer" initial-value="0">' +
+    '<xsl:accumulator-rule match="i" select="$value + 1"/></xsl:accumulator>';
+
+  /**
+   * Runs a template body on the 20,000 siblings, within a time bound.
+   * @param {string} body
+   * @returns {string} the text of the result
+   */
+  function timed(body) {
+    const compiled = compileStylesheet(
+      stylesheet(
+        `${declarations}<xsl:template match="/">${body}</xsl:template>`,
+      ),
+      { parseXml: parseJsdom },
+    );
+    const started = performance.now();
+    const result = compiled.transform({ source });
+    const elapsed = performance.now() - started;
+    assert.ok(elapsed < 5000, `took ${elapsed} ms`);
+    return result.principal.documentElement.textContent;
+  }
+
+  it("reads the values of 20,000 siblings in linear time", () => {
+    const text = timed(
+      "<out><xsl:value-of select=\"sum(r/i ! accumulator-before('c'))\"/></out>",
+    );
+    assert.equal(text, String((20000 * 20001) / 2));
+  });
+
+  it("maps a node of a large copy back to its original", () => {
+    const text = timed(
+      "<out><xsl:value-of select=\"copy-of(r)/i[last()]/accumulator-before('c')\"/></out>",
+    );
+    assert.equal(text, "20000");
   });
 });
