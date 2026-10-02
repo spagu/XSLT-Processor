@@ -77,7 +77,7 @@ export { transformToChunks, transformToStream } from "./async/stream.js";
 /**
  * Version information
  */
-export const VERSION = "1.3.1";
+export const VERSION = "1.3.2";
 
 /**
  * Check if we're running in a browser environment
