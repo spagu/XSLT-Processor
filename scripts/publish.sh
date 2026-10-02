@@ -10,7 +10,8 @@
 #   1. the working tree is clean and HEAD carries the tag v<version>;
 #   2. that version is not on npm yet, and you are logged in (npm login);
 #   3. the build, the tests and the conformance suite pass;
-#   4. npm publish runs with the one-time password from your authenticator,
+#   4. npm publish runs with the one-time password from your authenticator
+#      (or, on an empty answer, with npm's approval in the browser),
 #      asked for after the tests (a code is valid for about 30 seconds, the
 #      tests take minutes); OTP=123456 still works for scripted use.
 #
@@ -70,10 +71,19 @@ if [[ "${DRY_RUN:-0}" == "1" ]]; then
   npm publish "${workspace[@]}" --dry-run --access public --ignore-scripts
   echo "publish: dry run done, nothing was published"
 else
-  # Asked only now, after the checks: one-time passwords expire in seconds
-  while [[ ! "${OTP:-}" =~ ^[0-9]{6}$ ]]; do
-    read -rp "publish: one-time password for ${name}@${version}: " OTP
+  # Asked only now, after the checks: one-time passwords expire in seconds.
+  # An empty answer publishes without --otp: npm then asks you to approve
+  # the publication in the browser (for a passkey or security key, or when
+  # the authenticator is out of reach).
+  # OTP= from make (no OTP given) means "not provided", ask
+  [[ -n "${OTP:-}" ]] || unset OTP
+  while [[ -z "${OTP+set}" || ( -n "${OTP}" && ! "${OTP}" =~ ^[0-9]{6}$ ) ]]; do
+    read -rp "publish: 6-digit code from your authenticator for ${name}@${version} (Enter: approve in the browser): " OTP
   done
-  npm publish "${workspace[@]}" --access public --ignore-scripts --otp="${OTP}"
+  if [[ -n "${OTP}" ]]; then
+    npm publish "${workspace[@]}" --access public --ignore-scripts --otp="${OTP}"
+  else
+    npm publish "${workspace[@]}" --access public --ignore-scripts
+  fi
   echo "publish: npm now has $(npm view "${name}" version)"
 fi

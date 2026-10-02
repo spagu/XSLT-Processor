@@ -105,7 +105,9 @@ It refuses unless the working tree is clean, HEAD is the tag `v<version>` of
 package.json, that version is not on npm yet and you are logged in; then it
 installs from the lockfile, builds, runs the tests and the libxslt
 conformance suite, and asks for the one-time password only then (a code is valid for about 30
-seconds, the checks take minutes); `OTP=123456` skips the question. A manual release has no provenance
+seconds, the checks take minutes); `OTP=123456` skips the question. Press Enter without a
+code to publish with npm's approval in the browser instead (two-factor authentication with a
+passkey or security key, or an authenticator out of reach). A manual release has no provenance
 attestation (only CI can sign one).
 
 **Release process:**
