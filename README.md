@@ -52,7 +52,7 @@ The documentation is also published as a website with an interactive playground:
 | [Security Limits](docs/SECURITY-LIMITS.md) | XPath and XSLT limits, prototype pollution protection, input validation |
 | [Browser Compatibility](docs/BROWSER-SUPPORT.md) | Minimum browser versions, native XSLT removal timeline, feature detection |
 | [XSLT 2.0 and 3.0](docs/XSLT3.md) | `@tradik/xslt3`: one engine for XSLT 3.0 and 2.0 in a separate package; options, conformance and design |
-| [Benchmarks](docs/BENCHMARKS.md) | 1.1.3 vs 1.2.0: speed-up, time and peak memory per scenario, with charts, tables and `npm run bench` to reproduce; XPath 1.0 of this package vs XPath 3.1 of @tradik/xslt3 (`npm run bench -- --suite xpath`); the XSLT 1.0 engine vs @tradik/xslt3 on the same stylesheets, idiomatic 2.0/3.0 rewrites and 3.0-only scenarios (`npm run bench -- --suite xslt`) |
+| [Benchmarks](docs/BENCHMARKS.md) | Every version side by side (1.1.3, 1.2.0, 1.3.0, @tradik/xslt3) in one chart and table; then the detailed runs: 1.1.3 vs 1.2.0 speed-up, time and peak memory per scenario, with charts, tables and `npm run bench` to reproduce; XPath 1.0 of this package vs XPath 3.1 of @tradik/xslt3 (`npm run bench -- --suite xpath`); the XSLT 1.0 engine vs @tradik/xslt3 on the same stylesheets, idiomatic 2.0/3.0 rewrites and 3.0-only scenarios (`npm run bench -- --suite xslt`) |
 | [Development](docs/DEVELOPMENT.md) | Setup, tests, Docker, Makefile, publishing to npm |
 | [Style Guide](docs/STYLE-GUIDE.md) | Project colors with WCAG 2.2 contrast ratios |
 

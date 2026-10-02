@@ -12,6 +12,9 @@
  * (the XPath charts and sections, see xpathCharts.mjs)
  *        node scripts/benchmark/charts.mjs --suite xslt [--results scripts/benchmark/results-xslt.json]
  * (the XSLT engine charts and sections, see xsltCharts.mjs)
+ *        node scripts/benchmark/charts.mjs --suite overview
+ * (the "all versions" overview from both result files, see overview.mjs;
+ * the release and xslt suites refresh it too)
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -21,6 +24,7 @@ import { confinePath } from "../lib/fsSafety.mjs";
 import { hero, memoryTable, rows, speedupTable, timeTable } from "./data.mjs";
 import { speedupChart, timeChart } from "./figures.mjs";
 import { memoryChart } from "./memory.mjs";
+import { writeOverview } from "./overview.mjs";
 import { DOCS, PAGE, chart, fill } from "./page.mjs";
 import { writeXPathCharts } from "./xpathCharts.mjs";
 import { writeXsltCharts } from "./xsltCharts.mjs";
@@ -38,11 +42,16 @@ if (values.suite === "xpath") {
 }
 if (values.suite === "xslt") {
   writeXsltCharts(values.results ?? "scripts/benchmark/results-xslt.json");
+  writeOverview(undefined, values.results);
+  process.exit();
+}
+if (values.suite === "overview") {
+  writeOverview();
   process.exit();
 }
 if (values.suite !== "release") {
   throw new Error(
-    `Unknown benchmark suite: ${values.suite} (release, xpath or xslt)`,
+    `Unknown benchmark suite: ${values.suite} (release, xpath, xslt or overview)`,
   );
 }
 
@@ -88,3 +97,4 @@ writeFileSync(PAGE, page);
 console.log(
   "Wrote docs/benchmarks/{speedup,time,memory}.svg and docs/BENCHMARKS.md",
 );
+writeOverview(values.results);
