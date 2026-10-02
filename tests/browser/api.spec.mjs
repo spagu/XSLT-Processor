@@ -87,7 +87,7 @@ test("transformToFragment with method html yields live HTML elements", async ({
   });
 });
 
-test("transformToFragment with method xml creates XHTML elements in an HTML page, like Chrome", async ({
+test("transformToFragment with method xml keeps elements in no namespace in an HTML page, like Chrome and Firefox", async ({
   page,
 }) => {
   const result = await page.evaluate((xslHead) => {
@@ -105,17 +105,16 @@ test("transformToFragment with method xml creates XHTML elements in an HTML page
       isHtml: item instanceof HTMLElement,
       namespace: item.namespaceURI,
       localName: item.localName,
-      // getAttribute() lower-cases its argument on HTML elements; the
-      // attribute keeps its XML case, so look it up by namespace and name
-      attribute: item.getAttributeNS(null, "Id"),
+      // Not an HTML element, so the attribute name keeps its XML case
+      attribute: item.getAttribute("Id"),
       ownedByPage: item.ownerDocument === document,
     };
   }, XSL_HEAD);
 
   expect(result).toEqual({
     isFragment: true,
-    isHtml: true,
-    namespace: "http://www.w3.org/1999/xhtml",
+    isHtml: false,
+    namespace: null,
     localName: "Item",
     attribute: "1",
     ownedByPage: true,

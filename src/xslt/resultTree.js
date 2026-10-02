@@ -24,23 +24,26 @@ export function createResultDocument(ownerDocument) {
 }
 
 /**
- * Copy an element in no namespace into an HTML document as an element of the
- * XHTML namespace, as Chrome and Firefox do when they insert XML output into
- * an HTML document: `<ul><li>` become HTMLElements that render as a list.
- * The name is kept as written (no case folding).
+ * Copy an element in no namespace as an element of the XHTML namespace:
+ * with `lowerCase`, with lower-case element and attribute names, what the
+ * HTML parser would make of html output (for DOMs that cannot parse HTML
+ * fragments, see parseHtmlFragment); without, with the names as written
+ * (the deprecated `legacyXhtmlFragments` behaviour).
  *
  * @param {Element} element - Element in no namespace
- * @param {Document} targetDoc - The HTML document that will own the copy
+ * @param {Document} targetDoc - The document that will own the copy
+ * @param {boolean} lowerCase - Lower-case the element and attribute names
  * @returns {Element} The shallow copy, with the attributes
  */
-function importAsHtmlElement(element, targetDoc) {
-  const copy = targetDoc.createElementNS(XHTML_NAMESPACE, element.localName);
+function importAsHtmlElement(element, targetDoc, lowerCase) {
+  const fold = (name) => (lowerCase ? name.toLowerCase() : name);
+  const copy = targetDoc.createElementNS(
+    XHTML_NAMESPACE,
+    fold(element.localName),
+  );
   for (const attribute of element.attributes) {
-    copy.setAttributeNS(
-      attribute.namespaceURI,
-      attribute.name,
-      attribute.value,
-    );
+    const name = attribute.namespaceURI ? attribute.name : fold(attribute.name);
+    copy.setAttributeNS(attribute.namespaceURI, name, attribute.value);
   }
   return copy;
 }
@@ -49,27 +52,29 @@ function importAsHtmlElement(element, targetDoc) {
  * Deep-import a result tree node into another document.
  *
  * Unlike `Document.importNode` this preserves the internal
- * `_disableOutputEscaping` marker set by `disable-output-escaping`. With
- * `htmlElements` and an HTML target document, elements in no namespace
- * become XHTML elements (see importAsHtmlElement), as in the fragments
- * browsers return; elements of other namespaces are kept.
+ * `_disableOutputEscaping` marker set by `disable-output-escaping`. Elements
+ * in no namespace become XHTML elements (see importAsHtmlElement) with
+ * `htmlMethod` (output of the html method on a DOM without an HTML parser,
+ * lower-case names) or, into an HTML document only, with `xhtmlElements`
+ * (the deprecated `legacyXhtmlFragments` option, names as written);
+ * elements of other namespaces are kept.
  *
  * @param {Node} node - The node to import
  * @param {Document} targetDoc - The document that will own the copy
- * @param {{htmlElements?: boolean}} [options] - Import options
+ * @param {{htmlMethod?: boolean, xhtmlElements?: boolean}} [options] - Import
+ *   options
  * @returns {Node} The imported copy
  *
  * @example
  * const copy = importResultNode(element, window.document);
  */
 export function importResultNode(node, targetDoc, options = {}) {
+  const htmlMethod = options.htmlMethod === true;
+  const legacy = options.xhtmlElements === true && isHtmlDocument(targetDoc);
   const asHtml =
-    options.htmlElements === true &&
-    node.nodeType === 1 &&
-    !node.namespaceURI &&
-    isHtmlDocument(targetDoc);
+    (htmlMethod || legacy) && node.nodeType === 1 && !node.namespaceURI;
   const copy = asHtml
-    ? importAsHtmlElement(node, targetDoc)
+    ? importAsHtmlElement(node, targetDoc, htmlMethod)
     : targetDoc.importNode(node, false);
 
   if (node._disableOutputEscaping) {
@@ -90,7 +95,8 @@ export function importResultNode(node, targetDoc, options = {}) {
  *
  * @param {DocumentFragment} fragment - The fragment built in the neutral document
  * @param {Document} targetDoc - The document that will own the result
- * @param {{htmlElements?: boolean}} [options] - See {@link importResultNode}
+ * @param {{htmlMethod?: boolean, xhtmlElements?: boolean}} [options] - See
+ *   {@link importResultNode}
  * @returns {DocumentFragment} A fragment owned by `targetDoc`
  *
  * @example
@@ -189,23 +195,71 @@ export function isHtmlDocument(doc) {
 }
 
 /**
- * Parse serialized `html` output into a fragment of an HTML document, as
- * Chrome's `XSLTProcessor.transformToFragment` does: the elements are
- * created by the HTML parser, so `<a>` is an `HTMLAnchorElement` and
- * `<script>` elements run when inserted. Like Blink, the markup is parsed
- * in the context of a (detached) `body` element, that is in the "in body"
- * insertion mode: `<html>`, `<head>` and `<body>` tags are dropped and their
- * content becomes children of the fragment.
+ * Parse serialized `html` output into a fragment of `doc`, as Chrome's
+ * `XSLTProcessor.transformToFragment` does whatever the owner document: the
+ * elements are created by the HTML parser, so `<a>` is an `HTMLAnchorElement`
+ * in the XHTML namespace with a lower-case name, `<table>` gets its `tbody`,
+ * and `<script>` elements run when inserted. Like Blink, the markup is
+ * parsed in the context of a (detached) `body` element, that is in the
+ * "in body" insertion mode: `<html>`, `<head>` and `<body>` tags are dropped
+ * and their content becomes children of the fragment.
+ *
+ * An XML owner document (`createDocument("", "XmlTransform", null)`, issue
+ * #17) gets the same nodes: they are parsed in a scratch HTML document of
+ * its DOM implementation and adopted. A DOM that cannot do that (xmldom has
+ * no `createRange`) returns null, and the caller imports the result tree
+ * instead (see importResultNode).
  *
  * @param {string} markup - HTML markup
- * @param {Document} doc - The HTML document that will own the fragment
- * @returns {DocumentFragment} The parsed fragment
+ * @param {Document} doc - The document that will own the fragment
+ * @returns {DocumentFragment|null} The parsed fragment, or null when the
+ *   DOM cannot parse HTML fragments
  *
  * @example
  * parseHtmlFragment('<a href="u">x</a>', document).firstChild; // HTMLAnchorElement
  */
 export function parseHtmlFragment(markup, doc) {
-  const range = doc.createRange();
-  range.selectNodeContents(doc.createElement("body"));
-  return range.createContextualFragment(markup);
+  const scratch = isHtmlDocument(doc) ? doc : createScratchHtmlDocument(doc);
+  if (typeof scratch?.createRange !== "function") return null;
+  const range = scratch.createRange();
+  range.selectNodeContents(scratch.createElement("body"));
+  const fragment = range.createContextualFragment(markup);
+  return scratch === doc ? fragment : doc.adoptNode(fragment);
+}
+
+/**
+ * An HTML document of the same DOM implementation as `doc`, to parse HTML
+ * for an XML document, or null when the DOM cannot create one or cannot
+ * adopt its nodes.
+ *
+ * @param {Document} doc - An XML document
+ * @returns {Document|null} The scratch document
+ */
+function createScratchHtmlDocument(doc) {
+  const implementation = doc.implementation;
+  if (
+    typeof implementation?.createHTMLDocument !== "function" ||
+    typeof doc.adoptNode !== "function"
+  ) {
+    return null;
+  }
+  return implementation.createHTMLDocument("");
+}
+
+/**
+ * The fragment Chrome returns for `method="text"`: the serialized text as
+ * one text node, or an empty fragment for no text. Result elements never
+ * reach the fragment, text output has none.
+ *
+ * @param {Document} doc - The document that will own the fragment
+ * @param {string} text - The serialized text output
+ * @returns {DocumentFragment} The fragment
+ *
+ * @example
+ * textFragment(document, "a < b").firstChild.nodeValue; // "a < b"
+ */
+export function textFragment(doc, text) {
+  const fragment = doc.createDocumentFragment();
+  if (text) fragment.appendChild(doc.createTextNode(text));
+  return fragment;
 }

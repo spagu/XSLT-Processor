@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`transformToFragment()` with html output into an XML owner document** ([#17](https://github.com/spagu/XSLT-Processor/issues/17)): the fragment kept the result elements in no namespace with their names as written, so `XMLSerializer` wrote `<img .../>` and no `xmlns`. Chrome and Firefox return what the HTML parser makes of the output whatever the owner document (`document.implementation.createDocument("", "XmlTransform", null)` included): XHTML-namespace `HTMLElement`s with lower-case names, `tbody` in tables, `html`/`head`/`body` tags dropped. The processor now parses html output the same way for any owner document and adopts the nodes into it; `XMLSerializer` then writes `<div xmlns="http://www.w3.org/1999/xhtml" ...><img ... /></div>`, byte for byte as Firefox's on the reporter's stylesheet. DOMs without an HTML parser (xmldom) get the result nodes as XHTML elements with lower-case names instead. Same for @tradik/xslt3 through `xsltVersion: "auto"`.
+- **`transformToFragment()` with `method="text"` returned the result elements** besides the text; Chrome and Firefox return one text node with the text output (an empty fragment for no text), and so does the processor now.
+
 ### Changed
 
+- **`transformToFragment()` with xml output into an HTML document keeps the result nodes as they are**: elements in no namespace stay in no namespace, as Chrome and Firefox both return them (a comparison of the native `XSLTProcessor`s with this one over 26 output scenarios found it). Since 1.2.0 they became XHTML elements, on the belief that browsers did that; a page that relied on `<ul><li>` from `method="xml"` rendering as a list should declare `method="html"` (the default when the result starts with `html`), as it would have to in Chrome, or pass `new XSLTProcessor({ legacyXhtmlFragments: true })` (deprecated, like `legacyNameTests`) to keep the old behaviour while it does.
 - `make publish` and `make publish-xslt3` ask for the npm one-time password after the build and the tests, just before publishing: a code is valid for about 30 seconds and the checks take minutes, so `make publish OTP=123456` expired before it was used. `OTP=…` still works for scripted runs.
 
 ### Documentation

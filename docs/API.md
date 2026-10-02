@@ -36,13 +36,14 @@ non-W3C options:
 | `enableDynamicEvaluate` | Allow EXSLT `dyn:evaluate()` (trusted input only) |
 | `clock` | `() => Date` used by EXSLT date functions and `current-dateTime()` |
 | `legacyNameTests` | Deprecated: unprefixed name tests also match namespaced nodes, as before 1.2.0 |
+| `legacyXhtmlFragments` | Deprecated: `transformToFragment` turns xml output into XHTML elements of an HTML owner document, as in 1.2.0 to 1.3.0; Chrome and Firefox keep them in no namespace, the default since 1.3.1 |
 
 ### Methods
 
 | Method | Description |
 |--------|-------------|
 | `importStylesheet(node, stylesheetUri?)` | Imports an XSLT stylesheet from a Document or Element node. The optional `stylesheetUri` is the base URI used to resolve relative `xsl:import`/`xsl:include` hrefs |
-| `transformToFragment(source, output)` | Transforms XML and returns a DocumentFragment owned by `output` |
+| `transformToFragment(source, output)` | Transforms XML and returns a DocumentFragment owned by `output`, shaped as Chrome's: html output (declared or detected) is parsed by the HTML parser whether `output` is an HTML or an XML document, so it holds `HTMLElement`s with lower-case names in the XHTML namespace; text output is one text node; xml output keeps the result nodes in their namespaces |
 | `transformToDocument(source)` | Transforms XML and returns an XMLDocument |
 | `transformToString(source)` | Transforms XML and returns the serialized result honoring `xsl:output` (non-W3C extension) |
 | `setParameter(namespaceURI, localName, value)` | Sets an XSLT parameter |
@@ -289,7 +290,7 @@ How the API maps onto `@tradik/xslt3`:
 | `setParameter` / `getParameter` / `removeParameter` / `clearParameters` / `reset` | Stylesheet parameters by name (`{uri}local` for a namespace). Strings are `xs:string`, numbers `xs:double`, booleans `xs:boolean`; nodes, node lists and arrays are sequences of nodes |
 | `transformToString`, `transformAsync`, `transformToStream` | The principal result serialized with its `xsl:output` (Serialization 3.1) |
 | `transformToDocument` | As for XSLT 1.0: text output in a `pre` page, html output parsed as HTML, xml output with the `xsl:output` doctype |
-| `transformToFragment(source, output)` | A fragment of `output`; html output into an HTML document is parsed by its HTML parser |
+| `transformToFragment(source, output)` | A fragment of `output`, shaped as for XSLT 1.0: html output parsed by the HTML parser whatever the owner document, text output as one text node, xml output as the result nodes |
 | `setStylesheetLoader` | Loads `xsl:include`/`xsl:import` modules (with the resolved URI) |
 | `setDocumentLoader` | Loads `doc()` and `document()` (with the resolved URI); a missing document is an error (`FODC0002`), not an empty node-set |
 | `clock` option | `current-dateTime()` |

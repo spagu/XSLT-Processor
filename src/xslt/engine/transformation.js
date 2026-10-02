@@ -9,8 +9,8 @@ import { WhitespaceFilter, stripWhitespaceNodes } from "../whitespace.js";
 import {
   createResultDocument,
   importResultFragment,
-  isHtmlDocument,
   parseHtmlFragment,
+  textFragment,
   wrapTextResult,
 } from "../resultTree.js";
 import { resolveOutputSettings, serializeResult } from "../serializer.js";
@@ -57,12 +57,19 @@ export const transformationMethods = {
   },
 
   /**
-   * Transform a source node into a fragment of `ownerDocument` as Chrome's
-   * `transformToFragment` does: into an HTML document, the output of the
-   * html method (declared or detected) is serialized and parsed as HTML, so
-   * it holds HTMLElements, and other output keeps its nodes except that
-   * elements in no namespace become XHTML elements (as in Chrome and
-   * Firefox); into an XML document the result nodes are kept.
+   * Transform a source document and return a document fragment owned by
+   * `ownerDocument`, shaped as Chrome's `XSLTProcessor.transformToFragment`
+   * shapes it, whatever the owner document (HTML or XML, issue #17):
+   *
+   * - html output (declared or detected) is serialized and parsed by the
+   *   HTML parser, so the fragment holds HTMLElements with lower-case names
+   *   in the XHTML namespace, `table` gets its `tbody`, and `html`, `head`
+   *   and `body` tags are dropped (see parseHtmlFragment); a DOM without an
+   *   HTML parser gets the result nodes as XHTML elements instead;
+   * - text output is one text node;
+   * - xml output keeps the result nodes as they are, in their namespaces
+   *   (with the deprecated `legacyXhtmlFragments` option, elements in no
+   *   namespace become XHTML elements of an HTML owner, as before 1.3.1).
    *
    * @param {Node} sourceNode - Source document or element
    * @param {Document} ownerDocument - Output document
@@ -71,14 +78,20 @@ export const transformationMethods = {
   transformToFragment(sourceNode, ownerDocument) {
     const doc = this.outputDocumentOf(ownerDocument);
     const fragment = this.buildResultTree(sourceNode, doc);
-    const settings = resolveOutputSettings(this.outputSettings, fragment);
-    if (isHtmlDocument(doc) && settings.method === "html") {
-      return parseHtmlFragment(
-        serializeResult(fragment, this.outputSettings),
-        doc,
+    const { method } = resolveOutputSettings(this.outputSettings, fragment);
+    if (method === "text") {
+      return textFragment(doc, serializeResult(fragment, this.outputSettings));
+    }
+    if (method === "html") {
+      const markup = serializeResult(fragment, this.outputSettings);
+      return (
+        parseHtmlFragment(markup, doc) ??
+        importResultFragment(fragment, doc, { htmlMethod: true })
       );
     }
-    return importResultFragment(fragment, doc, { htmlElements: true });
+    return importResultFragment(fragment, doc, {
+      xhtmlElements: this.legacyXhtmlFragments,
+    });
   },
 
   /**

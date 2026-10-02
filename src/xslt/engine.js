@@ -94,6 +94,9 @@ export class XsltEngine {
    *   instantiations (default XSLT_MAX_TEMPLATE_DEPTH, 3000 as in libxslt)
    * @param {boolean} [options.legacyNameTests] - Deprecated: unprefixed name
    *   tests also match nodes in a namespace, as before 1.2.0
+   * @param {boolean} [options.legacyXhtmlFragments] - Deprecated: xml output
+   *   of transformToFragment becomes XHTML elements in an HTML owner
+   *   document, as in 1.2.0 to 1.3.0 (browsers keep it in no namespace)
    * @param {Function} [options.stylesheetLoader] - Loader for xsl:import/include
    * @param {Function} [options.documentLoader] - Loader for document()
    * @param {string} [options.baseUri] - Base URI of the stylesheet
@@ -104,6 +107,7 @@ export class XsltEngine {
    */
   constructor(options = {}) {
     this.enableDynamicEvaluate = options.enableDynamicEvaluate === true;
+    this.legacyXhtmlFragments = options.legacyXhtmlFragments === true;
     this.clock = options.clock ?? null;
     this.xpathEvaluator = new XPathEvaluator({
       maxResultSize: options.maxResultSize ?? XSLT_MAX_RESULT_SIZE,

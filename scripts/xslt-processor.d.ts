@@ -121,6 +121,12 @@ export class XSLTProcessor {
      * in no namespace.
      */
     legacyNameTests?: boolean;
+    /**
+     * Deprecated: `transformToFragment` turns xml output into XHTML elements
+     * of an HTML owner document, as 1.2.0 to 1.3.0 did. Chrome and Firefox
+     * keep such elements in no namespace, the default since 1.3.1.
+     */
+    legacyXhtmlFragments?: boolean;
     /** Allow EXSLT `dyn:evaluate()`; it evaluates XPath built from data. */
     enableDynamicEvaluate?: boolean;
     /** Clock for EXSLT current-time functions (reproducible output). */
@@ -505,6 +511,12 @@ export class XsltEngine {
      * in no namespace.
      */
     legacyNameTests?: boolean;
+    /**
+     * Deprecated: `transformToFragment` turns xml output into XHTML elements
+     * of an HTML owner document, as 1.2.0 to 1.3.0 did. Chrome and Firefox
+     * keep such elements in no namespace, the default since 1.3.1.
+     */
+    legacyXhtmlFragments?: boolean;
     /** Allow EXSLT `dyn:evaluate()`; it evaluates XPath built from data. */
     enableDynamicEvaluate?: boolean;
     /** Clock for EXSLT current-time functions (reproducible output). */

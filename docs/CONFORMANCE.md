@@ -234,7 +234,7 @@ Not supported, as in libexslt: `date:format-date`, `date:parse-date`,
 - `xsl:number` supports `level="single|multiple|any"` with `count`, `from`, `grouping-separator`/`grouping-size`, the `1`, `01`, `a`, `A`, `i`, `I` format tokens and decimal tokens of any Unicode digit family
 - Unprefixed name tests (`item`, `@a`) match only nodes in no namespace (XPath 1.0 section 2.3); in HTML documents element names are matched case-insensitively regardless of namespace, as browsers do
 - The `namespace::` axis returns a namespace node for every binding in scope, including `xml`
-- `transformToFragment()` into an HTML document parses html output as HTML, like Chrome, so the fragment contains real `HTMLElement`s
+- `transformToFragment()` parses html output as HTML, like Chrome, whether the owner document is an HTML or an XML one, so the fragment contains real `HTMLElement`s with lower-case names in the XHTML namespace (`XMLSerializer` writes `xmlns="http://www.w3.org/1999/xhtml"` and `<img ... />`); text output is one text node, and xml output keeps the result nodes in their namespaces, as Chrome and Firefox do. Not reproduced: libxslt's line breaks around block elements in html output, and the `application/xhtml+xml` content type of Chrome's text result document
 - The result tree is built in a neutral XML document and imported into the output
   document at the end, so element names and namespaces survive an HTML owner document
 
@@ -269,6 +269,11 @@ Differences from the XSLT 1.0 / XPath 1.0 specifications and from libxslt
 - **`legacyNameTests`** (deprecated, to be removed in a future major release):
   `new XSLTProcessor({ legacyNameTests: true })` restores the pre-1.2.0 matching
   where unprefixed name tests also selected namespaced nodes.
+- **`legacyXhtmlFragments`** (deprecated, to be removed in a future major
+  release): `new XSLTProcessor({ legacyXhtmlFragments: true })` restores the
+  1.2.0 to 1.3.0 behaviour where `transformToFragment` turned xml output into
+  XHTML elements of an HTML owner document; Chrome and Firefox keep such
+  elements in no namespace.
 
 ## Test Coverage
 

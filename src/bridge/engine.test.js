@@ -234,6 +234,73 @@ describe("xsltVersion auto result shapes", () => {
     assert.strictEqual(findFirst(doc, "p").textContent, "x");
   });
 
+  it("returns one text node for text output", () => {
+    const fragment = auto(text).transformToFragment(
+      parseXML("<r/>"),
+      parseXML("<o/>"),
+    );
+    assert.strictEqual(fragment.childNodes.length, 1);
+    assert.strictEqual(fragment.firstChild.nodeType, 3);
+    assert.strictEqual(fragment.textContent, "a < b");
+  });
+
+  it(
+    "turns xml output into XHTML elements with legacyXhtmlFragments",
+    jsdomOnly("HTML documents"),
+    () => {
+      const fragment = auto(
+        stylesheet(
+          `${NO_DECLARATION}<xsl:template match="/"><Item a="1"/></xsl:template>`,
+        ),
+        { legacyXhtmlFragments: true },
+      ).transformToFragment(parseXML("<r/>"), window.document);
+      assert.strictEqual(
+        fragment.firstChild.namespaceURI,
+        "http://www.w3.org/1999/xhtml",
+      );
+      assert.strictEqual(fragment.firstChild.localName, "Item");
+    },
+  );
+
+  it("keeps xml output in no namespace in an HTML owner", () => {
+    const fragment = auto(
+      stylesheet(
+        `${NO_DECLARATION}<xsl:template match="/"><Item a="1"/></xsl:template>`,
+      ),
+    ).transformToFragment(parseXML("<r/>"), window.document);
+    assert.strictEqual(fragment.firstChild.namespaceURI, null);
+    assert.strictEqual(fragment.firstChild.nodeName, "Item");
+  });
+
+  it("imports html output as XHTML elements on a DOM without an HTML parser", () => {
+    // An owner document that cannot parse HTML fragments (as xmldom): the
+    // result nodes are imported with lower-case names instead
+    const xml = parseXML("<o/>");
+    const owner = {
+      nodeType: 9,
+      contentType: "application/xml",
+      implementation: {},
+      createDocumentFragment: () => xml.createDocumentFragment(),
+      createElementNS: (ns, name) => xml.createElementNS(ns, name),
+      importNode: (node, deep) => xml.importNode(node, deep),
+    };
+    const fragment = auto(html).transformToFragment(parseXML("<r/>"), owner);
+    const p = findFirst(fragment, "p");
+    assert.strictEqual(p.namespaceURI, "http://www.w3.org/1999/xhtml");
+    assert.strictEqual(p.textContent, "x");
+  });
+
+  it("makes html output XHTML elements of an XML owner (#17)", () => {
+    const fragment = auto(html).transformToFragment(
+      parseXML("<r/>"),
+      parseXML("<o/>"),
+    );
+    assert.strictEqual(
+      findFirst(fragment, "p").namespaceURI,
+      "http://www.w3.org/1999/xhtml",
+    );
+  });
+
   it(
     "parses html output into HTML elements of an HTML owner",
     jsdomOnly("HTML documents"),
