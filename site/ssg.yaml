@@ -20,7 +20,7 @@ source: xslt
 template: xslt-site
 domain: xslt-processor.tradik.com
 title: "@tradik/xslt-processor"
-description: "XSLT 1.0 and XPath 1.0 in JavaScript: a drop-in XSLTProcessor for browsers without native XSLT, Node.js and the command line."
+description: "XSLT 1.0, 2.0 and 3.0 and XPath 3.1 in JavaScript: a drop-in XSLTProcessor for browsers without native XSLT, Node.js and the command line."
 content_dir: content
 templates_dir: templates
 data_dir: data

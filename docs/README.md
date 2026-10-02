@@ -14,7 +14,7 @@ implements the W3C `XSLTProcessor` API for browsers and Node.js and ships an
 | [Conformance](CONFORMANCE.md) | W3C compliance tables, supported elements and functions, known deviations, test coverage |
 | [Security Limits](SECURITY-LIMITS.md) | XPath and XSLT limits, prototype pollution protection, input validation |
 | [Browser Compatibility](BROWSER-SUPPORT.md) | Minimum browser versions, native XSLT removal timeline, feature detection |
-| [XSLT 2.0 and 3.0](XSLT3.md) | In development: one engine for XSLT 3.0 and 2.0 in a separate package, `@tradik/xslt3`; design, scope and milestones |
+| [XSLT 2.0 and 3.0](XSLT3.md) | `@tradik/xslt3`: one engine for XSLT 3.0 and 2.0 in a separate package; options, conformance and design |
 | [Benchmarks](BENCHMARKS.md) | 1.1.3 vs 1.2.0: speed-up, time and peak memory per scenario, with charts, tables and `npm run bench` to reproduce; XPath 1.0 of this package vs XPath 3.1 of @tradik/xslt3 (`npm run bench -- --suite xpath`); the XSLT 1.0 engine vs @tradik/xslt3 on the same stylesheets, idiomatic 2.0/3.0 rewrites and 3.0-only scenarios (`npm run bench -- --suite xslt`) |
 | [Development](DEVELOPMENT.md) | Setup, tests, Docker, Makefile, publishing to npm |
 | [Style Guide](STYLE-GUIDE.md) | Project colors with WCAG 2.2 contrast ratios |

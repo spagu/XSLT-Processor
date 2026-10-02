@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `make publish` and `make publish-xslt3` ask for the npm one-time password after the build and the tests, just before publishing: a code is valid for about 30 seconds and the checks take minutes, so `make publish OTP=123456` expired before it was used. `OTP=…` still works for scripted runs.
 
+### Documentation
+
+- **Website wording for XSLT 2.0 and 3.0**: the home page said "XSLT 1.0 · XPath 1.0 · EXSLT" and the title "XSLT 1.0 in JavaScript"; they now name XSLT 1.0, 2.0 and 3.0 and XPath 3.1, with an install hint for `@tradik/xslt3` under the npm command. The playground mode is called "XSLT 2.0 / 3.0", because the 3.0 engine runs `version="2.0"` stylesheets as written (the page says so). "In development" is gone from the site, README.md, docs/README.md and docs/DEVELOPMENT.md, and the social card (og-card.png) is regenerated with the new text.
+
 ## [1.3.0] - 2026-10-02
 
 The first release of **`@tradik/xslt3` 1.0.0**, a separate XSLT 3.0 and XPath 3.1 engine (99.9% of the W3C qt3tests, 98.2% of xslt30-test), and an opt-in route to it from `XSLTProcessor` (`xsltVersion: "auto"`). The XSLT 1.0 behaviour of `@tradik/xslt-processor` is unchanged by default.

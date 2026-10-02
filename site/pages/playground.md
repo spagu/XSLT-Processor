@@ -1,6 +1,6 @@
 ---
 title: "XSLT playground"
-description: "Run XSLT 1.0 and 3.0 stylesheets and XPath 3.1 expressions on your own XML in the browser: parameters, live preview, result documents, typed items."
+description: "Run XSLT 1.0, 2.0 and 3.0 stylesheets and XPath 3.1 expressions on your own XML in the browser: parameters, live preview, result documents, typed items."
 slug: playground
 link: /playground/
 status: publish
@@ -14,9 +14,10 @@ page keeps working without a network connection once it has loaded.
 `@tradik/xslt-processor`, not with the browser's native `XSLTProcessor`, so
 the result is the one your users get after Chrome removes native XSLT.
 
-**XSLT 3.0** runs the same editors with `@tradik/xslt3`, the XSLT 3.0 engine
-that is in development in this repository ([design and status](../docs/xslt3/)).
-It takes XSLT 3.0 and 2.0 stylesheets, and 1.0 ones in backwards-compatible
+**XSLT 2.0 / 3.0** runs the same editors with `@tradik/xslt3`, the XSLT 3.0
+engine ([options and conformance](../docs/xslt3/)). It is one mode for both
+versions: XSLT 3.0 is a superset of 2.0, so a stylesheet with
+`version="2.0"` runs here as written, and 1.0 ones run in backwards-compatible
 mode. The examples cover `xsl:for-each-group`, `xsl:analyze-string`, typed
 `xsl:function`s, text value templates, `xsl:iterate`, maps and JSON,
 `xsl:try`, `xsl:merge`, accumulators and `xsl:result-document`, whose extra

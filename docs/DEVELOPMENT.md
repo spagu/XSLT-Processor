@@ -50,7 +50,7 @@ further packages, built and tested on their own:
 | Directory | Package | Tests |
 |---|---|---|
 | `.` | `@tradik/xslt-processor` | `npm test` |
-| `packages/xslt3` | `@tradik/xslt3` (XSLT 3.0 / XPath 3.1, in development, [design](XSLT3.md)) | `npm run test:xslt3` |
+| `packages/xslt3` | `@tradik/xslt3` (XSLT 3.0 / XPath 3.1, [design](XSLT3.md)) | `npm run test:xslt3` |
 
 `npm ci` at the root installs every package. A workspace never becomes a
 dependency of `@tradik/xslt-processor`: its tarball holds only `dist/`,

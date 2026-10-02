@@ -238,7 +238,7 @@ export function landingData({ readme, pages, version }) {
  */
 export function homePage(landing) {
   return frontmatter({
-    title: "XSLT 1.0 in JavaScript",
+    title: "XSLT 1.0, 2.0 and 3.0 in JavaScript",
     description: truncate(landing.intro, 160),
     slug: "home",
     link: "/",

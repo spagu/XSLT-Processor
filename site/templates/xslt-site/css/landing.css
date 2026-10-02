@@ -72,6 +72,12 @@
   margin-block: var(--space-4);
 }
 
+.install-line--extra {
+  margin-top: var(--space-2);
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
 .install-line code {
   display: inline-block;
   padding: var(--space-2) var(--space-3);

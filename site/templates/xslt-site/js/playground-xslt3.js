@@ -101,7 +101,7 @@ export function createXslt3Mode({
     statusLine.textContent =
       result.output === null
         ? "The transformation failed. See the messages below."
-        : `Output method: ${result.method} (${source}). ${plural(result.output.length, "character")}${extra} in ${result.ms.toFixed(1)} ms with @tradik/xslt3 ${lib.VERSION} (in development).`;
+        : `Output method: ${result.method} (${source}). ${plural(result.output.length, "character")}${extra} in ${result.ms.toFixed(1)} ms with @tradik/xslt3 ${lib.VERSION}.`;
     showMessages(result.messages);
     outputCode.textContent = result.output ?? "";
     preview.srcdoc =
