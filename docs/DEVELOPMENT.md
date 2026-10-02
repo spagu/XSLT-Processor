@@ -57,6 +57,24 @@ further packages, built and tested on their own:
 dependency of `@tradik/xslt-processor`: its tarball holds only `dist/`,
 `src/` and `bin/`.
 
+## Continuous integration
+
+Each workflow runs only when the files it checks change (`paths` filters on
+push and pull request), so a website or documentation change does not run the
+library's tests, and a library change does not redeploy the site unless the
+site is built from it:
+
+| Workflow | Runs when these change |
+|---|---|
+| `test.yml` (lint, format, unit tests of every package, DOM matrix, build) | `src/`, `bin/`, `packages/`, `scripts/`, `tests/`, package files, ESLint/Prettier config |
+| `browser.yml` (Playwright: Chromium, Firefox, WebKit, Chromium without XSLT) | the same paths |
+| `conformance.yml` (libxslt corpus) | `src/`, the conformance runner and its tests, package files |
+| `site.yml` (site tests, docs links, build, deploy from `main`) | `site/`, `docs/`, `README.md`, `CHANGELOG.md`, and the code the site is built from (`src/`, `packages/xslt3/src/`, `packages/migrate-check/`, `scripts/build.js`); also by hand (`workflow_dispatch`) |
+| `release.yml` | a published GitHub release only |
+
+Each workflow also runs when its own file changes. SonarCloud is a GitHub App,
+not a workflow, and analyses every pull request.
+
 ## Docker
 
 ```bash

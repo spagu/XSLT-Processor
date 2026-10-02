@@ -7,8 +7,32 @@ name: Browser tests
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "bin/**"
+      - "packages/**"
+      - "scripts/**"
+      - "tests/**"
+      - "package.json"
+      - "package-lock.json"
+      - "eslint.config.js"
+      - ".prettierrc*"
+      - ".prettierignore"
+      - ".github/workflows/browser.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "src/**"
+      - "bin/**"
+      - "packages/**"
+      - "scripts/**"
+      - "tests/**"
+      - "package.json"
+      - "package-lock.json"
+      - "eslint.config.js"
+      - ".prettierrc*"
+      - ".prettierignore"
+      - ".github/workflows/browser.yml"
 
 permissions: {}
 
