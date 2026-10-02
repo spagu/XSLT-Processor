@@ -1,0 +1,50 @@
+{
+  "name": "xslt-migrate-check",
+  "version": "0.1.0",
+  "description": "Scans a project for XSLT that stops working when Chrome removes native XSLT (Chrome 158, 17 November 2026) and prints the risk and the one-line migration",
+  "type": "module",
+  "bin": {
+    "xslt-migrate-check": "./bin/xslt-migrate-check.js"
+  },
+  "exports": {
+    ".": "./src/cli.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "!bin/**/*.test.js",
+    "!src/**/*.test.js",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "test": "node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=96 --test-coverage-exclude=\"**/*.test.js\" \"src/**/*.test.js\" \"bin/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "BSD-3-Clause",
+  "author": "tradik",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spagu/XSLT-Processor.git",
+    "directory": "packages/migrate-check"
+  },
+  "homepage": "https://xslt-processor.tradik.com/",
+  "bugs": {
+    "url": "https://github.com/spagu/XSLT-Processor/issues"
+  },
+  "keywords": [
+    "xslt",
+    "xsltprocessor",
+    "chrome",
+    "deprecation",
+    "migration",
+    "xml-stylesheet",
+    "audit",
+    "cli"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

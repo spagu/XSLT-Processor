@@ -26,7 +26,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit]
+        browser: [chromium, firefox, webkit, chromium-noxslt]
+        include:
+          # Chromium with Blink's XSLT feature disabled (what Chrome 158
+          # ships): the same install, a Playwright project of its own
+          - browser: chromium-noxslt
+            install: chromium
 
     steps:
       - name: Checkout repository
@@ -43,8 +48,8 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Install ${{ matrix.browser }} and its system dependencies
-        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Install ${{ matrix.install || matrix.browser }} and its system dependencies
+        run: npx playwright install --with-deps ${{ matrix.install || matrix.browser }}
 
       - name: Build distribution
         run: npm run build

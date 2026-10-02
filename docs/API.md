@@ -81,6 +81,10 @@ skipped, as libxslt does.
 | `XSLTProcessor` (also the default export) | The processor class described above |
 | `isNativeXSLTSupported()` | `true` when `globalThis.XSLTProcessor` exists and transforms a test document. After `installGlobal()` it tests the installed polyfill |
 | `installGlobal(force = false)` | Sets `globalThis.XSLTProcessor` to this implementation when native XSLT is not functional (always with `force`). Returns `true` when installed |
+| `findXmlStylesheet(doc)` | The first `xml-stylesheet` processing instruction naming an XSLT stylesheet, as `{ href, type }`, or `null` |
+| `needsXmlStylesheet(doc)` | `true` for an XML document left unstyled with such an instruction (not HTML, not already an XHTML page) |
+| `applyXmlStylesheet(doc = document, { fetch, Processor })` | Fetches the stylesheet relative to the document, transforms the document and replaces its document element with the result (scripts re-created). Resolves to `false` when the document needs nothing; rejects when the stylesheet cannot be fetched or parsed |
+| `autoApplyXmlStylesheet(doc = document)` | `applyXmlStylesheet` once the document is parsed, errors on the console; the browser bundle calls it next to `installGlobal()`, see [BROWSER-SUPPORT.md](BROWSER-SUPPORT.md) |
 | `serializeResult(node, outputSettings?)` | Serializes a document, fragment or element with `xsl:output` settings, see [below](#serializing-output-xsloutput) |
 | `resolveOutputSettings(outputSettings, node)` | Normalizes raw `xsl:output` settings (booleans for `indent`/`omitXmlDeclaration`, a `Set` of CDATA element names, detected method) |
 | `markRawText(textNode)`, `isRawText(node)` | Mark / test a text node that is serialized without escaping (`disable-output-escaping`) |

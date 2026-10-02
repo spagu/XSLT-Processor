@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.2] - 2026-10-02
+
+### Added
+
+- **`xslt-migrate-check`** (`packages/migrate-check`, `npx xslt-migrate-check .`): a dependency-free scanner that finds the XSLT a project runs in the browser (`XSLTProcessor` usages in JavaScript and templates, XML documents rendered with `<?xml-stylesheet?>`, HTML pointing at XSL, the stylesheets with their version and the features they use, MSXML extensions), rates the Chrome compatibility risk (HIGH, MEDIUM, NONE) and prints the one-line migration; `--json` for tools, `--fail-on high|medium` for pipelines. Documented in docs/MIGRATE-CHECK.md, published from the same release tag (`make publish-migrate-check`).
+- **Migration how-to on the website** (`/blog/migrating-from-native-xslt/`): find what breaks with the checker, one line for pages that call `XSLTProcessor`, one line inside XML documents with `<?xml-stylesheet?>`, XSLT 2.0/3.0, testing today with `chrome --disable-blink-features=XSLT`, and rendering on the server instead. The home page gets a "Find out what breaks" section and a hero line for the checker; the docs navigation gets "Migration checker".
+- **One line keeps `<?xml-stylesheet?>` documents rendering without native XSLT**: a browser without XSLT shows such an XML document raw but runs an XHTML `<script>` found in it, so `<script xmlns="http://www.w3.org/1999/xhtml" src="…/xslt-processor.browser.min.js"></script>` after the processing instruction makes the bundle fetch the stylesheet (and its imports) relative to the document, transform the document and replace it with the result, scripts of the result re-created so they run. New exports `findXmlStylesheet`, `needsXmlStylesheet`, `applyXmlStylesheet` and `autoApplyXmlStylesheet`; the browser bundles call the last one next to `installGlobal()`. Verified in Chromium with Blink's XSLT feature disabled (`--disable-blink-features=XSLT`, what Chrome 158 ships), which the browser tests now run as the `chromium-noxslt` project.
 
 ### Changed
 

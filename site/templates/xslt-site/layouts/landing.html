@@ -16,6 +16,7 @@
         </div>
         <p class="install-line"><code>npm install @tradik/xslt-processor</code></p>
         <p class="install-line install-line--extra">XSLT 2.0 and 3.0: add <code>@tradik/xslt3</code> and pass <code>xsltVersion: "auto"</code> (<a href="{{ $b }}/docs/xslt3/">how</a>)</p>
+        <p class="install-line install-line--extra">Not sure what breaks? <code>npx xslt-migrate-check .</code> (<a href="{{ $b }}/docs/migrate-check/">what it finds</a>)</p>
       </div>
       <img class="hero__art" src="{{ $b }}/images/hero.svg" width="480" height="360" alt="An XML document and an XSLT stylesheet flow into the processor, which produces an HTML page">
     </div>
@@ -42,7 +43,22 @@
     </div>
   </section>
 
-  <section class="band" aria-labelledby="install-title">
+  <section class="band" aria-labelledby="check-title">
+    <div class="wrap prose narrow">
+      <h2 id="check-title">Find out what breaks</h2>
+      <p>One command scans a project for the XSLT it runs in the browser: pages that call <code>XSLTProcessor</code>, XML documents rendered with <code>&lt;?xml-stylesheet?&gt;</code>, and the stylesheets themselves. Nothing leaves your machine.</p>
+      <pre><code>npx xslt-migrate-check .
+
+Found 5 XSLTProcessor usages in 2 files
+Found 12 XSL stylesheets (10 × XSLT 1.0, 1 × XSLT 2.0, 1 × XSLT 3.0)
+Found 3 XML documents rendered with &lt;?xml-stylesheet?&gt;
+Chrome compatibility risk: HIGH
+Suggested migration: @tradik/xslt-processor</code></pre>
+      <p>It ends with the one line that fixes each kind of page: a <code>&lt;script&gt;</code> tag for pages that use <code>XSLTProcessor</code>, and the same tag inside an XML document for <code>&lt;?xml-stylesheet?&gt;</code>. Add <code>--fail-on high</code> in a pipeline. <a href="{{ $b }}/blog/migrating-from-native-xslt/">The migration how-to</a> walks through every step; <a href="{{ $b }}/docs/migrate-check/">the reference</a> lists what it looks for.</p>
+    </div>
+  </section>
+
+  <section class="band band--alt" aria-labelledby="install-title">
     <div class="wrap prose narrow">
       <h2 id="install-title">Install</h2>
       {{ $l.install | safeHTML }}
@@ -52,7 +68,7 @@
     </div>
   </section>
 
-  <section class="band band--alt" aria-labelledby="guides-title">
+  <section class="band" aria-labelledby="guides-title">
     <div class="wrap">
       <h2 id="guides-title">Guides</h2>
       <dl class="guide-list">

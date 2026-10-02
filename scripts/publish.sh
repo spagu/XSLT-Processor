@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Publish to npm by hand: @tradik/xslt-processor (make publish OTP=123456) or,
-# with PACKAGE=xslt3, @tradik/xslt3 (make publish-xslt3 OTP=123456). Both are
-# released from the same tag, v<version of the root package.json>.
+# with PACKAGE=xslt3, @tradik/xslt3 (make publish-xslt3 OTP=123456), or with
+# PACKAGE=migrate-check, xslt-migrate-check (make publish-migrate-check). All
+# are released from the same tag, v<version of the root package.json>.
 #
 # The Release workflow publishes with Trusted Publishing when a GitHub release
 # is created; this is the manual path for when that is not possible. It
@@ -31,7 +32,8 @@ tag="v$(node -p "require('./package.json').version")"
 case "${PACKAGE:-root}" in
   root) manifest="./package.json" workspace=() ;;
   xslt3) manifest="./packages/xslt3/package.json" workspace=(--workspace @tradik/xslt3) ;;
-  *) fail "PACKAGE must be root or xslt3" ;;
+  migrate-check) manifest="./packages/migrate-check/package.json" workspace=(--workspace xslt-migrate-check) ;;
+  *) fail "PACKAGE must be root, xslt3 or migrate-check" ;;
 esac
 name=$(node -p "require('${manifest}').name")
 version=$(node -p "require('${manifest}').version")
@@ -54,7 +56,9 @@ fi
 
 echo "publish: ${name}@${version} from ${tag} ($(git rev-parse --short HEAD))"
 npm ci --ignore-scripts
-if [[ "${PACKAGE:-root}" == "xslt3" ]]; then
+if [[ "${PACKAGE:-root}" == "migrate-check" ]]; then
+  npm run test:migrate-check
+elif [[ "${PACKAGE:-root}" == "xslt3" ]]; then
   npm run test:xslt3
   npm run test:suites:unit
   npm run suites:fetch

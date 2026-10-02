@@ -1,4 +1,4 @@
-.PHONY: install test test-watch test-browser test-dom conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help site site-content site-serve site-test site-clean site-deploy publish publish-dry publish-xslt3 publish-xslt3-dry
+.PHONY: install test test-watch test-browser test-dom conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help site site-content site-serve site-test site-clean site-deploy publish publish-dry publish-xslt3 publish-xslt3-dry publish-migrate-check publish-migrate-check-dry
 
 # Default target
 help:
@@ -30,6 +30,8 @@ help:
 	@echo "  publish-dry  - Every publish check and npm publish --dry-run, nothing published"
 	@echo "  publish-xslt3 - Publish @tradik/xslt3 from the same release tag (asks for the OTP after the tests)"
 	@echo "  publish-xslt3-dry - The same checks for @tradik/xslt3 and a dry run"
+	@echo "  publish-migrate-check - Publish xslt-migrate-check from the same release tag"
+	@echo "  publish-migrate-check-dry - The same checks for xslt-migrate-check and a dry run"
 
 # Install dependencies
 install:
@@ -169,3 +171,10 @@ publish-xslt3:
 
 publish-xslt3-dry:
 	PACKAGE=xslt3 DRY_RUN=1 bash scripts/publish.sh
+
+# xslt-migrate-check (packages/migrate-check), from the same release tag
+publish-migrate-check:
+	PACKAGE=migrate-check OTP=$(OTP) bash scripts/publish.sh
+
+publish-migrate-check-dry:
+	PACKAGE=migrate-check DRY_RUN=1 bash scripts/publish.sh

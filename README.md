@@ -31,6 +31,7 @@ This library ensures your XSLT-based applications continue to work regardless of
 ## Features
 
 - **1:1 Native API Compatibility**: Drop-in replacement for native `XSLTProcessor`
+- **One-line migration**: a `<script>` tag keeps `XSLTProcessor` pages working, and the same tag inside an XML document keeps `<?xml-stylesheet?>` rendering; `npx xslt-migrate-check .` finds the pages that need it ([how-to](https://xslt-processor.tradik.com/blog/migrating-from-native-xslt/))
 - **XSLT 1.0**: Every element and function of the W3C XSLT 1.0 Recommendation, with the few gaps listed under [Known Deviations](docs/CONFORMANCE.md#known-deviations)
 - **XPath 1.0 Engine**: Built-in XPath evaluator with all core functions
 - **`xsl:output` Serialization**: `transformToString()` honors method, indent, doctype, CDATA sections and `disable-output-escaping`
@@ -52,6 +53,7 @@ The documentation is also published as a website with an interactive playground:
 | [Security Limits](docs/SECURITY-LIMITS.md) | XPath and XSLT limits, prototype pollution protection, input validation |
 | [Browser Compatibility](docs/BROWSER-SUPPORT.md) | Minimum browser versions, native XSLT removal timeline, feature detection |
 | [XSLT 2.0 and 3.0](docs/XSLT3.md) | `@tradik/xslt3`: one engine for XSLT 3.0 and 2.0 in a separate package; options, conformance and design |
+| [Migration checker](docs/MIGRATE-CHECK.md) | `npx xslt-migrate-check .`: finds `XSLTProcessor` usages, `<?xml-stylesheet?>` documents and stylesheets in a project, rates the Chrome risk and prints the one-line migration; `--json` and `--fail-on` for CI |
 | [Benchmarks](docs/BENCHMARKS.md) | Every version side by side (1.1.3, 1.2.0, 1.3.0, @tradik/xslt3) in one chart and table; then the detailed runs: 1.1.3 vs 1.2.0 speed-up, time and peak memory per scenario, with charts, tables and `npm run bench` to reproduce; XPath 1.0 of this package vs XPath 3.1 of @tradik/xslt3 (`npm run bench -- --suite xpath`); the XSLT 1.0 engine vs @tradik/xslt3 on the same stylesheets, idiomatic 2.0/3.0 rewrites and 3.0-only scenarios (`npm run bench -- --suite xslt`) |
 | [Development](docs/DEVELOPMENT.md) | Setup, tests, Docker, Makefile, publishing to npm |
 | [Style Guide](docs/STYLE-GUIDE.md) | Project colors with WCAG 2.2 contrast ratios |
@@ -109,6 +111,28 @@ implementation, call `XsltProcessorLib.installGlobal(true)` or use
 | unpkg | `https://unpkg.com/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js` |
 
 > **Tip:** Use `@1` for the latest 1.x version, or an exact version such as `@1.1.3` for pinning.
+
+### One line for XML documents with `<?xml-stylesheet?>`
+
+An XML file that Chrome rendered through `<?xml-stylesheet type="text/xsl"?>`
+shows up as raw XML once native XSLT is gone. One line right after the
+processing instruction keeps it rendering: browsers without XSLT run an XHTML
+`<script>` found in an XML document, the bundle finds the instruction,
+fetches the stylesheet (and its imports), transforms the document and
+replaces it with the result, scripts of the result included.
+
+```xml
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="catalog.xsl"?>
+<catalog><script xmlns="http://www.w3.org/1999/xhtml" src="https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js"></script>
+  <item>…</item>
+</catalog>
+```
+
+Browsers that still have XSLT apply the instruction themselves and never see
+the script. The stylesheet does not see it either: it is removed from the
+source before the transformation. To find the pages that need this line, run
+`npx xslt-migrate-check .` in your project ([migration checker](docs/MIGRATE-CHECK.md)).
 
 ### Browser (Local Install)
 

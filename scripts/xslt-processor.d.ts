@@ -304,6 +304,36 @@ export function isNativeXSLTSupported(): boolean;
 export function installGlobal(force?: boolean): boolean;
 
 /**
+ * The first `xml-stylesheet` processing instruction of a document that names
+ * an XSLT stylesheet, or null.
+ */
+export function findXmlStylesheet(
+  doc: Document,
+): { href: string; type: string } | null;
+
+/**
+ * Whether a document is XML left unstyled with an XSLT processing instruction
+ * the browser did not apply (not HTML, not already an XHTML page).
+ */
+export function needsXmlStylesheet(doc: Document | null | undefined): boolean;
+
+/**
+ * Apply the document's `<?xml-stylesheet?>` with this library: fetch the
+ * stylesheet relative to the document, transform, replace the document
+ * element with the result. Resolves to false when the document needs none.
+ */
+export function applyXmlStylesheet(
+  doc?: Document,
+  options?: { fetch?: typeof fetch; Processor?: typeof XSLTProcessor },
+): Promise<boolean>;
+
+/**
+ * Apply the processing instruction of the current document once parsed, when
+ * the browser did not (the browser bundle calls it next to installGlobal()).
+ */
+export function autoApplyXmlStylesheet(doc?: Document): void;
+
+/**
  * XPath evaluation result types.
  */
 export const XPathResultType: {

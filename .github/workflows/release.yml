@@ -137,6 +137,16 @@ jobs:
             npm publish --workspace @tradik/xslt3 --provenance --access public
           fi
 
+      # xslt-migrate-check (packages/migrate-check), the same way
+      - name: Publish xslt-migrate-check to npm
+        run: |
+          version=$(node -p "require('./packages/migrate-check/package.json').version")
+          if npm view "xslt-migrate-check@${version}" version >/dev/null 2>&1; then
+            echo "xslt-migrate-check@${version} is already on npm"
+          else
+            npm publish --workspace xslt-migrate-check --provenance --access public
+          fi
+
   # Standalone `xslt` executables (Node.js Single Executable Applications,
   # see scripts/binaries/build.mjs). Each target is built on its own OS and
   # CPU: the V8 code cache is platform specific and macOS binaries must be
