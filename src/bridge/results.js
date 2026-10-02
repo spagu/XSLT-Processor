@@ -4,17 +4,17 @@
  * The principal result of @tradik/xslt3 is a document (a well-formed tree)
  * or a document fragment. `transformToFragment` and `transformToDocument`
  * return it shaped as the XSLT 1.0 engine shapes its own results (as
- * Chrome does): html output parsed by the HTML parser of an HTML owner
- * document, text output wrapped in a `pre` page, xml output as a document
- * with the `doctype-public`/`doctype-system` of xsl:output.
+ * Chrome does): html output parsed by the HTML parser, text output as one
+ * text node or wrapped in a `pre` page, xml output as the result nodes or a
+ * document with the `doctype-public`/`doctype-system` of xsl:output.
  *
  * @module bridge/results
  */
 
 import {
   importResultFragment,
-  isHtmlDocument,
   parseHtmlFragment,
+  textFragment,
   wrapTextResult,
 } from "../xslt/resultTree.js";
 import { fillXmlDocument, parseHtmlDocument } from "../xslt/resultDocument.js";
@@ -39,7 +39,10 @@ export function camelCaseOutput(output) {
 }
 
 /**
- * The result as a fragment owned by `output`.
+ * The result as a fragment owned by `output`, shaped as the XSLT 1.0
+ * engine shapes its fragments (XsltEngine.transformToFragment): html
+ * output parsed by the HTML parser whatever the owner document, text
+ * output as one text node, xml output as the result nodes.
  *
  * @param {Node} principal - Principal result (document or fragment)
  * @param {Record<string, *>} params - Its serialization parameters
@@ -48,10 +51,16 @@ export function camelCaseOutput(output) {
  * @returns {DocumentFragment} The fragment
  */
 export function fragmentResult(principal, params, output, serialize) {
-  if (isHtmlDocument(output) && params.method === "html") {
-    return parseHtmlFragment(serialize(principal, params), output);
+  if (params.method === "text") {
+    return textFragment(output, serialize(principal, params));
   }
-  return importResultFragment(principal, output, { htmlElements: true });
+  if (params.method === "html") {
+    return (
+      parseHtmlFragment(serialize(principal, params), output) ??
+      importResultFragment(principal, output, { htmlMethod: true })
+    );
+  }
+  return importResultFragment(principal, output);
 }
 
 /**

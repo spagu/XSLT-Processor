@@ -1309,14 +1309,11 @@ describe("XSLTProcessor", () => {
           document,
         );
 
-        // Elements in no namespace become XHTML elements of the HTML owner
-        // document, as in Chrome and Firefox; the name keeps its case
+        // xml output: elements in no namespace stay in no namespace with
+        // their names as written, as Chrome and Firefox return them
         assert.strictEqual(fragment.ownerDocument, document);
         assert.strictEqual(fragment.firstChild.localName, "BAR");
-        assert.strictEqual(
-          fragment.firstChild.namespaceURI,
-          "http://www.w3.org/1999/xhtml",
-        );
+        assert.strictEqual(fragment.firstChild.namespaceURI, null);
         assert.strictEqual(fragment.firstChild.firstChild.localName, "qux");
       },
     );
