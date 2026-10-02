@@ -72,9 +72,11 @@ async function buildAll() {
     sourcemap: true,
     footer: {
       js: `
-// Auto-install as global XSLTProcessor replacement if native is not functional
+// Auto-install as global XSLTProcessor replacement if native is not functional,
+// and apply an <?xml-stylesheet?> the browser left unapplied (XML documents)
 if (typeof window !== 'undefined') {
   XsltProcessorLib.installGlobal();
+  XsltProcessorLib.autoApplyXmlStylesheet();
 }
 `,
     },
@@ -94,7 +96,7 @@ if (typeof window !== 'undefined') {
     minify: true,
     sourcemap: true,
     footer: {
-      js: `if(typeof window!=='undefined'){XsltProcessorLib.installGlobal();}`,
+      js: `if(typeof window!=='undefined'){XsltProcessorLib.installGlobal();XsltProcessorLib.autoApplyXmlStylesheet();}`,
     },
   });
 

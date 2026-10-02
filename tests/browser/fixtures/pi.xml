@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="pi.xsl"?>
+<!-- One line, right after the processing instruction, keeps this document
+     rendering in a browser without XSLT: the library applies the stylesheet -->
+<catalog><script xmlns="http://www.w3.org/1999/xhtml" src="/dist/xslt-processor.browser.min.js"></script>
+  <item id="1">Apples</item>
+  <item id="2">Pears &amp; quinces</item>
+</catalog>

@@ -32,6 +32,14 @@ export {
   default,
 } from "./XSLTProcessor.js";
 
+// <?xml-stylesheet?> in an XML document the browser left unstyled
+export {
+  applyXmlStylesheet,
+  autoApplyXmlStylesheet,
+  findXmlStylesheet,
+  needsXmlStylesheet,
+} from "./browser/xmlStylesheet.js";
+
 // XPath module (for advanced users)
 export {
   evaluate as evaluateXPath,

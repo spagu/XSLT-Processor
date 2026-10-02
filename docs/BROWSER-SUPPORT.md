@@ -27,6 +27,30 @@ From [Chrome's announcement](https://developer.chrome.com/docs/web-platform/depr
 | Firefox | positive standards position, tracking [bug 1990759](https://bugzilla.mozilla.org/show_bug.cgi?id=1990759) | no date | no date |
 | Safari (WebKit) | supports the removal | no date | no date |
 
+## XML Documents With `<?xml-stylesheet?>`
+
+A browser without XSLT ignores the processing instruction and shows the XML
+document as it is, but it does run an XHTML `<script>` element found in the
+document (tested in Chromium with Blink's XSLT feature disabled, which is what
+Chrome 158 ships: the `chromium-noxslt` project of the browser tests). The
+bundle uses that: when it loads inside an unstyled XML document that carries an
+XSLT processing instruction, `autoApplyXmlStylesheet()` fetches the stylesheet
+relative to the document, runs `importStylesheetAsync()` (so `xsl:import` and
+`xsl:include` are fetched too), transforms the document without the XHTML
+script elements, and replaces the document element with the result. Script
+elements of the result are re-created so that they run. One line does it:
+
+```xml
+<?xml-stylesheet type="text/xsl" href="page.xsl"?>
+<root><script xmlns="http://www.w3.org/1999/xhtml" src="https://cdn.jsdelivr.net/npm/@tradik/xslt-processor@1/dist/xslt-processor.browser.min.js"></script>…</root>
+```
+
+Browsers with XSLT apply the instruction while parsing and never execute the
+script. The API: `findXmlStylesheet(doc)`, `needsXmlStylesheet(doc)`,
+`applyXmlStylesheet(doc, { fetch, Processor })` (a promise; false when the
+document needs nothing) and `autoApplyXmlStylesheet(doc)` (waits for
+`DOMContentLoaded`, logs errors and leaves the raw XML in place).
+
 ## Feature Detection
 
 ```javascript

@@ -31,6 +31,16 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      // Chromium with Blink's XSLT feature switched off: what Chrome 158
+      // (17 November 2026) ships. Only the specs written for it run here.
+      name: "chromium-noxslt",
+      testMatch: "xmlStylesheet.spec.mjs",
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { args: ["--disable-blink-features=XSLT"] },
+      },
+    },
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
