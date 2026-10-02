@@ -59,6 +59,12 @@ export function startCheck(app, checker) {
     errorBox.hidden = false;
   };
 
+  /** Report a check that failed: no result, and the reason. */
+  const fail = (error) => {
+    status.textContent = "No result.";
+    showError(error.message);
+  };
+
   app.hidden = false;
   checker.then(
     () => {
@@ -110,8 +116,7 @@ export function startCheck(app, checker) {
       status.textContent = `Checked ${plural(collected.files.length, "file")}: migration readiness ${percent}%, ${plural(analysis.summary.findings, "finding")}.`;
       result.focus();
     } catch (error) {
-      status.textContent = "No result.";
-      showError(error.message);
+      fail(error);
     } finally {
       busy = false;
     }
@@ -121,7 +126,7 @@ export function startCheck(app, checker) {
     input.addEventListener("change", () => {
       const sources = fromFileList(input.files);
       input.value = "";
-      run(async () => sources);
+      run(async () => sources).catch(fail);
     });
   }
 
@@ -137,7 +142,7 @@ export function startCheck(app, checker) {
     event.preventDefault();
     drop.classList.remove("ck-drop--over");
     const dropped = takeDropped(event.dataTransfer);
-    run((isIgnoredDir) => droppedSources(dropped, isIgnoredDir));
+    run((isIgnoredDir) => droppedSources(dropped, isIgnoredDir)).catch(fail);
   });
   // A file dropped beside the zone would replace the page with the file
   for (const type of ["dragover", "drop"]) {

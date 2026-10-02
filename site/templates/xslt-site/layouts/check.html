@@ -27,7 +27,7 @@
       <label for="ck-folder" class="button ck-drop__folder">Choose a folder</label>
       <p class="ck-drop__note">Read: scripts and templates (.js, .ts, .html, .php, .vue and more), .xml, .xsl and .xslt, and the root package.json. Left out, as on the command line: node_modules, dist, build, vendor and other generated folders. Up to 50 MB and 5,000 files; zip archives without encryption.</p>
     </div>
-    <p id="ck-status" class="ck-status" role="status" aria-live="polite">Loading the checker…</p>
+    <output id="ck-status" class="ck-status" aria-live="polite">Loading the checker…</output>
     <div id="ck-error" class="ck-error" hidden></div>
   </section>
 
@@ -40,19 +40,20 @@
     <div class="ck-actions">
       <button type="button" id="ck-copy" class="button button--primary">Copy report</button>
       <button type="button" id="ck-download" class="button">Download HTML report</button>
-      <span id="ck-action-status" class="ck-action-status" role="status" aria-live="polite"></span>
+      <output id="ck-action-status" class="ck-action-status" aria-live="polite"></output>
     </div>
 
     <h3 id="ck-steps-title">What to do</h3>
     <ol id="ck-steps" class="ck-steps" aria-labelledby="ck-steps-title"></ol>
 
     <h3 id="ck-findings-title">Findings</h3>
-    <div class="ck-filters" role="group" aria-label="Show findings rated">
+    <fieldset class="ck-filters">
+      <legend class="visually-hidden">Show findings rated</legend>
       <button type="button" class="button button--small" data-filter="ALL" aria-pressed="true">All</button>
       <button type="button" class="button button--small" data-filter="HIGH" aria-pressed="false">HIGH</button>
       <button type="button" class="button button--small" data-filter="MEDIUM" aria-pressed="false">MEDIUM</button>
       <button type="button" class="button button--small" data-filter="LOW" aria-pressed="false">LOW</button>
-    </div>
+    </fieldset>
     <div class="ck-table">
       <table id="ck-findings" aria-labelledby="ck-findings-title">
         <thead>

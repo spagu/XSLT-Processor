@@ -34,6 +34,75 @@ function stringEnd(text, offset) {
 }
 
 /**
+ * @typedef {object} ScanState
+ * @property {number} depth - Nesting depth of objects and arrays
+ * @property {string|null} lastKey - The last key of the root object
+ * @property {{rootEnd: number, depsStart: number, depsEnd: number}} found -
+ *   Offsets found so far (-1 when not yet)
+ */
+
+/**
+ * Read a JSON string; a string of the root object is remembered as a key.
+ *
+ * @param {string} text - JSON text
+ * @param {number} index - Offset of the opening quote
+ * @param {ScanState} state - Scan state, updated
+ * @returns {number} Offset after the closing quote
+ */
+function scanString(text, index, state) {
+  const end = stringEnd(text, index);
+  if (state.depth === 1) state.lastKey = text.slice(index + 1, end - 1);
+  return end;
+}
+
+/**
+ * Enter an object or array; the one under `dependencies` is noted.
+ *
+ * @param {number} index - Offset of `{` or `[`
+ * @param {ScanState} state - Scan state, updated
+ * @returns {void}
+ */
+function scanOpen(index, state) {
+  state.depth += 1;
+  if (state.depth === 2 && state.lastKey === "dependencies") {
+    state.found.depsStart = index;
+  }
+}
+
+/**
+ * Leave an object or array, noting the end of dependencies and the root.
+ *
+ * @param {number} index - Offset of `}` or `]`
+ * @param {ScanState} state - Scan state, updated
+ * @returns {void}
+ */
+function scanClose(index, state) {
+  state.depth -= 1;
+  const { found } = state;
+  if (state.depth === 1 && found.depsStart >= 0 && found.depsEnd < 0) {
+    found.depsEnd = index;
+  }
+  if (state.depth === 0) found.rootEnd = index;
+}
+
+/**
+ * Scan one token of JSON text.
+ *
+ * @param {string} text - JSON text
+ * @param {number} index - Offset of the token
+ * @param {ScanState} state - Scan state, updated
+ * @returns {number} Offset of the next token
+ */
+function scanToken(text, index, state) {
+  const char = text[index];
+  if (char === '"') return scanString(text, index, state);
+  if (char === "{" || char === "[") scanOpen(index, state);
+  else if (char === "}" || char === "]") scanClose(index, state);
+  else if (char === "," && state.depth === 1) state.lastKey = null;
+  return index + 1;
+}
+
+/**
  * Locate the root object's closing brace and the `dependencies` object.
  *
  * @param {string} text - JSON text of an object
@@ -41,29 +110,14 @@ function stringEnd(text, offset) {
  *   of the root `}`, and of the `{` and `}` of dependencies (-1 without)
  */
 export function locate(text) {
-  const found = { rootEnd: -1, depsStart: -1, depsEnd: -1 };
-  let depth = 0;
-  let lastKey = null;
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    if (char === '"') {
-      const end = stringEnd(text, index);
-      if (depth === 1) lastKey = text.slice(index + 1, end - 1);
-      index = end - 1;
-    } else if (char === "{" || char === "[") {
-      depth += 1;
-      if (depth === 2 && lastKey === "dependencies") found.depsStart = index;
-    } else if (char === "}" || char === "]") {
-      depth -= 1;
-      if (depth === 1 && found.depsStart >= 0 && found.depsEnd < 0) {
-        found.depsEnd = index;
-      }
-      if (depth === 0) found.rootEnd = index;
-    } else if (char === "," && depth === 1) {
-      lastKey = null;
-    }
-  }
-  return found;
+  const state = {
+    depth: 0,
+    lastKey: null,
+    found: { rootEnd: -1, depsStart: -1, depsEnd: -1 },
+  };
+  let index = 0;
+  while (index < text.length) index = scanToken(text, index, state);
+  return state.found;
 }
 
 /**

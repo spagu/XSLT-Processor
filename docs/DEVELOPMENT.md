@@ -223,6 +223,11 @@ in `site/templates/xslt-site/images/blog/` as SVG with light and dark colours,
 referenced relative to the post (`../../images/blog/chart.svg`). Don't add
 `tags:` to posts: the theme has no tag archive template.
 
+Every post gets a "Listen" player (`post.html`, `js/listen.js` and
+`js/listen-blocks.js`) that reads it aloud with the browser's speech synthesis.
+Mark an element `data-listen-skip` to leave it out; give images an `alt`
+text, which is what the player says for them.
+
 The playground has three modes, kept in the address (`?mode=xslt3`,
 `?mode=xpath`; XSLT 1.0 has no parameter) and remembered in localStorage.
 XSLT 1.0 uses `dist/xslt-processor.browser.min.js` (copied to

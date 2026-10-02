@@ -16,7 +16,7 @@ import { exportOf } from "./load.js";
 import { transformInPage } from "./page.js";
 
 /** The origin the project is served from (never resolved on a network). */
-export const ORIGIN = "http://xslt-migrate-test.invalid";
+export const ORIGIN = "https://xslt-migrate-test.invalid";
 
 /** Content types by extension; anything else is served as XML. */
 const TYPES = Object.freeze({

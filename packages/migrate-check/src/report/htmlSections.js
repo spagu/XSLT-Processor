@@ -14,7 +14,8 @@ import { POLYFILL_IMPORT } from "../texts.js";
 /**
  * Escape text for HTML element content and quoted attribute values.
  *
- * @param {unknown} value - Any value; converted with String()
+ * @param {string|number|boolean|null|undefined} value - A primitive;
+ *   converted with String()
  * @returns {string} The escaped text
  */
 export function escapeHtml(value) {

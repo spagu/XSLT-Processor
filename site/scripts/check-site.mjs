@@ -43,6 +43,35 @@ const REQUIRED_META = [
 ];
 
 /**
+ * Check one page's landmarks and heading levels.
+ *
+ * @param {Document} doc - Parsed page
+ * @returns {string[]} Problems
+ */
+function structureProblems(doc) {
+  const problems = [];
+  if (doc.querySelectorAll("main").length !== 1) {
+    problems.push("expected exactly one <main>");
+  }
+  if (doc.querySelectorAll("h1").length !== 1) {
+    problems.push("expected exactly one <h1>");
+  }
+  let previous = 1;
+  for (const heading of doc.querySelectorAll(
+    "main h1, main h2, main h3, main h4, main h5, main h6",
+  )) {
+    const level = Number(heading.tagName[1]);
+    if (level > previous + 1) {
+      problems.push(
+        `heading level skipped: <${heading.tagName.toLowerCase()}> "${heading.textContent.trim()}"`,
+      );
+    }
+    previous = level;
+  }
+  return problems;
+}
+
+/**
  * Check one page's head, landmarks and headings.
  *
  * @param {Document} doc - Parsed page
@@ -78,24 +107,7 @@ export function pageProblems(doc) {
       "Google Tag Manager on the page: the site uses Google Analytics only",
     );
   }
-  if (doc.querySelectorAll("main").length !== 1) {
-    problems.push("expected exactly one <main>");
-  }
-  if (doc.querySelectorAll("h1").length !== 1) {
-    problems.push("expected exactly one <h1>");
-  }
-  let previous = 1;
-  for (const heading of doc.querySelectorAll(
-    "main h1, main h2, main h3, main h4, main h5, main h6",
-  )) {
-    const level = Number(heading.tagName[1]);
-    if (level > previous + 1) {
-      problems.push(
-        `heading level skipped: <${heading.tagName.toLowerCase()}> "${heading.textContent.trim()}"`,
-      );
-    }
-    previous = level;
-  }
+  problems.push(...structureProblems(doc));
   for (const img of doc.querySelectorAll("img:not([alt])")) {
     problems.push(`image without alt: ${img.getAttribute("src")}`);
   }
@@ -155,15 +167,14 @@ export function checkSite(
       new JSDOM(readFileSync(file, "utf8")).window.document,
     ]),
   );
-  const problems = [];
-  for (const [file, doc] of docs) {
-    for (const problem of pageProblems(doc)) {
-      problems.push(`${relative(root, file)}: ${problem}`);
-    }
-  }
-  problems.push(...linkProblems(root, prefix, docs));
-  problems.push(...scriptProblems(root));
-  problems.push(...contrastProblems(parseTokens(tokensCss)));
+  const problems = [...docs].flatMap(([file, doc]) =>
+    pageProblems(doc).map((problem) => `${relative(root, file)}: ${problem}`),
+  );
+  problems.push(
+    ...linkProblems(root, prefix, docs),
+    ...scriptProblems(root),
+    ...contrastProblems(parseTokens(tokensCss)),
+  );
   return problems;
 }
 

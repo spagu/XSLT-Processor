@@ -89,7 +89,7 @@ export function parsePairsJson(text) {
   } catch (error) {
     throw new Error(`not valid JSON (${error.message})`, { cause: error });
   }
-  if (!Array.isArray(list)) throw new Error("expected an array of pairs");
+  if (!Array.isArray(list)) throw new TypeError("expected an array of pairs");
   return list.map((entry, index) => {
     if (typeof entry?.xml !== "string" || typeof entry?.xsl !== "string") {
       throw new Error(`entry ${index + 1}: "xml" and "xsl" must be strings`);

@@ -44,7 +44,7 @@ export const MIGRATE_CHECK_BUNDLE = "migrate-check.browser.min.js";
 export function protectCdnNames(code) {
   return code.replace(
     /(https:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com)\/npm\/[^"'`\s\\]*?)\.js(?=["'`\s\\])/g,
-    "$1\\x2ejs",
+    String.raw`$1\x2ejs`,
   );
 }
 

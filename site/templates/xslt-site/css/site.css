@@ -384,3 +384,32 @@ img {
   margin-top: var(--space-5);
   color: var(--color-muted);
 }
+
+/* "Listen" on blog posts (js/listen.js): the player and the block being read */
+.listen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-block: var(--space-3) var(--space-4);
+}
+
+.listen[hidden] {
+  display: none;
+}
+
+.listen-rate {
+  color: var(--color-muted);
+}
+
+.listen-status {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.listen-current {
+  background: var(--color-hero);
+  border-radius: 4px;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+}

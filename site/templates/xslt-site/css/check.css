@@ -48,7 +48,9 @@
   border-color: var(--color-primary);
 }
 
-.ck-input {
+/* Off screen, still read: the file inputs and the filters' legend */
+.ck-input,
+.ck-filters legend {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -87,6 +89,7 @@
 }
 
 .ck-status {
+  display: block;
   margin: 0;
   font-weight: 600;
 }
@@ -184,7 +187,12 @@
   color: var(--color-text);
 }
 
+/* A <fieldset> without the default frame */
 .ck-filters {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);

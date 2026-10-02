@@ -42,6 +42,34 @@ function fileFor(root, path) {
 }
 
 /**
+ * The problem of one link of a page, or null when it is fine.
+ *
+ * @param {object} site - The site
+ * @param {string} site.root - Output directory
+ * @param {string} site.prefix - Path prefix the site is served under
+ * @param {Map<string, Document>} site.docs - Parsed pages by file path
+ * @param {URL} pageUrl - URL of the page the link is on
+ * @param {Element} el - Element with href or src
+ * @returns {string|null} The problem, without the page name
+ */
+function linkProblem({ root, prefix, docs }, pageUrl, el) {
+  const raw = el.getAttribute("href") ?? el.getAttribute("src");
+  if (el.tagName === "LINK" && el.getAttribute("rel") === "preconnect") {
+    return null;
+  }
+  const url = new URL(raw, pageUrl);
+  if (url.host !== "site.test") return null;
+  if (!url.pathname.startsWith(`${prefix}/`)) {
+    return `${raw} is outside ${prefix}/`;
+  }
+  const target = fileFor(root, url.pathname.slice(prefix.length));
+  if (!target) return `broken link ${raw}`;
+  if (url.hash.length <= 1 || !docs.has(target)) return null;
+  const id = decodeURIComponent(url.hash.slice(1));
+  return docs.get(target).getElementById(id) ? null : `missing anchor ${raw}`;
+}
+
+/**
  * Check every link, asset reference and anchor of the site.
  *
  * @param {string} root - Output directory
@@ -50,31 +78,16 @@ function fileFor(root, path) {
  * @returns {string[]} Problems
  */
 export function linkProblems(root, prefix, docs) {
+  const site = { root, prefix, docs };
   const problems = [];
   for (const [file, doc] of docs) {
+    const page = relative(root, file);
     const pageUrl = new URL(
-      `https://site.test${prefix}/${relative(root, file).replace(/index\.html$/, "")}`,
+      `https://site.test${prefix}/${page.replace(/index\.html$/, "")}`,
     );
     for (const el of doc.querySelectorAll("[href], [src]")) {
-      const raw = el.getAttribute("href") ?? el.getAttribute("src");
-      if (el.tagName === "LINK" && el.getAttribute("rel") === "preconnect") {
-        continue;
-      }
-      const url = new URL(raw, pageUrl);
-      if (url.host !== "site.test") continue;
-      if (!url.pathname.startsWith(`${prefix}/`)) {
-        problems.push(`${relative(root, file)}: ${raw} is outside ${prefix}/`);
-        continue;
-      }
-      const target = fileFor(root, url.pathname.slice(prefix.length));
-      if (!target) {
-        problems.push(`${relative(root, file)}: broken link ${raw}`);
-      } else if (url.hash.length > 1 && docs.has(target)) {
-        const id = decodeURIComponent(url.hash.slice(1));
-        if (!docs.get(target).getElementById(id)) {
-          problems.push(`${relative(root, file)}: missing anchor ${raw}`);
-        }
-      }
+      const problem = linkProblem(site, pageUrl, el);
+      if (problem) problems.push(`${page}: ${problem}`);
     }
   }
   return problems;

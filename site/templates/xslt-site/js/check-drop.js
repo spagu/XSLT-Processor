@@ -34,21 +34,20 @@ export function fromFileList(list) {
 }
 
 /**
- * Every entry of a directory (readEntries returns them in batches).
+ * Every entry left in a directory reader. readEntries returns them in
+ * batches and must be called again, one call after the other, until it
+ * returns an empty one; each call is a step of the recursion.
  *
- * @param {object} directory - A FileSystemDirectoryEntry
- * @returns {Promise<object[]>} Its entries
+ * @param {object} reader - A FileSystemDirectoryReader
+ * @param {object[]} [entries] - Entries read so far
+ * @returns {Promise<object[]>} The entries
  */
-async function readAll(directory) {
-  const reader = directory.createReader();
-  const entries = [];
-  for (;;) {
-    const batch = await new Promise((resolve, reject) =>
-      reader.readEntries(resolve, reject),
-    );
-    if (batch.length === 0) return entries;
-    entries.push(...batch);
-  }
+async function readAll(reader, entries = []) {
+  const batch = await new Promise((resolve, reject) =>
+    reader.readEntries(resolve, reject),
+  );
+  if (batch.length === 0) return entries;
+  return readAll(reader, [...entries, ...batch]);
 }
 
 /**
@@ -67,12 +66,13 @@ async function walk(entry, path, isIgnoredDir) {
     );
     return [fileSource(file, path)];
   }
-  const sources = [];
-  for (const child of await readAll(entry)) {
-    if (child.isDirectory && isIgnoredDir(child.name)) continue;
-    sources.push(...(await walk(child, `${path}/${child.name}`, isIgnoredDir)));
-  }
-  return sources;
+  const children = await readAll(entry.createReader());
+  const nested = await Promise.all(
+    children
+      .filter((child) => !(child.isDirectory && isIgnoredDir(child.name)))
+      .map((child) => walk(child, `${path}/${child.name}`, isIgnoredDir)),
+  );
+  return nested.flat();
 }
 
 /**
@@ -101,13 +101,11 @@ export function takeDropped(dataTransfer) {
  * @returns {Promise<import("./check-files.js").Source[]>} The sources
  */
 export async function droppedSources(dropped, isIgnoredDir) {
-  const sources = [];
-  for (const { entry, file } of dropped) {
-    if (entry?.isDirectory) {
-      sources.push(...(await walk(entry, entry.name, isIgnoredDir)));
-    } else if (file) {
-      sources.push(fileSource(file, file.name));
-    }
-  }
-  return sources;
+  const nested = await Promise.all(
+    dropped.map(({ entry, file }) => {
+      if (entry?.isDirectory) return walk(entry, entry.name, isIgnoredDir);
+      return file ? [fileSource(file, file.name)] : [];
+    }),
+  );
+  return nested.flat();
 }

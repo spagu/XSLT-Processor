@@ -19,6 +19,18 @@ import { crc32, deflateRawSync } from "node:zlib";
  */
 
 /**
+ * The compression method number of an entry: 0 (store) or 8 (deflate),
+ * or the number given.
+ *
+ * @param {FixtureEntry} entry - The entry
+ * @returns {number} The method
+ */
+function methodOf(entry) {
+  if (typeof entry.method === "number") return entry.method;
+  return entry.method === "store" ? 0 : 8;
+}
+
+/**
  * Build a zip archive.
  *
  * @param {FixtureEntry[]} entries - The entries
@@ -33,12 +45,7 @@ export function makeZip(entries, { comment = "" } = {}) {
   for (const entry of entries) {
     const name = Buffer.from(entry.name);
     const raw = Buffer.from(entry.data ?? "");
-    const method =
-      typeof entry.method === "number"
-        ? entry.method
-        : entry.method === "store"
-          ? 0
-          : 8;
+    const method = methodOf(entry);
     const stored = method === 8 ? deflateRawSync(raw) : raw;
     const fields = {
       flags: entry.encrypted ? 1 : 0,

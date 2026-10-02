@@ -36,14 +36,17 @@ export function openPage(main, checker) {
 /**
  * Wait until a condition holds (the page works asynchronously).
  *
+ * Polls one step at a time (recursion instead of an awaiting loop).
+ *
  * @param {() => boolean} condition - The condition
+ * @param {number} [tries] - Polls left, 5 ms apart
  * @returns {Promise<void>} Resolves when it holds; fails after 2 s
  */
-export async function until(condition) {
-  for (let i = 0; i < 400 && !condition(); i++) {
-    await delay(5);
-  }
-  assert.ok(condition(), "timed out");
+export async function until(condition, tries = 400) {
+  if (condition()) return;
+  assert.ok(tries > 0, "timed out");
+  await delay(5);
+  await until(condition, tries - 1);
 }
 
 /**

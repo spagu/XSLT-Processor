@@ -101,7 +101,7 @@ export function firstDifference(a, b, path) {
       .map(
         (attr) => `${attr.namespaceURI ?? ""}|${attr.localName}=${attr.value}`,
       )
-      .sort()
+      .sort((x, y) => Number(x > y) - Number(x < y))
       .join("\n");
   if (attributes(a) !== attributes(b)) return { path, a, b };
   const left = significantChildren(a);

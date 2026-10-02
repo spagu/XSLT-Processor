@@ -101,7 +101,10 @@ export function visibleFindings(findings, { filter, descending }) {
  * @param {string} text - Cell text
  * @returns {string} The text with pipes escaped and on one line
  */
-const cell = (text) => String(text).replaceAll("|", "\\|").replace(/\s+/g, " ");
+const cell = (text) =>
+  String(text)
+    .replaceAll("|", String.raw`\|`)
+    .replace(/\s+/g, " ");
 
 /**
  * A fenced code block.

@@ -108,12 +108,14 @@ jobs:
         run: node site/scripts/check-site.mjs site/public
 
       # The online check (/check/) in a real browser: drops files and a zip on
-      # the built page; needs the site, so it runs here and not in browser.yml
+      # the built page; needs the site, so it runs here and not in browser.yml.
+      # Playwright runs from node_modules (the lockfile's version, installed by
+      # npm ci above), never fetched on demand by npx.
       - name: Install Chromium for the online check test
-        run: npx playwright install --with-deps chromium
+        run: ./node_modules/.bin/playwright install --with-deps chromium
 
       - name: Test the online check in Chromium
-        run: npx playwright test -c tests/browser/playwright.config.mjs --project=chromium tests/browser/check.spec.mjs
+        run: ./node_modules/.bin/playwright test -c tests/browser/playwright.config.mjs --project=chromium tests/browser/check.spec.mjs
 
       - name: Upload site
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

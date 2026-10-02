@@ -5,7 +5,7 @@
 <title>polyfill entry</title>
 <script type="module">
   // What a bundled app does: import the entry once, then use the W3C API
-  import "/dist/polyfill.js";
+  import "../../../dist/polyfill.js";
   const parse = (text) => new DOMParser().parseFromString(text, "application/xml");
   const processor = new XSLTProcessor();
   processor.importStylesheet(parse(`<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">

@@ -77,7 +77,9 @@ export function recommendationLines(recommendations, style) {
   return [
     "",
     style.bold("What to do"),
-    ...recommendations.flatMap(recommendationBlock),
+    ...recommendations.flatMap((item, index) =>
+      recommendationBlock(item, index),
+    ),
     "",
     `How-to: ${LINKS.howTo}`,
   ];

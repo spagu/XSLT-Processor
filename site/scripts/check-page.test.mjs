@@ -58,6 +58,8 @@ describe("online check page", () => {
         getAsFile: () => null,
       },
       { kind: "string" },
+      // A file item the browser hands over neither as entry nor as file
+      { kind: "file", getAsFile: () => null },
     ]);
     await until(() => !$("ck-result").hidden);
     assert.equal($("ck-percent").textContent, "90%");

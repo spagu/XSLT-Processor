@@ -80,27 +80,62 @@ export function commonFolder(paths) {
  * @throws {Error} When the archives alone exceed the size cap
  */
 async function expandZips(sources, { limits, skipped }) {
-  const plain = [];
-  let bytes = 0;
-  for (const source of sources) {
-    if (!isZip(source.path)) {
-      plain.push(source);
-      continue;
-    }
-    bytes += source.size;
-    if (bytes > limits.maxBytes) throw new Error(tooLarge(limits));
-    try {
-      const archive = await source.read();
-      for (const entry of listZipEntries(archive)) {
-        if (entry.directory) continue;
-        const read = () => readEntry(archive, entry);
-        plain.push({ path: entry.name, size: entry.size, read });
-      }
-    } catch (error) {
-      skipped.push({ path: source.path, reason: error.message });
-    }
+  const bytes = sources
+    .filter((source) => isZip(source.path))
+    .reduce((sum, source) => sum + source.size, 0);
+  if (bytes > limits.maxBytes) throw new Error(tooLarge(limits));
+  const opened = await Promise.all(
+    sources.map((source) =>
+      isZip(source.path) ? openZip(source) : { sources: [source] },
+    ),
+  );
+  for (const { failure } of opened) {
+    if (failure) skipped.push(failure);
   }
-  return { sources: plain, bytes };
+  return { sources: opened.flatMap((zip) => zip.sources), bytes };
+}
+
+/**
+ * The file entries of one zip archive, as sources.
+ *
+ * @param {Source} source - The archive
+ * @returns {Promise<{sources: Source[], failure?: object}>} Its files, or
+ *   none and why it could not be read
+ */
+async function openZip(source) {
+  try {
+    const archive = await source.read();
+    const files = listZipEntries(archive).filter((entry) => !entry.directory);
+    return {
+      sources: files.map((entry) => ({
+        path: entry.name,
+        size: entry.size,
+        read: () => readEntry(archive, entry),
+      })),
+    };
+  } catch (error) {
+    const failure = { path: source.path, reason: error.message };
+    return { sources: [], failure };
+  }
+}
+
+/**
+ * Read one kept file.
+ *
+ * @param {Source} source - The file
+ * @param {number} sniffBytes - Bytes searched for NUL
+ * @returns {Promise<{file?: {path: string, text: string}, failure?: object}>}
+ *   The text, or why it was skipped
+ */
+async function readSource(source, sniffBytes) {
+  try {
+    const text = decodeText(await source.read(), sniffBytes);
+    return text === null
+      ? { failure: { path: source.path, reason: "binary" } }
+      : { file: { path: source.path, text } };
+  } catch (error) {
+    return { failure: { path: source.path, reason: error.message } };
+  }
 }
 
 /**
@@ -148,15 +183,13 @@ export async function collectFiles(dropped, options) {
   let bytes = expanded.bytes;
   for (const source of keep) bytes += source.size;
   if (bytes > limits.maxBytes) throw new Error(tooLarge(limits));
+  const read = await Promise.all(
+    keep.map((source) => readSource(source, limits.sniffBytes)),
+  );
   const files = [];
-  for (const source of keep) {
-    try {
-      const text = decodeText(await source.read(), limits.sniffBytes);
-      if (text === null) skipped.push({ path: source.path, reason: "binary" });
-      else files.push({ path: source.path, text });
-    } catch (error) {
-      skipped.push({ path: source.path, reason: error.message });
-    }
+  for (const { file, failure } of read) {
+    if (file) files.push(file);
+    else skipped.push(failure);
   }
   return {
     files,
