@@ -17,6 +17,7 @@ WORKDIR /app
 # Copy package files (the root and every workspace: npm ci needs them all)
 COPY package*.json ./
 COPY packages/xslt3/package.json ./packages/xslt3/
+COPY packages/migrate-check/package.json ./packages/migrate-check/
 
 # Install dependencies
 RUN npm ci --ignore-scripts

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Docker build failed since the `xslt-migrate-check` workspace**: `npm ci` in the image needs every workspace's package.json, and the Dockerfile copied only `packages/xslt3`'s. It copies `packages/migrate-check/package.json` too; `.dockerignore` leaves the local `tasks/` notes out of the build context.
 - **`make publish` ended with "npm now has" and an npm 404 after a successful first publication**: the registry can take a minute to list a brand-new package, so the final check asked too early. It now retries the lookup for up to a minute and otherwise says plainly that the package was published and will show up shortly. The publication itself was never affected (`+ xslt-migrate-check@0.1.0`).
 
 ## [1.3.2] - 2026-10-02
