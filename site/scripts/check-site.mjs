@@ -90,29 +90,21 @@ export function pageProblems(doc) {
   const scripts = [...doc.querySelectorAll("head script")].map(
     (s) => s.textContent,
   );
-  if (!scripts.some((s) => s.includes("googletagmanager.com/gtm.js"))) {
-    problems.push("missing Google Tag Manager <script> in <head>");
-  }
   const gtagLoaded = [...doc.querySelectorAll("head script[src]")].some((s) =>
     s.getAttribute("src").includes("googletagmanager.com/gtag/js?id="),
   );
   if (!gtagLoaded || !scripts.some((s) => s.includes("gtag('config'"))) {
     problems.push("missing Google Analytics gtag.js in <head>");
   }
-  const noscript = doc.body.querySelector("noscript");
-  const gtmNoscript = noscript?.innerHTML.includes(
-    "googletagmanager.com/ns.html",
+  const gtm = [...doc.querySelectorAll("script, noscript")].some((el) =>
+    /googletagmanager\.com\/(gtm\.js|ns\.html)/.test(
+      el.getAttribute("src") ?? el.innerHTML,
+    ),
   );
-  // With the cookie banner the GTM iframe must be absent: it would load
-  // before any consent (ssg's cookie-consent worker README, "Gating scripts")
-  if (doc.getElementById("ssg-consent-config")) {
-    if (gtmNoscript) {
-      problems.push(
-        "GTM <noscript> loads without consent on a page with the cookie banner",
-      );
-    }
-  } else if (!gtmNoscript) {
-    problems.push("missing Google Tag Manager <noscript> in <body>");
+  if (gtm) {
+    problems.push(
+      "Google Tag Manager on the page: the site uses Google Analytics only",
+    );
   }
   if (doc.querySelectorAll("main").length !== 1) {
     problems.push("expected exactly one <main>");

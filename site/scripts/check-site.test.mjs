@@ -28,11 +28,10 @@ const head = `<meta name="viewport" content="x"><meta name="description" content
 <meta property="og:title" content="t"><meta property="og:description" content="d">
 <meta property="og:url" content="u"><meta property="og:image" content="i"><meta property="og:type" content="website">
 <meta name="twitter:card" content="summary"><meta name="twitter:title" content="t"><meta name="twitter:description" content="d">
-<script>j.src='https://www.googletagmanager.com/gtm.js?id='</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TEST"></script>
 <script>gtag('config', 'G-TEST');</script>`;
 const page = (body, lang = ' lang="en"') =>
-  `<!DOCTYPE html><html${lang}><head><title>T</title>${head}</head><body><noscript><iframe title="g" src="https://www.googletagmanager.com/ns.html?id=G"></iframe></noscript>${body}</body></html>`;
+  `<!DOCTYPE html><html${lang}><head><title>T</title>${head}</head><body>${body}</body></html>`;
 const parse = (html) => new JSDOM(html).window.document;
 
 describe("pageProblems", () => {
@@ -55,8 +54,6 @@ describe("pageProblems", () => {
       "missing <html lang>",
       "empty <title>",
       'missing meta[name="description"]',
-      "missing Google Tag Manager <script> in <head>",
-      "missing Google Tag Manager <noscript> in <body>",
       "missing Google Analytics gtag.js in <head>",
       "expected exactly one <main>",
       "expected exactly one <h1>",
@@ -67,19 +64,16 @@ describe("pageProblems", () => {
     }
   });
 
-  it("expects no GTM <noscript> on pages with the cookie banner", () => {
-    const consent =
-      '<script id="ssg-consent-config" type="application/json">{}</script>';
-    const withBanner = page("<main><h1>A</h1></main>")
-      .replace("</head>", `${consent}</head>`)
-      .replace(/<noscript>.*?<\/noscript>/, "");
-    assert.deepEqual(pageProblems(parse(withBanner)), []);
-    const leaking = page("<main><h1>A</h1></main>").replace(
-      "</head>",
-      `${consent}</head>`,
+  it("reports a Google Tag Manager snippet, which the site does not use", () => {
+    const gtm =
+      "<script>j.src='https://www.googletagmanager.com/gtm.js?id=G'</script>";
+    const problems = pageProblems(
+      parse(
+        page("<main><h1>A</h1></main>").replace("</head>", `${gtm}</head>`),
+      ),
     );
-    assert.deepEqual(pageProblems(parse(leaking)), [
-      "GTM <noscript> loads without consent on a page with the cookie banner",
+    assert.deepEqual(problems, [
+      "Google Tag Manager on the page: the site uses Google Analytics only",
     ]);
   });
 

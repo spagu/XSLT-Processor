@@ -211,18 +211,16 @@ cookie-consent`; see its README). `variables.cookie_consent` in
 with `/cookie-consent.js` and `.css`. The banner opens by itself in the EEA
 and the UK: the Pages Function `/api/consent/geo` answers from the visitor's
 country (without the Function, as in a local preview, it always opens). Google
-Analytics starts in Consent Mode v2 with storage denied, Google Tag Manager
-loads only after consent to analytics, and its `<noscript>` iframe is left
-out. The policy page is `site/pages/cookie-policy.md`; list any new cookie
+Analytics starts in Consent Mode v2 with storage denied. The policy page is `site/pages/cookie-policy.md`; list any new cookie
 there. ssg copies the worker's `functions/` into `site/public`, so the site is
 deployed from that directory (`make site-deploy`, and the Site workflow's
 `workingDirectory`), where wrangler builds the Functions.
 
 Google Analytics 4 runs on every page with the measurement id in
 `variables.ga_id` (`site/ssg.yaml`); the redirect page in `site/redirect/`
-has the same id written in. The Google Tag Manager container id is still a
-placeholder (`variables.gtm_id`). `check-site.mjs` fails a page that lacks
-either snippet.
+has the same id written in. It is the site's only tracking: there is no Google
+Tag Manager, and `check-site.mjs` fails a page that lacks the Google Analytics
+snippet or carries a Tag Manager one.
 
 ## DOM matrix
 

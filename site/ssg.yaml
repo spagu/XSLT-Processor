@@ -83,11 +83,8 @@ variables:
   base_path: ""
   repo_url: https://github.com/spagu/XSLT-Processor
   npm_url: https://www.npmjs.com/package/@tradik/xslt-processor
-  # Google Tag Manager container. GTM-XXXXXXX is a placeholder: replace it
-  # with the real container id. The theme renders both halves of the snippet
-  # (head script and body noscript) on every page.
-  gtm_id: GTM-XXXXXXX
-  # Google Analytics 4 measurement id (gtag.js), on every page. It starts in
+  # Google Analytics 4 measurement id (gtag.js), the site's only tracking, on
+  # every page. It starts in
   # Consent Mode v2 with every storage type denied; the cookie banner grants
   # analytics_storage when the visitor accepts the analytics category.
   ga_id: G-QX8Y8L1B20

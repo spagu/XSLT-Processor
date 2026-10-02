@@ -30,9 +30,7 @@
 {{ with $c.Vars.cookie_consent }}<link rel="stylesheet" href="{{ $b }}/cookie-consent.css">
 <script id="ssg-consent-config" type="application/json">{{ . | toJSON }}</script>
 <script src="{{ $b }}/cookie-consent.js" defer></script>{{ end }}
-{{/* Google Tag Manager (head half). Replace variables.gtm_id in site/ssg.yaml.
-     With the cookie banner it waits for consent to the analytics category. */}}
-{{ if $c.Vars.cookie_consent }}<script type="text/plain" data-consent-category="analytics">(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ $c.Vars.gtm_id }}');</script>{{ else }}<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer',{{ $c.Vars.gtm_id }});</script>{{ end }}
+
 <title>{{ if eq .Link "/" }}{{ $c.Site.Title }}: {{ .Title }}{{ else }}{{ .Title }} | {{ $c.Site.Title }}{{ end }}</title>
 <meta name="description" content="{{ .Description }}">
 {{ with .Robots }}<meta name="robots" content="{{ . }}">{{ end }}
@@ -68,7 +66,7 @@
 </head>
 <body>
 {{/* Google Tag Manager (noscript half), immediately after <body>. */}}
-{{/* The GTM <noscript> iframe would load without consent, so it is left out when the cookie banner is on. */}}{{ if not $c.Vars.cookie_consent }}<noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $c.Vars.gtm_id }}" height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>{{ end }}
+
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header">
   <div class="wrap site-header__inner">
