@@ -6,6 +6,7 @@
  * @module @tradik/xslt3/xslt/compiler/useAccumulators
  */
 
+import { compareCodepoints } from "../../xdm/strings.js";
 import { attr, clarkOf, tokens, xsltError } from "../names.js";
 
 /**
@@ -28,7 +29,9 @@ export function declareModeAccumulators(declarations, cx) {
         : clarkOf(cx.exprs.qname(nameText, element));
     const accumulators = useAccumulators(text, element, cx);
     const key =
-      accumulators === "all" ? "#all" : [...accumulators].sort().join();
+      accumulators === "all"
+        ? "#all"
+        : [...accumulators].sort(compareCodepoints).join();
     const current = chosen.get(name);
     if (current?.precedence === precedence && current.key !== key) {
       current.conflict = true;

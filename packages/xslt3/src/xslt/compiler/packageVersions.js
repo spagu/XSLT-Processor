@@ -20,8 +20,8 @@ export function parseVersion(text, keepZeros = false) {
   // the name part is an NCName; any name without ":" is accepted
   if (!match || match[2]?.includes(":")) return null;
   const portions = match[1].split(".").map(BigInt);
-  while (!keepZeros && portions.length > 1 && portions.at(-1) === 0n) {
-    portions.pop();
+  if (!keepZeros) {
+    while (portions.length > 1 && portions.at(-1) === 0n) portions.pop();
   }
   if (match[2] !== undefined) portions.push(match[2]);
   return portions;

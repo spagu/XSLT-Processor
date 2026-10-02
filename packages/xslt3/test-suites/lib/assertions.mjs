@@ -144,9 +144,12 @@ function resultDocument(documents, uri) {
  * @returns {Verdict} The best verdict
  */
 function best(verdicts) {
-  return verdicts.reduce((a, b) =>
-    RANK.indexOf(b.status) < RANK.indexOf(a.status) ? b : a,
-  );
+  return verdicts
+    .slice(1)
+    .reduce(
+      (a, b) => (RANK.indexOf(b.status) < RANK.indexOf(a.status) ? b : a),
+      verdicts[0],
+    );
 }
 
 /**

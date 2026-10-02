@@ -109,8 +109,9 @@ function highestPrecedence(declarations) {
       duplicated.delete(declaration.key);
     }
   }
-  for (const key of duplicated) {
-    throw xsltError("XTSE3350", `Two accumulators are named ${key}`);
+  const [duplicate] = duplicated;
+  if (duplicate !== undefined) {
+    throw xsltError("XTSE3350", `Two accumulators are named ${duplicate}`);
   }
   return chosen;
 }

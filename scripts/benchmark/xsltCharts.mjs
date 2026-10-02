@@ -80,9 +80,9 @@ export function xsltHero(v1, rewrites, dom) {
   const head = xpathHero(v1).replace(/\.$/, "");
   const gains = rewrites.filter((row) => row.gain).map((row) => row.gain);
   if (!gains.length) return `${head}.`;
-  const best = rewrites.reduce((a, b) =>
-    (b.gain ?? 0) > (a.gain ?? 0) ? b : a,
-  );
+  const best = rewrites
+    .slice(1)
+    .reduce((a, b) => ((b.gain ?? 0) > (a.gain ?? 0) ? b : a), rewrites[0]);
   return (
     `${head} · rewritten in XSLT 2.0/3.0, the same tasks run **${ratioWords(1 / geometricMean(gains))}** on xslt3 ` +
     `than their 1.0 stylesheets (geometric mean over ${gains.length} tasks on ${dom}; ${ratioWords(1 / best.gain)} on ${best.label}).`

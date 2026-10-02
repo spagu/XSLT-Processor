@@ -110,7 +110,7 @@ async function main() {
   if (values.mode === "check") {
     const output = engine.run(engine.compile());
     const name = `out-${engineSlug(values.engine)}-${values.dom}.txt`;
-    writeFileSync(join(dir, name), output);
+    writeFileSync(confinePath(join(dir, name)), output);
     report({ type: "check", chars: output.length });
   } else {
     timeRuns("compile", () => engine.compile());

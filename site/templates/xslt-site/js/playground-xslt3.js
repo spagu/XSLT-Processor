@@ -132,7 +132,7 @@ export function createXslt3Mode({
    */
   function loadPreset(id) {
     editor.load(xslt3Presets.find((p) => p.id === id) ?? xslt3Presets[0]);
-    run();
+    void run(); // run() reports its own errors on the page
   }
 
   return { presets: xslt3Presets, loadPreset, run };

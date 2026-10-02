@@ -87,8 +87,10 @@ function htmlVersionOf(values) {
     version = CONVERTERS.decimal("version", values.version);
   }
   if (version === undefined) return values.method === "xhtml" ? 4 : 5;
-  if (version === 5) return 5;
-  if (version === 4 || version === 4.01) return 4;
+  // Decimal versions compared with a tolerance: 5, 5.0, 4.0 and 4.01
+  const near = (target) => Math.abs(version - target) < 1e-9;
+  if (near(5)) return 5;
+  if (near(4) || near(4.01)) return 4;
   throw new XPathError("SESU0013", `Unsupported HTML version ${version}`);
 }
 

@@ -79,7 +79,9 @@ export function passRate(row) {
  */
 export function buildBaseline(results, meta) {
   const passing = results.filter((r) => r.status === "pass").map((r) => r.id);
-  return { ...meta, count: passing.length, passing: passing.sort() };
+  // Code point order (test ids are ASCII), stable across locales
+  passing.sort((a, b) => (a === b ? 0 : a < b ? -1 : 1));
+  return { ...meta, count: passing.length, passing };
 }
 
 /**

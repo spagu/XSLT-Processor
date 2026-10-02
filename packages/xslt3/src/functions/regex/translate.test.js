@@ -125,7 +125,8 @@ describe("regex translation: escapes and classes", () => {
 
   it("matches categories by their own case with the i flag", () => {
     assert.equal(full("\\p{Lu}", "m", "i"), !MODIFIERS);
-    assert.ok(full("[^\\p{Lu}]", "m", "i"));
+    // Without (?-i:...) (Node.js 22) the i flag folds the category too
+    assert.equal(full("[^\\p{Lu}]", "m", "i"), MODIFIERS);
     assert.ok(full("ABC", "abc", "i"));
   });
 

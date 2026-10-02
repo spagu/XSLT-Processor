@@ -119,7 +119,7 @@ export function createXPathMode({
     exprInput.value = preset.expression;
     varsInput.value = preset.variables;
     nsInput.value = preset.namespaces;
-    run();
+    void run(); // run() reports its own errors on the page
   }
 
   return { presets: xpathPresets, loadPreset, run };

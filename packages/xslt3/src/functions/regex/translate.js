@@ -51,7 +51,9 @@ export function stripWhitespace(pattern) {
     const c = chars[i];
     if (c === "\\") {
       // the escaped character is the next one after removed whitespace
-      while (depth === 0 && XML_SPACE.has(chars[i + 1])) i++;
+      if (depth === 0) {
+        while (XML_SPACE.has(chars[i + 1])) i++;
+      }
       result += c + (chars[++i] ?? "");
       continue;
     }

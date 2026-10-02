@@ -33,8 +33,10 @@ function widen(chars, minWidth, maxWidth) {
     result.push(zero);
     mandatory++;
   }
-  const signs = () => result.filter((c) => c === "#" || isDigit(c)).length;
-  while (maxWidth !== null && signs() < maxWidth) result.push("#");
+  if (maxWidth !== null) {
+    let signs = result.filter((c) => c === "#" || isDigit(c)).length;
+    for (; signs < maxWidth; signs++) result.push("#");
+  }
   return result;
 }
 

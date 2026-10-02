@@ -75,7 +75,9 @@ function checkAdditive(values) {
 function total(items) {
   const values = promoteAll(items);
   checkAdditive(values);
-  return values.reduce((sum, value) => arithmetic(sum, "+", value));
+  return values
+    .slice(1)
+    .reduce((sum, value) => arithmetic(sum, "+", value), values[0]);
 }
 
 /**

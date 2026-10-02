@@ -13,7 +13,12 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { cpus, platform, release, totalmem, type } from "node:os";
 import { join } from "node:path";
-import { REPO_ROOT, TMP_ROOT, systemTool } from "../lib/fsSafety.mjs";
+import {
+  REPO_ROOT,
+  TMP_ROOT,
+  confinePath,
+  systemTool,
+} from "../lib/fsSafety.mjs";
 
 /** Directory of the extracted 1.1.3 copy. */
 const BASELINE_DIR = join(TMP_ROOT, "xslt-processor-bench", "v1.1.3");
@@ -73,7 +78,7 @@ export function prepareVersions() {
  * @returns {string|null} Its version, or null when not installed
  */
 export function packageVersion(root, name) {
-  const file = join(root, "node_modules", name, "package.json");
+  const file = confinePath(join(root, "node_modules", name, "package.json"));
   return existsSync(file)
     ? JSON.parse(readFileSync(file, "utf8")).version
     : null;

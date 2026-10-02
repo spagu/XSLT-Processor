@@ -11,6 +11,7 @@
  * @module @tradik/xslt3/serialize/params/fromElement
  */
 
+import { compareCodepoints } from "../../xdm/strings.js";
 import { XPathError } from "../../errors.js";
 import { isNamespaceDeclaration } from "../../xpath/eval/domNodes.js";
 import { inScopeNamespaces } from "../../xpath/eval/namespaceNodes.js";
@@ -57,7 +58,7 @@ function elementChildren(element) {
 function characterMap(element) {
   const map = new Map();
   for (const child of elementChildren(element)) {
-    const attributes = plainAttributes(child).sort().join(" ");
+    const attributes = plainAttributes(child).sort(compareCodepoints).join(" ");
     if (
       child.namespaceURI !== OUTPUT_NAMESPACE ||
       child.localName !== "character-map" ||
