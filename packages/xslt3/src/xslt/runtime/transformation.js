@@ -6,19 +6,24 @@
  * @module @tradik/xslt3/xslt/runtime/transformation
  */
 
-import { createDynamicContext } from "../../xpath/eval/dynamicContext.js";
 import { withinLimits } from "../../xpath/eval/compiler.js";
-import { resolveUri } from "../../xpath/eval/uris.js";
 import { isEligibleMode } from "../compiler/packageChecks.js";
-import { xsltError } from "../names.js";
-import { globalContextItem } from "../compiler/globalContextItem.js";
+import { displayName, xsltError } from "../names.js";
+import {
+  checkLibraryContextItems,
+  globalContextItem,
+} from "../compiler/globalContextItem.js";
 import { setInitialAccumulators } from "./accumulators.js";
 import { withDefaultMethod } from "./defaultMethod.js";
 import { finishTree, invoke } from "./invocation.js";
 import { LazyEntry } from "./lazy.js";
 import { Machine } from "./machine.js";
 import { normalizeParams } from "./params.js";
-import { stripDocument } from "./strip.js";
+import { isStrippedText } from "./strip.js";
+import {
+  documentStripper,
+  transformationContext,
+} from "./transformationContext.js";
 
 /**
  * The lazily evaluated entries of the global variables.
@@ -30,13 +35,16 @@ function globalEnvironment(tx, params) {
   let env = null;
   for (const global of tx.stylesheet.globals) {
     if (global.required && !params.has(global.key)) {
-      throw xsltError("XTDE0050", `The parameter ${global.key} is required`);
+      throw xsltError(
+        "XTDE0050",
+        `The parameter $${displayName(global.key)} is required`,
+      );
     }
     const compute =
       global.isParam && params.has(global.key)
         ? () => global.convert(params.get(global.key))
         : () => global.value(tx.globalContext, tx.machine);
-    env = new LazyEntry(env, compute, global.key);
+    env = new LazyEntry(env, compute, global.key, true);
   }
   return env;
 }
@@ -61,36 +69,6 @@ function documentFactory(options) {
     }
     return implementation.createDocument(null, null, null);
   };
-}
-
-/**
- * The XPath dynamic context of a transformation, whose document loader
- * resolves relative URIs against the base URI of the calling expression
- * and strips whitespace from the documents it loads.
- * @param {object} stylesheet
- * @param {object} options
- * @param {(document: Node) => Node} strip
- * @param {() => Document} createDocument
- * @returns {object}
- */
-function transformationContext(stylesheet, options, strip, createDocument) {
-  const loader = options.documentLoader;
-  const dyn = createDynamicContext(
-    stylesheet.sc,
-    {
-      documentLoader: loader && ((uri) => strip(loader(uri))),
-      createDocument,
-      implicitTimezone: options.implicitTimezone,
-      currentDateTime: options.currentDateTime,
-    },
-    options.source,
-  );
-  const load = dyn.loadDocument;
-  dyn.loadDocument = function loadDocument(uri) {
-    return load(resolveUri(uri, this.staticBaseUri));
-  };
-  dyn.xc = null;
-  return dyn;
 }
 
 /**
@@ -120,15 +98,17 @@ function initialMode(stylesheet, requested) {
  *   messages: Array}}
  */
 export function runTransformation(stylesheet, options) {
+  checkLibraryContextItems(stylesheet);
   const createDocument = documentFactory(options);
   let scratchDocument = null;
-  const strip = (document) =>
-    document?.nodeType === 9
-      ? stripDocument(document, stylesheet.spaceRules)
-      : document;
-  const source = strip(options.source);
+  const strip = documentStripper();
+  // a source text node that stripping removes is no source (XPDY0002)
+  const source = isStrippedText(options.source ?? {}, stylesheet.spaceRules)
+    ? undefined
+    : strip(options.source, stylesheet.spaceRules);
   const tx = {
     stylesheet,
+    options,
     machine: new Machine(options.maxDepth),
     scratch: () => (scratchDocument ??= createDocument()),
     messages: [],
@@ -145,7 +125,9 @@ export function runTransformation(stylesheet, options) {
     dyn: transformationContext(stylesheet, options, strip, createDocument),
   };
   tx.addResult = (uri, fragment, output) => {
-    const tree = finishTree(fragment, createDocument);
+    const tree = Array.isArray(fragment)
+      ? fragment
+      : finishTree(fragment, createDocument);
     const params = withDefaultMethod(output, tree);
     if (uri === "") {
       tx.principalOverride = tree;
@@ -172,7 +154,10 @@ export function runTransformation(stylesheet, options) {
     dyn: null,
   };
   setInitialAccumulators(tx, options, source);
-  tx.globalEnv = globalEnvironment(tx, normalizeParams(options.params));
+  tx.globalEnv = globalEnvironment(
+    tx,
+    normalizeParams(options.params, options.paramsAsUntyped),
+  );
   tx.globalContext.env = tx.globalEnv;
   return withinLimits(() => invoke(tx, options, source, createDocument));
 }

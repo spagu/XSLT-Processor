@@ -14,6 +14,7 @@ import { compileBody } from "../compiler/body.js";
 import { checkAttributes } from "../compiler/attributes.js";
 import { infoOf } from "../compiler/elementInfo.js";
 import { derive, evaluate } from "../runtime/context.js";
+import { escapesTry, markOutside } from "../runtime/lazy.js";
 import { SequenceReceiver } from "../runtime/sequenceReceiver.js";
 import { attr, isXsl, tokens, xsltError } from "../names.js";
 
@@ -64,20 +65,35 @@ function errorTests(element) {
 }
 
 /**
+ * An optional atomic value.
+ * @param {object} type
+ * @param {string|number|undefined} value - Absent when undefined
+ * @returns {Array}
+ */
+const optional = (type, value) =>
+  value === undefined
+    ? []
+    : [new AtomicValue(type, type === types.integer ? BigInt(value) : value)];
+
+/**
  * The values of the err:* variables for an error.
  * @param {Error} error
  * @returns {Array[]} in the order of ERROR_VARIABLES
  */
 function errorValues(error) {
   const { uri, local } = codeName(error.code);
-  const description = error.message.replace(/^[^ ]+: /, "");
+  const description = (error.plainMessage ?? error.message).replace(
+    /^[^ ]+: /,
+    "",
+  );
   return [
     [new AtomicValue(types.QName, new QNameValue(uri, local, "err"))],
     [new AtomicValue(types.string, description)],
     error.errorObject ?? error.value ?? [],
-    [],
-    [],
-    [],
+    // where the error was raised (see runtime/locations.js)
+    optional(types.string, error.location?.module),
+    optional(types.integer, error.location?.line),
+    optional(types.integer, error.location?.column),
     [],
   ].map((value) => (Array.isArray(value) ? value : [value]));
 }
@@ -150,10 +166,15 @@ export function compileTry(element, cx, scope) {
   });
   return (xc, out, machine) => {
     let items;
+    const marker = {};
+    markOutside(xc.env, xc.tx.globalEnv, marker);
     try {
       items = content(xc, machine);
     } catch (error) {
-      if (typeof error?.code !== "string") throw error;
+      // errors of variables declared outside are not caught (XSLT 3.0 8.3)
+      if (typeof error?.code !== "string" || escapesTry(error, marker)) {
+        throw error;
+      }
       const handler = catches.find((c) => c.matches(codeName(error.code)));
       if (!handler) throw error;
       let env = xc.env;

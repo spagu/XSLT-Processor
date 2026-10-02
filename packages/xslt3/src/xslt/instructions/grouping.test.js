@@ -187,12 +187,12 @@ describe("xsl:for-each-group", () => {
       ],
       options,
     );
-    // XSLT 2.0 groups nodes only
+    // a 3.0 processor groups any items, even for a 2.0 stylesheet
     checkBodies(
       [
         [
-          '<xsl:for-each-group select="1" group-starting-with="a"/>',
-          "XTTE1120",
+          '<xsl:for-each-group select="1, 2" group-starting-with=".[. = 2]">[{current-group()}]</xsl:for-each-group>',
+          "[1][2]",
         ],
       ],
       { ...options, version: "2.0" },

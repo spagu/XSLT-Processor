@@ -30,7 +30,7 @@ const SHARED_VALUES = {
   "xsd-version": ["1.1"],
   language: ["en"],
   "default-language": ["en"],
-  languages_for_numbering: ["en"],
+  languages_for_numbering: ["en", "de"],
   default_language_for_numbering: ["en"],
   "unicode-normalization-form": ["NFC", "NFD", "NFKC", "NFKD"],
   additional_normalization_form: [
@@ -44,7 +44,12 @@ const SHARED_VALUES = {
   supported_calendars_in_date_formatting_functions: ["AD", "ISO"],
   default_calendar_in_date_formatting_functions: ["AD"],
   limits: [],
-  year_component_values: [],
+  // xs:date and the like: years -999,999,999 to 999,999,999, year 0 (XSD 1.1)
+  year_component_values: [
+    "support negative year",
+    "support year above 9999",
+    "support year zero",
+  ],
   default_output_encoding: ["UTF-8"],
   unparsed_text_encoding: ["UTF-8"],
   default_html_version: ["5"],

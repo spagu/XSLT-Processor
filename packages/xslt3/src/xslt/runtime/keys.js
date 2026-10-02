@@ -9,6 +9,7 @@
 import { getCollation } from "../../functions/collations.js";
 import { stringItem } from "../../xpath/eval/atomics.js";
 import { attributesOf } from "../../xpath/eval/domNodes.js";
+import { namespaceNodesOf } from "../../xpath/eval/namespaceNodes.js";
 import { atomize } from "../../xdm/nodes.js";
 import { canonicalString } from "../../xdm/lexical.js";
 import { xsltError } from "../names.js";
@@ -34,17 +35,35 @@ export function keyValueString(value, definition) {
 }
 
 /**
+ * The index strings of the key values of a node, or of the values sought:
+ * one per value, or one for the whole sequence of a composite key (XSLT
+ * 3.0 section 20.2.2), which matches only an equal sequence.
+ * @param {Array} values - Atomic values
+ * @param {object} definition - Key definition
+ * @returns {string[]}
+ */
+function indexKeys(values, definition) {
+  const keys = values.map((value) => keyValueString(value, definition));
+  if (!definition.composite) return keys;
+  return keys.includes(NAN_KEY) ? [NAN_KEY] : [JSON.stringify(keys)];
+}
+
+/**
  * All nodes of a tree in document order (elements, attributes, text...).
  * @param {Node} root
+ * @param {boolean} namespaces - Include the namespace nodes
  * @returns {Node[]}
  */
-function treeNodes(root) {
+function treeNodes(root, namespaces) {
   const nodes = [];
   const stack = [root];
   while (stack.length > 0) {
     const node = stack.pop();
     nodes.push(node);
-    if (node.nodeType === 1) nodes.push(...attributesOf(node));
+    if (node.nodeType === 1) {
+      if (namespaces) nodes.push(...namespaceNodesOf(node));
+      nodes.push(...attributesOf(node));
+    }
     const children = node.childNodes ?? [];
     for (let i = children.length - 1; i >= 0; i--) {
       if (children[i].nodeType !== 10) stack.push(children[i]);
@@ -63,15 +82,15 @@ function treeNodes(root) {
 function buildIndex(definitions, root, xc) {
   const index = new Map();
   const machine = xc.tx.machine;
-  for (const node of treeNodes(root)) {
+  const namespaces = definitions.some((definition) => definition.namespaces);
+  for (const node of treeNodes(root, namespaces)) {
     for (const definition of definitions) {
       const nodeXc = derive(xc, { item: node, position: 1, size: 1 });
       if (!patternMatches(definition.match, node, nodeXc)) continue;
       const values = definition.use
         ? evaluate(definition.use, nodeXc)
         : bodySequence(definition.body, nodeXc, machine);
-      for (const value of atomize(values)) {
-        const key = keyValueString(value, definition);
+      for (const key of indexKeys(atomize(values), definition)) {
         // NaN is not equal to itself: it finds nothing
         if (key === NAN_KEY) continue;
         let list = index.get(key);
@@ -115,10 +134,8 @@ export function keyLookup(xc, name, values, root, owner) {
     byRoot.set(root, index);
   }
   const found = new Set();
-  for (const value of values) {
-    for (const node of index.get(keyValueString(value, definitions[0])) ?? []) {
-      found.add(node);
-    }
+  for (const key of indexKeys(values, definitions[0])) {
+    for (const node of index.get(key) ?? []) found.add(node);
   }
   return tx.dyn.order.sort([...found]);
 }

@@ -92,6 +92,8 @@ export function buildTable(cx, all, context) {
   );
   const own = declaredComponents(all, cx, context);
   exposeComponents(own, rules, cx.header.implicit);
+  // kept for the modes used without declaration (see packageChecks.js)
+  cx.exposeRules = rules;
   const table = new Map();
   cx.ownSlots = [];
   cx.globalNames = new Map();

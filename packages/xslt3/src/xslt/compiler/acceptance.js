@@ -152,16 +152,24 @@ export function matchOverrides(overrides, rules, byKey, cx) {
  * @param {object[]} exported - Components exported by the used package
  * @param {Map<object, Element>} overridden - From {@link matchOverrides}
  * @param {object[]} rules - Parsed xsl:accept rules
+ * @param {boolean} [implicit] - The using package is an implicit one (an
+ *   xsl:stylesheet), whose templates and modes are public by default
  * @returns {object[]} `{component, visibility, override}`
  */
-export function acceptComponents(exported, overridden, rules) {
+export function acceptComponents(exported, overridden, rules, implicit) {
   const accepted = [];
   for (const component of exported) {
     const element = overridden.get(component);
     let visibility;
     if (!element) visibility = acceptedVisibility(component, rules);
     else if (isXsl(element, "param")) visibility = "public";
-    else visibility = declaredVisibility(element, component.kind) ?? "private";
+    else {
+      const fallback =
+        implicit && ["template", "mode"].includes(component.kind)
+          ? "public"
+          : "private";
+      visibility = declaredVisibility(element, component.kind) ?? fallback;
+    }
     if (visibility !== "hidden") {
       accepted.push({ component, visibility, override: element ?? null });
     }

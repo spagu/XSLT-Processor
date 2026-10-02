@@ -7,6 +7,7 @@
  */
 
 import { formatToken } from "../../functions/format/formatInteger.js";
+import { numberLanguage } from "../../functions/format/numberLanguages.js";
 
 const ALPHANUMERIC = /[\p{L}\p{N}]/u;
 
@@ -65,11 +66,14 @@ function group(digits, separator, size) {
  * Formats a list of numbers.
  * @param {bigint[]} numbers
  * @param {string} format
- * @param {{ordinal: boolean, separator: string, size: number}} options
+ * @param {{ordinal: boolean|string, separator: string, size: number,
+ *   lang?: string|null}} options - ordinal: false, or the value of the
+ *   ordinal attribute
  * @returns {string}
  */
 export function formatNumbers(numbers, format, options) {
   const { prefix, tokens, separators, suffix } = parseFormat(format);
+  const language = numberLanguage(options.lang);
   let result = prefix;
   numbers.forEach((n, i) => {
     if (i > 0) {
@@ -77,7 +81,7 @@ export function formatNumbers(numbers, format, options) {
     }
     const token = tokens[Math.min(i, tokens.length - 1)];
     // a negative number (start-at below 1) gets a minus sign
-    const text = formatToken(n < 0n ? -n : n, token, options.ordinal);
+    const text = formatToken(n < 0n ? -n : n, token, options.ordinal, language);
     result +=
       (n < 0n ? "-" : "") + group(text, options.separator, options.size);
   });

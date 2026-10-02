@@ -71,11 +71,41 @@ export function packageResolver(engine, packages, loadFile) {
 }
 
 /**
+ * A raw principal result (build-tree="no") made only of nodes, as a
+ * document holding copies of them: the assertions of the catalog address
+ * results with paths such as `/out`. Other results are kept.
+ *
+ * @param {*} principal - The principal result
+ * @param {() => Document} createDocument - Creates documents
+ * @returns {*} The result for the assertions
+ */
+export function asTree(principal, createDocument) {
+  const isNodes =
+    Array.isArray(principal) &&
+    principal.length > 0 &&
+    principal.every((item) => [1, 3, 7, 8].includes(item?.nodeType));
+  if (!isNodes) return principal;
+  const document = createDocument();
+  const fragment = document.createDocumentFragment();
+  for (const node of principal) {
+    fragment.appendChild(document.importNode(node, true));
+  }
+  const elements = principal.filter((node) => node.nodeType === 1).length;
+  if (elements !== 1 || principal.some((node) => node.nodeType === 3)) {
+    return fragment;
+  }
+  document.appendChild(fragment);
+  return document;
+}
+
+/**
  * Builds the transform function of the adapter.
  *
  * @param {object} engine - The @tradik/xslt3 module
- * @param {object} helpers - `loadFile(path)`, `loadSource(source)` and
- *   `evaluate(expression, contextItem)`
+ * @param {object} helpers - `loadFile(path)`, `loadSource(source)`,
+ *   `evaluate(expression, contextItem)`, and optionally
+ *   `loadResource(resources, uri)`, `collection(collections, uri)` and
+ *   `parseXml(text)` for the text resources, collections and parse-xml()
  * @returns {(stylesheet: object, input: object, params: object[]) => object}
  *   The transform capability
  */
@@ -117,6 +147,7 @@ export function createTransform(engine, helpers) {
     const compiled = engine.compileStylesheet(loadFile(principal.file), {
       baseUri: pathToFileURL(principal.file).href,
       loadStylesheet: fromUrl,
+      parseXml: helpers.parseXml,
       staticParams: values(params.filter((param) => param.static)),
       resolvePackage: packageResolver(
         engine,
@@ -143,17 +174,28 @@ export function createTransform(engine, helpers) {
       tunnelParams: values(entryParams.filter((p) => p.tunnel)),
       documentLoader,
       createDocument,
+      baseOutputUri: input.output?.path
+        ? pathToFileURL(input.output.path).href
+        : undefined,
+      textLoader:
+        helpers.loadResource &&
+        ((uri) => helpers.loadResource(environment?.resources ?? [], uri)),
+      collections:
+        helpers.collection &&
+        ((uri) => helpers.collection(environment?.collections ?? [], uri)),
+      xmlParser: helpers.parseXml,
     });
     const resultDocuments = new Map();
     for (const [uri, { document, output }] of result.secondary) {
       resultDocuments.set(uri, document);
       outputParams.set(document, output);
     }
-    if (typeof result.principal === "object") {
-      outputParams.set(result.principal, result.output);
+    const value = asTree(result.principal, createDocument);
+    if (typeof value === "object") {
+      outputParams.set(value, result.output);
     }
     return {
-      value: result.principal,
+      value,
       messages: result.messages,
       resultDocuments,
     };

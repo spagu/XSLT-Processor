@@ -125,7 +125,8 @@ function xmlToJson(node, optionsArg) {
     "FOJS0005",
   );
   let element = node;
-  if (node.nodeType === 9) {
+  // 11: a temporary tree (xsl:variable without "as") is a document node
+  if (node.nodeType === 9 || node.nodeType === 11) {
     const children = members(node);
     if (children.length !== 1) invalid("a document needs one element");
     element = children[0];

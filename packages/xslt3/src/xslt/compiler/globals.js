@@ -14,7 +14,13 @@ import {
   typeConverter,
   variableName,
 } from "../instructions/variables.js";
-import { attr, isXsl, RESERVED_NAMESPACES, xsltError } from "../names.js";
+import {
+  attr,
+  displayName,
+  isXsl,
+  RESERVED_NAMESPACES,
+  xsltError,
+} from "../names.js";
 import { required, yesNo } from "./attributes.js";
 import { compileBody } from "./body.js";
 import { splitParams } from "./templatesDecl.js";
@@ -61,13 +67,37 @@ export function collectGlobals(declarations, cx) {
 }
 
 /**
- * Compiles a global variable or parameter.
+ * A scope without a variable: its binding keeps its place (references are
+ * resolved to depths) but cannot be found by name.
+ * @param {object} scope - `{vars}`
+ * @param {string} key - Clark name hidden
+ * @returns {object} the scope
+ */
+function hideVariable(scope, key) {
+  const before = [];
+  let found = scope.vars;
+  while (found !== null && found.key !== key) {
+    before.push(found.key);
+    found = found.next;
+  }
+  if (found === null) return scope;
+  let vars = { key: "", next: found.next };
+  for (let i = before.length - 1; i >= 0; i--) {
+    vars = { key: before[i], next: vars };
+  }
+  return { ...scope, vars };
+}
+
+/**
+ * Compiles a global variable or parameter. Its own name is not in scope
+ * in its declaration (XSLT 3.0 section 9.9: XPST0008).
  * @param {{element: Element, key: string}} declaration
  * @param {object} cx
- * @param {object} [scope] - Default: the global scope of the package
+ * @param {object} [global] - Default: the global scope of the package
  * @returns {object} `{key, isParam, required, value, convert}`
  */
-export function compileGlobal({ element, key }, cx, scope = cx.globalScope()) {
+export function compileGlobal({ element, key }, cx, global = cx.globalScope()) {
+  const scope = hideVariable(global, key);
   const isParam = isXsl(element, "param");
   if (isParam && yesNo(element, "tunnel", false)) {
     throw xsltError(
@@ -85,8 +115,21 @@ export function compileGlobal({ element, key }, cx, scope = cx.globalScope()) {
     key,
     isParam,
     required: isParam && yesNo(element, "required", false),
-    value: compiled.value,
-    convert: typeConverter(compiled.type, "XTTE0590", `parameter $${key}`),
+    // a static variable keeps the value of the static stage
+    value:
+      cx.staticDeclarations?.get(key)?.element === element
+        ? () =>
+            typeConverter(
+              compiled.type,
+              isParam ? "XTTE0590" : "XTTE0570",
+              `value of $${displayName(key)}`,
+            )(cx.statics.get(key))
+        : compiled.value,
+    convert: typeConverter(
+      compiled.type,
+      "XTTE0590",
+      `parameter $${displayName(key)}`,
+    ),
   };
 }
 
@@ -140,10 +183,27 @@ export function compileFunction(signature, cx) {
       ...param,
       convert: param.type
         ? (value) =>
-            coerce(value, param.type, { what: `argument $${param.key}` })
+            coerce(value, param.type, {
+              what: `argument $${displayName(param.key)}`,
+            })
         : (value) => value,
     })),
     body: compileBody(element, cx, { ...scope, inFunction: true }, rest),
     convert: typeConverter(type, "XTTE0780", "result of the function"),
+    memo: isMemoized(element),
   };
+}
+
+/**
+ * Whether the results of a function are cached: cache="yes", or
+ * new-each-time="no" (the same arguments give the same nodes).
+ * @param {Element} element - xsl:function
+ * @returns {boolean}
+ */
+function isMemoized(element) {
+  const flag = (name) => attr(element, name)?.trim();
+  return (
+    ["yes", "true", "1"].includes(flag("cache")) ||
+    ["no", "false", "0"].includes(flag("new-each-time"))
+  );
 }

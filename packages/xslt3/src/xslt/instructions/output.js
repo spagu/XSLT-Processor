@@ -5,6 +5,7 @@
  * @module @tradik/xslt3/xslt/instructions/output
  */
 
+import { stringItem } from "../../xpath/eval/atomics.js";
 import { compileBody } from "../compiler/body.js";
 import { evaluate } from "../runtime/context.js";
 import { TreeReceiver } from "../runtime/treeReceiver.js";
@@ -62,10 +63,18 @@ export function compileMessage(element, cx, scope) {
     ? avtEvaluator(cx.exprs.avt(codeText, element, scope.vars))
     : () => "XTMM9000";
   return (xc, out, machine) => {
-    const items = [
-      ...(select ? evaluate(select, xc) : []),
-      ...bodySequence(body, xc, machine),
-    ];
+    let items;
+    try {
+      items = [
+        ...(select ? evaluate(select, xc) : []),
+        ...bodySequence(body, xc, machine, false),
+      ];
+    } catch (error) {
+      if (typeof error?.code !== "string") throw error;
+      // XSLT 3.0 section 23.1: an error in the content of a message is
+      // reported in the message, not by failing the transformation
+      items = [stringItem(`Error in xsl:message: ${error.message}`)];
+    }
     let message;
     try {
       message = buildDocument(items, xc);

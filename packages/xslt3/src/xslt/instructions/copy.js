@@ -8,8 +8,9 @@
 import { isAtomic, isNode } from "../../xdm/atomic.js";
 import { compileBody } from "../compiler/body.js";
 import { required, yesNo } from "../compiler/attributes.js";
-import { evaluate, withFocus } from "../runtime/context.js";
+import { derive, evaluate, withFocus } from "../runtime/context.js";
 import { setOrigin } from "../runtime/accumulators.js";
+import { markCopied, markDocumentCopied } from "../runtime/baseUri.js";
 import { copyLeaf, copyNamespaceNodes } from "../runtime/copy.js";
 import { BodyFrame } from "../runtime/machine.js";
 import { bodySequence } from "../runtime/values.js";
@@ -45,7 +46,8 @@ export function compileCopy(element, cx, scope) {
       if (items.length > 1) {
         throw xsltError("XTTE3180", "xsl:copy select gives several items");
       }
-      context = withFocus(xc, items[0], 1, 1);
+      // a new focus: no current template rule (XTDE0560 for next-match)
+      context = derive(withFocus(xc, items[0], 1, 1), { rule: null });
     }
     const item = context.item;
     if (item === undefined) {
@@ -58,9 +60,11 @@ export function compileCopy(element, cx, scope) {
     }
     if (item.nodeType === 1) {
       content = out.element(item.namespaceURI ?? "", item.nodeName);
+      markCopied(item, content.parent, false);
       if (copyNamespaces) copyNamespaceNodes(item, content);
     } else if (item.nodeType === 9 || item.nodeType === 11) {
       content = out.document();
+      markDocumentCopied(item, content);
     } else {
       copyLeaf(item, out);
       return;
@@ -141,7 +145,7 @@ export function compilePerformSort(element, cx, scope) {
   return (xc, out, machine) => {
     const items = select
       ? evaluate(select, xc)
-      : bodySequence(body, xc, machine);
+      : bodySequence(body, xc, machine, false);
     for (const item of sort(items, xc, machine)) out.item(item);
   };
 }

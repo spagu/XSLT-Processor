@@ -29,6 +29,8 @@ export class TreeReceiver extends NamespaceScope {
     this.doc = parent.nodeType === 9 ? parent : parent.ownerDocument;
     this.hasChildren = false;
     this.lastAtomic = false;
+    /** @type {boolean} the receiver of the top of a result tree */
+    this.resultTree = false;
   }
 
   /**
@@ -166,7 +168,12 @@ export class TreeReceiver extends NamespaceScope {
     else if (isArray(item)) {
       for (const member of item.members) for (const x of member) this.item(x);
     } else if (isFunctionItem(item)) {
-      throw xsltError("XTDE0450", "A function item cannot be added to a tree");
+      // the top of a result tree is built by sequence normalization
+      // (XSLT 3.0 section 2.3.6), whose error is SENR0001
+      throw xsltError(
+        this.resultTree ? "SENR0001" : "XTDE0450",
+        "A function item cannot be added to a tree",
+      );
     } else this.copy(item, true);
   }
 

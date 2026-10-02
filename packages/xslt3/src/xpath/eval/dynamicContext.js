@@ -21,6 +21,8 @@ import {
 } from "./resources.js";
 import { resolveUri } from "./uris.js";
 
+const XSL_NAMESPACE = "http://www.w3.org/1999/XSL/Transform";
+
 /**
  * The date and time of a JS Date in a timezone.
  * @param {Date} date
@@ -46,22 +48,23 @@ export function dateTimeOf(date, timezone) {
  * same document during an evaluation). Raises FODC0005 for an invalid URI
  * (a colon not preceded by a valid scheme) and FODC0002 when the loader
  * fails or finds nothing.
- * @param {((uri: string) => Node)|undefined} loader
+ * @param {((uri: string, base?: string) => Node)|undefined} loader - Gets
+ *   the absolute URI and the base URI it was resolved against
  * @param {string|undefined} baseUri
- * @returns {(uri: string) => Node}
+ * @returns {(uri: string, base?: string) => Node}
  */
 function documentLoader(loader, baseUri) {
   const documents = new Map();
-  return (uri) => {
+  return (uri, base = baseUri) => {
     const scheme = /^([^/?#]*):/.exec(uri);
     if (scheme && !/^[A-Za-z][A-Za-z0-9+.-]*$/.test(scheme[1])) {
       throw new XPathError("FODC0005", `Invalid URI ${uri}`);
     }
-    const absolute = resolveUri(uri, baseUri);
+    const absolute = resolveUri(uri, base);
     if (documents.has(absolute)) return documents.get(absolute);
     let document;
     try {
-      document = loader?.(absolute);
+      document = loader?.(absolute, base);
     } catch (error) {
       throw new XPathError("FODC0002", `Cannot load ${absolute}`, {
         cause: error,
@@ -143,8 +146,12 @@ export function createDynamicContext(sc, options, contextNode) {
     compareOptions,
     compatibleCompareOptions: { ...compareOptions, backwardsCompatible: true },
     lookupFunction(uri, local, arity, ctx) {
+      // xsl:original is only reachable by a static call (XSLT 3.0 3.5.3)
+      if (uri === XSL_NAMESPACE) return null;
       try {
-        return functionItemOf(resolveFunction(uri, local, arity, sc), ctx);
+        // the static context of the calling expression, when one is set
+        const callSc = this.sc ?? sc;
+        return functionItemOf(resolveFunction(uri, local, arity, callSc), ctx);
       } catch (error) {
         if (error.code === "XPST0017") return null;
         throw error;

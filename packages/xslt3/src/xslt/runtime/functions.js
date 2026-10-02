@@ -21,6 +21,8 @@ import { availabilityFunctions, nameArgument } from "./availability.js";
 import { copyFunctions } from "./copyFunctions.js";
 import { keyLookup } from "./keys.js";
 import { mergeFunctions } from "./merging.js";
+import { streamAvailableFunctions } from "./streamAvailable.js";
+import { transformFunctions } from "./transformFunction.js";
 
 /**
  * Whether a node is a node of the subtree rooted at another.
@@ -107,7 +109,8 @@ export const xsltFunctions = [
     params: [],
     returns: "item()*",
     impl: (_, context) => {
-      if (context.xc.group === undefined) {
+      // absent in dynamic function calls (XSLT 3.0)
+      if (context.xc.group === undefined || context.dynamicCall) {
         throw xsltError(
           "XTDE1061",
           "current-group(): there is no current group",
@@ -121,7 +124,7 @@ export const xsltFunctions = [
     params: [],
     returns: "xs:anyAtomicType*",
     impl: (_, context) => {
-      if (context.xc.groupKey === undefined) {
+      if (context.xc.groupKey === undefined || context.dynamicCall) {
         throw xsltError("XTDE1071", "current-grouping-key(): there is no key");
       }
       return context.xc.groupKey;
@@ -165,18 +168,24 @@ export const xsltFunctions = [
     params: [],
     returns: "xs:anyURI?",
     impl: (_, context) => {
+      // absent in temporary output state, patterns and dynamic calls
       const { temporary, outputUri } = context.xc;
-      return temporary || outputUri === undefined
+      return temporary || context.dynamicCall || outputUri === undefined
         ? []
         : [new AtomicValue(types.anyURI, outputUri)];
     },
   },
-  ...["unparsed-entity-uri", "unparsed-entity-public-id"].map((local) => ({
-    local,
-    params: ["xs:string"],
-    returns: "xs:string",
-    impl: () => [stringItem("")],
-  })),
+  // the DOM gives no unparsed entities: their URI and public id are ""
+  ...["unparsed-entity-uri", "unparsed-entity-public-id"].flatMap((local) =>
+    [["xs:string"], ["xs:string", "node()"]].map((params) => ({
+      local,
+      params,
+      returns: "xs:string",
+      impl: () => [stringItem("")],
+    })),
+  ),
   ...accumulatorFunctions,
   ...mergeFunctions,
+  ...streamAvailableFunctions,
+  ...transformFunctions,
 ];

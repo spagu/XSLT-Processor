@@ -139,6 +139,8 @@ export function declareKey({ element }, cx) {
   const use = attr(element, "use");
   const children = cx.children(element);
   if (use !== undefined && children.length > 0) {
+    // content that is no sequence constructor is the first error (XTSE0010)
+    compileBody(element, cx, cx.globalScope());
     throw xsltError("XTSE1205", "xsl:key cannot have use and content");
   }
   if (use === undefined && children.length === 0) {
@@ -148,6 +150,8 @@ export function declareKey({ element }, cx) {
   const collation = attr(element, "collation");
   const definition = {
     match: compilePattern(required(element, "match"), element, cx),
+    // namespace nodes are indexed only for keys that can match them
+    namespaces: required(element, "match").includes("namespace-node"),
     use: use === undefined ? null : cx.exprs.xpath(use, element, scope.vars),
     body: use === undefined ? compileBody(element, cx, scope) : null,
     collation: collation ?? infoOf(element).defaultCollation,

@@ -45,7 +45,20 @@ function outputMethod(value, element, cx) {
 function parameterDocument(element, cx) {
   const href = element.getAttribute("parameter-document");
   if (!href) return {};
-  const source = cx.loadModule(resolveUri(href.trim(), cx.baseUriOf(element)));
+  return readParameterDocument(href, element, cx);
+}
+
+/**
+ * The parameters of a serialization parameter document (xsl:output and
+ * xsl:result-document parameter-document).
+ * @param {string} href - URI reference, relative to the element's base
+ * @param {Element} element - The element that names the document
+ * @param {object} cx - Stylesheet compiler (`loadModule`, `baseUriOf`)
+ * @returns {Record<string, *>} parameters by name
+ */
+export function readParameterDocument(href, element, cx) {
+  const base = cx.baseUriOf(element);
+  const source = cx.loadModule(resolveUri(href.trim(), base), base);
   const root = source.nodeType === 9 ? source.documentElement : source;
   return parametersFromElement(root);
 }

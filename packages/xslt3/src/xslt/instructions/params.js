@@ -7,7 +7,7 @@
  */
 
 import { checkAttributes, yesNo } from "../compiler/attributes.js";
-import { isXsl, xsltError } from "../names.js";
+import { displayName, isXsl, xsltError } from "../names.js";
 import { compileValue, typeConverter, variableName } from "./variables.js";
 
 /**
@@ -98,7 +98,11 @@ export function compileParams(elements, cx, scope, isFunction = false) {
           ? compiled.value
           : implicitDefault(compiled, key),
       type: compiled.type,
-      convert: typeConverter(compiled.type, "XTTE0590", `parameter $${key}`),
+      convert: typeConverter(
+        compiled.type,
+        "XTTE0590",
+        `parameter $${displayName(key)}`,
+      ),
     });
     current = { ...current, vars: { key, next: current.vars } };
   }

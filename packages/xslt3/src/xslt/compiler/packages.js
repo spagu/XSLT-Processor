@@ -121,7 +121,12 @@ export function usePackage(declaration, cx) {
   const { rules, overrides } = useContent(element, cx);
   const byKey = new Map(child.exports.map((c) => [`${c.kind} ${c.key}`, c]));
   const { list, overridden } = matchOverrides(overrides, rules, byKey, cx);
-  const accepted = acceptComponents(child.exports, overridden, rules);
+  const accepted = acceptComponents(
+    child.exports,
+    overridden,
+    rules,
+    cx.header.implicit,
+  );
   checkUnmatched(rules, "XTSE3030");
   return {
     element,

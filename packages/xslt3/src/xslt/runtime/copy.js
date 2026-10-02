@@ -11,7 +11,7 @@ import {
   isNamespaceDeclaration,
 } from "../../xpath/eval/domNodes.js";
 import { inScopeNamespaces } from "../../xpath/eval/namespaceNodes.js";
-import { markCopied } from "./baseUri.js";
+import { markCopied, markDocumentCopied } from "./baseUri.js";
 
 /**
  * Copies the namespace nodes of an element into a receiver.
@@ -110,6 +110,7 @@ export function copyNode(node, receiver, copyNamespaces) {
       );
     } else if (type === 9 || type === 11) {
       content = target.document();
+      markDocumentCopied(current, content);
     } else {
       copyLeaf(current, target);
       continue;

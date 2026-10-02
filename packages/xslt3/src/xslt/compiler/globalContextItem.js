@@ -36,13 +36,33 @@ export function declareGlobalContextItem(declarations, cx) {
     if (use === "absent" && asText !== undefined) {
       throw xsltError("XTSE3089", 'use="absent" cannot have a type');
     }
-    seen.add(`${use}|${asText?.trim()}`);
+    // the types compared without whitespace, which is not significant
+    seen.add(`${use}|${asText?.replace(/\s+/g, "")}`);
     if (seen.size > 1) {
       throw xsltError("XTSE3087", "Conflicting xsl:global-context-item");
     }
     const type =
       asText === undefined ? null : cx.exprs.sequenceType(asText, element);
     cx.globalContextItem = { use, type };
+  }
+}
+
+/**
+ * Checks the used packages: their global context item is absent, so one
+ * that declares it required cannot run (XSLT 3.0 xsl:global-context-item:
+ * XTTE0590).
+ * @param {object} cx - The top-level package's compiler
+ * @throws {import("../../errors.js").XPathError} XTTE0590
+ */
+export function checkLibraryContextItems(cx) {
+  for (const { child } of cx.uses) {
+    if (child.globalContextItem.use === "required") {
+      throw xsltError(
+        "XTTE0590",
+        `The used package ${child.packageName} requires a global context item`,
+      );
+    }
+    checkLibraryContextItems(child);
   }
 }
 

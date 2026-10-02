@@ -13,6 +13,7 @@ import { childrenOf, rootOf } from "../../xpath/eval/domNodes.js";
 import { xsltError } from "../names.js";
 import { patternMatches } from "../patterns/compile.js";
 import { derive } from "./context.js";
+import { originalNode } from "./copyOrigins.js";
 
 /**
  * The accumulator state of a transformation, created on first use.
@@ -115,16 +116,15 @@ function traverse(accumulator, root, entry, xc) {
  * @param {string} key - Clark name of the accumulator
  * @param {Node} node
  * @param {boolean} after - Post-descent value
+ * @param {object} accumulator - The declaration (packages may each have
+ *   one of that name)
  * @returns {Array}
  */
-export function accumulatorValue(xc, key, node, after) {
+export function accumulatorValue(xc, key, node, after, accumulator) {
   const tx = xc.tx;
-  const accumulator = tx.stylesheet.accumulators.get(key);
   const state = stateOf(tx);
   let target = node;
-  while (state.origins.has(rootOf(target))) {
-    target = originalNode(state.origins, target);
-  }
+  for (let o; (o = originalNode(state.origins, target));) target = o;
   const root = rootOf(target);
   const scope = state.scopes.get(root) ?? "all";
   if (scope !== "all" && !scope.has(key)) {
@@ -132,10 +132,10 @@ export function accumulatorValue(xc, key, node, after) {
   }
   let byKey = state.values.get(root);
   if (!byKey) state.values.set(root, (byKey = new Map()));
-  let entry = byKey.get(key);
+  let entry = byKey.get(accumulator);
   if (!entry) {
     entry = { before: new Map(), after: new Map(), done: false };
-    byKey.set(key, entry);
+    byKey.set(accumulator, entry);
     traverse(accumulator, root, entry, tx.globalContext);
     entry.done = true;
   }
@@ -145,26 +145,6 @@ export function accumulatorValue(xc, key, node, after) {
   }
   if (result.error) throw result.error;
   return result.value;
-}
-
-/**
- * The node of the original tree a node of a copy stands for.
- * @param {WeakMap<Node, Node>} origins - Copy roots to original nodes
- * @param {Node} node - A node of a copy
- * @returns {Node}
- */
-function originalNode(origins, node) {
-  const path = [];
-  let current = node;
-  const root = rootOf(node);
-  for (; current !== root; current = current.parentNode) {
-    path.push([...current.parentNode.childNodes].indexOf(current));
-  }
-  let original = origins.get(root);
-  for (let i = path.length - 1; i >= 0; i--) {
-    original = original.childNodes[path[i]];
-  }
-  return original;
 }
 
 /**

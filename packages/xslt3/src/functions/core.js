@@ -31,6 +31,7 @@ import { jsonFunctions } from "./json/index.js";
 import { parseXmlFunctions } from "./parseXml.js";
 import { randomFunctions } from "./random.js";
 import { unparsedTextFunctions } from "./unparsedText.js";
+import { xqueryModuleFunctions } from "./xqueryModule.js";
 
 /**
  * fn:string of an optional item.
@@ -158,6 +159,7 @@ export const coreFunctions = [
   ...arrayFunctions,
   ...jsonFunctions,
   ...unparsedTextFunctions,
+  ...xqueryModuleFunctions,
   ...parseXmlFunctions,
   ...randomFunctions,
   ...idFunctions,

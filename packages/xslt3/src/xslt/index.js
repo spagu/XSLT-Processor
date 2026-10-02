@@ -8,3 +8,4 @@
 export { CompiledStylesheet, compileStylesheet } from "./api.js";
 export { XSLTProcessor } from "./processor.js";
 export { versionMatches } from "./compiler/packageVersions.js";
+export { untypedAtomic } from "./runtime/params.js";

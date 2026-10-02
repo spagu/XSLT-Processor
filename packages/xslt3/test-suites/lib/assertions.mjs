@@ -76,7 +76,7 @@ function checkValue(assertion, value, helpers) {
     assertion.file ? helpers.readFile(assertion.file) : assertion.value;
   const expression = assertionExpression(assertion);
   if (expression !== null) {
-    return helpers.test(expression, value)
+    return helpers.test(expression, value, assertion.namespaces)
       ? verdict("pass")
       : verdict("fail", assertion.kind);
   }
@@ -117,6 +117,24 @@ function checkValue(assertion, value, helpers) {
     default:
       return verdict("not-run", `assertion ${assertion.kind} not supported`);
   }
+}
+
+/**
+ * The result document with a URI: the one of that key, else (results are
+ * keyed by absolute URIs once a base output URI is set) the one whose URI
+ * ends with it.
+ *
+ * @param {Map<string, *>|undefined} documents - Result documents by URI
+ * @param {string} uri - URI of the assertion, often relative
+ * @returns {*} The document, undefined when there is none
+ */
+function resultDocument(documents, uri) {
+  if (!documents) return undefined;
+  if (documents.has(uri)) return documents.get(uri);
+  for (const [key, document] of documents) {
+    if (key.endsWith(`/${uri}`)) return document;
+  }
+  return undefined;
 }
 
 /**
@@ -185,7 +203,7 @@ export function checkAssertion(assertion, outcome, helpers) {
           : verdict("fail", "no xsl:message output");
       }
       case "assert-result-document": {
-        const document = outcome.resultDocuments?.get(assertion.uri);
+        const document = resultDocument(outcome.resultDocuments, assertion.uri);
         if (document === undefined) {
           return verdict("fail", `no result document ${assertion.uri}`);
         }

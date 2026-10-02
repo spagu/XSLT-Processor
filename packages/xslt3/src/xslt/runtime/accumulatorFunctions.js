@@ -19,7 +19,10 @@ const accumulatorFunction = (after) => (args, context) => {
   const [[name]] = args;
   const { uri, local } = nameArgument(name.value, context, "XTDE3340");
   const key = `{${uri}}${local}`;
-  if (!context.xc.tx.stylesheet.accumulators.has(key)) {
+  // accumulators are local to the package of the call (XSLT 3.0 3.5.5)
+  const owner = context.sc?.owner ?? context.xc.tx.stylesheet;
+  const accumulator = owner.accumulators.get(key);
+  if (!accumulator) {
     throw xsltError("XTDE3340", `No accumulator ${name.value}`);
   }
   const item = context.contextItem;
@@ -32,7 +35,7 @@ const accumulatorFunction = (after) => (args, context) => {
       "An accumulator function needs a context node other than an attribute",
     );
   }
-  return accumulatorValue(context.xc, key, item, after);
+  return accumulatorValue(context.xc, key, item, after, accumulator);
 };
 
 /** Function definitions. */

@@ -20,6 +20,8 @@ import { attr, boolAttr, childElements } from "./xmlUtil.mjs";
  * @property {boolean} [normalizeSpace] - Of `assert-string-value`
  * @property {string} [method] - Serialization method of `assert-serialization`
  * @property {string} [uri] - Of `assert-result-document`
+ * @property {{prefix: string, uri: string}[]} [namespaces] - Prefixes in
+ *   scope of an xslt30-test `assert`
  * @property {Assertion[]} children - Nested assertions of `any-of`, `all-of`,
  *   `not`, `assert-message` and `assert-result-document`
  */
@@ -36,6 +38,26 @@ export const COMPOSITE_KINDS = new Set([
   "assert-message",
   "assert-result-document",
 ]);
+
+/**
+ * The prefixed namespaces in scope on an element of a catalog.
+ *
+ * @param {Element} element - The element
+ * @returns {{prefix: string, uri: string}[]} The namespaces, the innermost
+ *   declaration of each prefix
+ */
+export function declaredPrefixes(element) {
+  const found = new Map();
+  for (let node = element; node?.nodeType === 1; node = node.parentNode) {
+    for (const attribute of [...node.attributes]) {
+      const prefix = attribute.name.startsWith("xmlns:")
+        ? attribute.name.slice(6)
+        : null;
+      if (prefix && !found.has(prefix)) found.set(prefix, attribute.value);
+    }
+  }
+  return [...found].map(([prefix, uri]) => ({ prefix, uri }));
+}
 
 /**
  * Read one assertion element.
@@ -63,6 +85,10 @@ export function parseAssertion(element, baseDir) {
   }
   if (kind === "assert-xml" || kind === "assert-serialization") {
     assertion.ignorePrefixes = boolAttr(element, "ignore-prefixes");
+  }
+  if (kind === "assert" && element.namespaceURI === XSLT_CATALOG_NAMESPACE) {
+    // xslt30-test assertions use the prefixes declared in the catalog
+    assertion.namespaces = declaredPrefixes(element);
   }
   if (kind === "assert-string-value") {
     // the xslt30-test runner (runner/assert.xsl) always normalizes space

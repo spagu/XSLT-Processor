@@ -104,13 +104,14 @@ export function loadModuleTree(source, uri, cx) {
         checkEmpty(child, cx);
         return resolveUri(required(child, "href"), cx.baseUriOf(child));
       };
+      const base = cx.baseUriOf(child);
       // XSLT 3.0 allows xsl:import anywhere among the declarations
       if (isXsl(child, "import")) {
         const target = href();
-        node.imports.push(load(cx.loadModule(target), target, true));
+        node.imports.push(load(cx.loadModule(target, base), target, true));
       } else if (isXsl(child, "include")) {
         const target = href();
-        const included = load(cx.loadModule(target), target);
+        const included = load(cx.loadModule(target, base), target);
         node.imports.push(...included.imports);
         node.declarations.push(...included.declarations);
       } else {

@@ -11,6 +11,7 @@ import { booleanItem, stringItem } from "../../xpath/eval/atomics.js";
 import { AtomicValue } from "../../xdm/atomic.js";
 import { QNameValue } from "../../xdm/qname.js";
 import { getType, types, XS_NAMESPACE } from "../../xdm/types.js";
+import { LIST_TYPES } from "../../xpath/eval/typeExprs.js";
 import { resolveQName, XSL_NS } from "../names.js";
 import {
   availableInstructions,
@@ -31,6 +32,15 @@ export function nameArgument(text, context, code, defaultUri = "") {
   namespaces.set("", defaultUri);
   return resolveQName(text, namespaces, { code, useDefault: true });
 }
+
+/**
+ * Whether the transformation allows xsl:evaluate (the dynamicEvaluation
+ * option); always at compile time.
+ * @param {object} context - XPath dynamic context
+ * @returns {boolean}
+ */
+const dynamicEvaluation = (context) =>
+  context.xc?.tx.dynamicEvaluation !== false;
 
 /**
  * Whether a function of a name exists with an arity.
@@ -60,7 +70,8 @@ function functionAvailable([[name], arity], context) {
   }
   if (!found && uri === XS_NAMESPACE && (n === null || n === 1)) {
     try {
-      found = !getType(local).abstract;
+      // list types (xs:NMTOKENS...) have constructor functions too
+      found = Boolean(LIST_TYPES[local]) || !getType(local).abstract;
     } catch {
       found = false;
     }
@@ -95,7 +106,10 @@ export const availabilityFunctions = [
     returns: "xs:string",
     impl: ([[name]], context) => {
       const { uri, local } = nameArgument(name.value, context, "XTDE1390");
-      return [stringItem(uri === XSL_NS ? systemProperty(local) : "")];
+      if (uri !== XSL_NS) return [stringItem("")];
+      const off =
+        local === "supports-dynamic-evaluation" && !dynamicEvaluation(context);
+      return [stringItem(off ? "no" : systemProperty(local))];
     },
   },
   {
@@ -113,8 +127,18 @@ export const availabilityFunctions = [
     params: ["xs:string"],
     returns: "xs:boolean",
     impl: ([[name]], context) => {
-      const { uri, local } = nameArgument(name.value, context, "XTDE1440");
-      return [booleanItem(uri === XSL_NS && availableInstructions.has(local))];
+      // unprefixed: the default namespace (xmlns) in scope
+      const { uri, local } = nameArgument(
+        name.value,
+        context,
+        "XTDE1440",
+        context.sc.defaultNamespace,
+      );
+      const available =
+        uri === XSL_NS &&
+        availableInstructions.has(local) &&
+        (local !== "evaluate" || dynamicEvaluation(context));
+      return [booleanItem(available)];
     },
   },
   {

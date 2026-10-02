@@ -9,7 +9,7 @@
 import { Mode } from "../patterns/modes.js";
 import { useStaticContext } from "../runtime/context.js";
 import { callFunction } from "../runtime/functionCall.js";
-import { attr, tokens, xsltError } from "../names.js";
+import { attr, displayName, tokens, xsltError } from "../names.js";
 import { infoOf } from "./elementInfo.js";
 import { expandCharacterMaps } from "./outputDecl.js";
 import { StaticStage } from "./staticStage.js";
@@ -136,7 +136,9 @@ export class CompilerRegistry extends StaticStage {
    */
   checkCall(key, params, element) {
     const template = this.namedTemplates.get(key);
-    if (!template) throw xsltError("XTSE0650", `No template named ${key}`);
+    if (!template) {
+      throw xsltError("XTSE0650", `No template named ${displayName(key)}`);
+    }
     const declared = new Set(
       template.params.filter((p) => !p.tunnel).map((p) => p.key),
     );
@@ -186,6 +188,8 @@ export class CompilerRegistry extends StaticStage {
   patternContext(item, xc, local = false) {
     const dyn = Object.create(xc.tx.dyn);
     dyn.xc = xc;
+    // no current output URI in patterns (XSLT 3.0 section 20.3.?)
+    dyn.dynamicCall = true;
     useStaticContext(dyn, xc.tx.stylesheet.sc);
     const env = local ? xc.env : xc.tx.globalEnv;
     return { item, position: 1, size: 1, env, dyn };
@@ -205,6 +209,7 @@ export class CompilerRegistry extends StaticStage {
       if (!output) throw xsltError("XTDE1460", `No output definition ${name}`);
     }
     const params = { ...output };
+    if (params["item-separator"] === "#absent") delete params["item-separator"];
     if (params["use-character-maps"]) {
       params["use-character-maps"] = expandCharacterMaps(
         params["use-character-maps"],

@@ -6,6 +6,7 @@
  * @module @tradik/xslt3/xpath/eval/inline
  */
 
+import { dynamicCallContext } from "./dynamicCall.js";
 import { XPathError } from "../../errors.js";
 import { FunctionItem } from "../../items/function.js";
 import { coerce } from "./coercion.js";
@@ -60,7 +61,7 @@ export const inlineCompilers = {
             position: 0,
             size: 0,
             env,
-            dyn: ctx.dyn,
+            dyn: dynamicCallContext(ctx.dyn),
           });
           return coerce(value, returns, resultOptions);
         },

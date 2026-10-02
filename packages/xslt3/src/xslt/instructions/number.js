@@ -164,11 +164,13 @@ export function compileNumber(element, cx, scope) {
       numbers = places.map(BigInt);
     }
     if (startAt) numbers = rebase(numbers, startAt(xc));
-    if (lang) checkLanguage(lang(xc), "XTDE0030");
+    const language = lang ? lang(xc) : null;
+    if (language !== null) checkLanguage(language, "XTDE0030");
     const ordinalText = ordinal(xc).trim();
     out.text(
       formatNumbers(numbers, format(xc), {
-        ordinal: ordinalText !== "" && ordinalText !== "no",
+        ordinal: ordinalText !== "" && ordinalText !== "no" && ordinalText,
+        lang: language,
         separator: separator(xc),
         size: Number(size(xc)),
       }),

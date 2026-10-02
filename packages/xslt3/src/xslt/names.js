@@ -182,6 +182,17 @@ export function declaredName(name, allowed) {
 export const clarkOf = (name) => `{${name.uri}}${name.local}`;
 
 /**
+ * A Clark name as messages show it: `local` without namespace, else the
+ * EQName `Q{uri}local`.
+ * @param {string} clark - `{uri}local` (other names are kept)
+ * @returns {string}
+ */
+export function displayName(clark) {
+  if (clark.startsWith("{}")) return clark.slice(2);
+  return clark.startsWith("{") ? `Q${clark}` : clark;
+}
+
+/**
  * Splits a whitespace-separated list.
  * @param {string|undefined} text
  * @returns {string[]}

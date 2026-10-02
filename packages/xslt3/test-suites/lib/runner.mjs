@@ -147,6 +147,15 @@ export function runXsltCase(testCase, adapter, readFile) {
   let outcome;
   try {
     const result = adapter.transform(stylesheet, input, params);
+    // <output serialize="yes"> with an expected error: the result is
+    // serialized, and a serialization error is the outcome of the test
+    if (
+      test.output?.serialize === "yes" &&
+      testCase.result?.kind === "error" &&
+      adapter.serialize
+    ) {
+      adapter.serialize(result?.value, {});
+    }
     outcome = {
       value: result?.value,
       messages: result?.messages ?? [],

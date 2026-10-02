@@ -17,13 +17,11 @@ import {
   nodeNamespace,
   parentOf,
 } from "../xpath/eval/domNodes.js";
-import { resolveUri } from "../xpath/eval/uris.js";
-import {
-  inScopeNamespaces,
-  XML_NAMESPACE,
-} from "../xpath/eval/namespaceNodes.js";
-import { recordedBaseUri } from "./baseUris.js";
+import { inScopeNamespaces } from "../xpath/eval/namespaceNodes.js";
+import { documentUriOf, nodeBaseUri } from "./baseUris.js";
 import { focusNode } from "./focus.js";
+
+export { nodeBaseUri };
 
 /** @param {Node} node @returns {boolean} */
 const isDocument = (node) => node.nodeType === 9 || node.nodeType === 11;
@@ -86,36 +84,6 @@ function pathOf(node) {
   if (isDocument(current)) return `/${steps.join("/")}`;
   const root = "Q{http://www.w3.org/2005/xpath-functions}root()";
   return steps.length ? `${root}/${steps.join("/")}` : root;
-}
-
-/**
- * Base URI of a node: its xml:base attributes resolved against the
- * document URI, or against the base URI recorded for a constructed node.
- * @param {Node} node
- * @returns {string|undefined}
- */
-export function nodeBaseUri(node) {
-  const chain = [];
-  for (let n = node; n; n = parentOf(n)) chain.unshift(n);
-  let base;
-  for (const n of chain) {
-    const own =
-      recordedBaseUri(n) ?? (isDocument(n) ? documentUriOf(n) : undefined);
-    if (own !== undefined) base = own;
-    if (n.nodeType === 1 && n.hasAttributeNS(XML_NAMESPACE, "base")) {
-      base = resolveUri(n.getAttributeNS(XML_NAMESPACE, "base"), base);
-    }
-  }
-  return base;
-}
-
-/**
- * @param {Node} node - A document node
- * @returns {string|undefined} its URI, undefined when unknown
- */
-function documentUriOf(node) {
-  const uri = node.documentURI ?? node.URL;
-  return uri && uri !== "about:blank" ? uri : undefined;
 }
 
 /** @param {string|undefined} uri @returns {Array} an optional xs:anyURI */

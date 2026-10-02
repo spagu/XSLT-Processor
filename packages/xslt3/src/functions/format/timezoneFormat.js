@@ -53,6 +53,20 @@ function numericOffset(offset, token, zuluAtZero) {
 }
 
 /**
+ * The numeric format of an offset without presentation modifier: "01:01",
+ * or only the hours (minutes when not zero) when a maximum width below
+ * five leaves no room for "hh:mm", as XSLT 2.0 erratum E29 has it.
+ * @param {import("./datePicture.js").Marker} marker
+ * @returns {string}
+ */
+function defaultToken(marker) {
+  if (marker.maxWidth === null || marker.maxWidth >= 5) {
+    return "01:01";
+  }
+  return "0".repeat(Math.min(2, Math.max(1, marker.minWidth ?? 1)));
+}
+
+/**
  * Formats a timezone component.
  * @param {number|null} timezone - Minutes, null when absent
  * @param {import("./datePicture.js").Marker} marker - Component Z or z
@@ -60,7 +74,7 @@ function numericOffset(offset, token, zuluAtZero) {
  * @returns {string}
  */
 export function formatTimezone(timezone, marker, zone = null) {
-  const token = marker.first ?? "01:01";
+  const token = marker.first ?? defaultToken(marker);
   if (timezone === null) return token === "Z" ? "J" : "";
   const gmt = marker.component === "z" ? "GMT" : "";
   if (token === "Z" && timezone % 60 === 0 && Math.abs(timezone) <= 720) {

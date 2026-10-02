@@ -1,7 +1,8 @@
 /**
  * The invocation of a stylesheet (XSLT 3.0 section 2.3): an initial
  * named template, an initial mode applied to the initial match selection,
- * or an initial function; then the principal result as a document.
+ * or an initial function; then the principal result as a document (a
+ * sequence when build-tree is "no", see rawResults.js).
  *
  * @module @tradik/xslt3/xslt/runtime/invocation
  */
@@ -12,7 +13,7 @@ import { xsltError } from "../names.js";
 import { applyTemplates, invokeTemplate, NO_ARGS } from "./apply.js";
 import { callFunction } from "./functionCall.js";
 import { clarkName, normalizeParams } from "./params.js";
-import { TreeReceiver } from "./treeReceiver.js";
+import { resultReceiver } from "./rawResults.js";
 
 /** The default initial template of XSLT 3.0. */
 const INITIAL_TEMPLATE =
@@ -35,6 +36,24 @@ export function finishTree(fragment, createDocument) {
   for (const child of children) {
     document.appendChild(document.importNode(child, true));
   }
+  return document;
+}
+
+/**
+ * The principal result tree: the document that owns the fragment when
+ * the tree is well-formed (one element, no text at the top), else the
+ * fragment.
+ * @param {DocumentFragment} fragment
+ * @param {Document} document - Its owner, still empty
+ * @returns {Document|DocumentFragment}
+ */
+function asDocument(fragment, document) {
+  const children = [...fragment.childNodes];
+  const wellFormed =
+    children.filter((child) => child.nodeType === 1).length === 1 &&
+    !children.some((child) => child.nodeType === 3);
+  if (!wellFormed) return fragment;
+  document.appendChild(fragment);
   return document;
 }
 
@@ -118,20 +137,20 @@ export function invoke(tx, options, source, createDocument) {
   }
   const step = initialStep(tx, options, source);
   const document = createDocument();
-  const fragment = document.createDocumentFragment();
-  tx.machine.runBody(
-    [step],
-    tx.globalContext,
-    new TreeReceiver(fragment, new Map()),
+  const { receiver, value } = resultReceiver(
+    tx.stylesheet.outputFor(null),
+    () => document,
+    tx.options.buildTree,
   );
-  if (tx.principalOverride && fragment.hasChildNodes()) {
+  tx.machine.runBody([step], tx.globalContext, receiver);
+  const raw = value();
+  const written = Array.isArray(raw) ? raw.length > 0 : raw.hasChildNodes();
+  if (tx.principalOverride && written) {
     throw xsltError("XTDE1490", "The principal result is written twice");
   }
-  const children = [...fragment.childNodes];
-  const wellFormed =
-    children.filter((child) => child.nodeType === 1).length === 1 &&
-    !children.some((child) => child.nodeType === 3);
-  if (wellFormed) document.appendChild(fragment);
-  const principal = tx.principalOverride ?? (wellFormed ? document : fragment);
+  let principal = tx.principalOverride ?? raw;
+  if (principal === raw && !Array.isArray(raw)) {
+    principal = asDocument(raw, document);
+  }
   return { principal, principalOutput: tx.principalOutput, ...result };
 }

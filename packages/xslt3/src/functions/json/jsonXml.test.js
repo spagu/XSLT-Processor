@@ -89,6 +89,10 @@ describe("fn:xml-to-json", () => {
     assert.equal(toJson("<number>1e6</number>"), "1.0E6");
     assert.equal(toJson("<array> </array>"), "[]");
     assert.equal(xs("xml-to-json(()), xml-to-json((), map{})"), "");
+    // a document fragment (a temporary tree) is a document node
+    const fragment = fnDoc("<string>a</string>").createDocumentFragment();
+    fragment.appendChild(fnDoc("<string>a</string>").documentElement);
+    assert.equal(xs("xml-to-json(.)", fragment), '"a"');
     const doc = parse(`<!--x--><null xmlns="${FN}"/>`);
     assert.equal(xs("xml-to-json(.)", doc), "null");
   });

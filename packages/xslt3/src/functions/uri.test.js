@@ -119,6 +119,8 @@ describe("resolve-uri", () => {
       () => f("resolve-uri", ["a"], { staticBaseUri: null }),
       "FONS0005",
     );
+    // "#" cannot appear in a fragment
+    throwsCode(() => f("resolve-uri", ["##x", "http://x/"]), "FORG0002");
   });
 
   it("rejects invalid URIs and bases", () => {

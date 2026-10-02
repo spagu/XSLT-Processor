@@ -3,7 +3,7 @@
   "commit": "201a6e466940cdfc727f4babfedcde5332b9f578",
   "mode": "qt3",
   "adapter": "xslt3",
-  "count": 21767,
+  "count": 21770,
   "passing": [
     "app-FunctxFn/functx-fn-QName-1",
     "app-FunctxFn/functx-fn-QName-2",
@@ -4881,6 +4881,9 @@
     "fn-function-lookup/fn-function-lookup-756",
     "fn-function-lookup/fn-function-lookup-757",
     "fn-function-lookup/fn-function-lookup-758",
+    "fn-function-lookup/fn-function-lookup-759",
+    "fn-function-lookup/fn-function-lookup-762",
+    "fn-function-lookup/fn-function-lookup-764",
     "fn-function-lookup/fn-function-lookup-767",
     "fn-function-lookup/fn-function-lookup-768",
     "fn-function-lookup/fn-function-lookup-769",

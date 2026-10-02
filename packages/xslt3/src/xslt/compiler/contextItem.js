@@ -53,7 +53,13 @@ function compileCheck(element, named, cx) {
   return {
     binding(xc) {
       if (use === "absent") {
-        return derive(xc, { item: undefined, position: 0, size: 0 });
+        // no focus, hence no current template rule either (XTDE0560)
+        return derive(xc, {
+          item: undefined,
+          position: 0,
+          size: 0,
+          rule: null,
+        });
       }
       if (xc.item === undefined) {
         if (use === "required") {

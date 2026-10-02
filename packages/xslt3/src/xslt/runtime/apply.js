@@ -12,6 +12,7 @@ import { canonicalString } from "../../xdm/lexical.js";
 import { stringValue } from "../../xdm/nodes.js";
 import { xsltError } from "../names.js";
 import { derive, withVariable } from "./context.js";
+import { markCopied, markDocumentCopied } from "./baseUri.js";
 import { copyNamespaceNodes } from "./copy.js";
 import { BodyFrame, LoopFrame } from "./machine.js";
 import { SequenceReceiver } from "./sequenceReceiver.js";
@@ -117,7 +118,8 @@ export function applyBuiltIn(item, xc, mode, out, machine, args) {
   if (action === "fail") {
     throw xsltError("XTDE0555", "No template rule matches the item");
   }
-  if (action === "deep-skip") return;
+  // deep-skip processes the children of a document node (XSLT 3.0 6.7.1)
+  if (action === "deep-skip" && type !== 9 && type !== 11) return;
   const copy = action === "shallow-copy";
   if (action === "deep-copy" || (copy && !container)) {
     if (type === undefined) out.item(item);
@@ -136,8 +138,12 @@ export function applyBuiltIn(item, xc, mode, out, machine, args) {
   let target = out;
   if (copy && type === 1) {
     target = out.element(item.namespaceURI ?? "", item.nodeName);
+    markCopied(item, target.parent);
     copyNamespaceNodes(item, target);
-  } else if (copy) target = out.document();
+  } else if (copy) {
+    target = out.document();
+    markDocumentCopied(item, target);
+  }
   const children = childrenOf(item);
   const selected =
     type === 1 && action !== "text-only-copy"

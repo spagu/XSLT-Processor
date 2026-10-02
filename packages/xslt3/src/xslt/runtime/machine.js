@@ -15,6 +15,7 @@
  */
 
 import { xsltError } from "../names.js";
+import { locateInFrames } from "./locations.js";
 
 /**
  * A compiled sequence constructor: steps that are instructions
@@ -118,6 +119,7 @@ export class Machine {
         if (!frames[frames.length - 1].advance(this)) frames.pop();
       }
     } catch (error) {
+      locateInFrames(error, frames, base);
       frames.length = base;
       throw error;
     }

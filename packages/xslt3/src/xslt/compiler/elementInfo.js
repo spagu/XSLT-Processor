@@ -49,6 +49,27 @@ export function setModuleUri(root, uri) {
   if (uri !== undefined) moduleUris.set(root, uri);
 }
 
+/**
+ * Forgets the info of an element whose attributes changed (shadow
+ * attributes evaluated after its use-when condition read its info).
+ * @param {Element} element
+ */
+export function forgetInfo(element) {
+  cache.delete(element);
+}
+
+/**
+ * The URI of the stylesheet module an element belongs to.
+ * @param {Node} element
+ * @returns {string|undefined}
+ */
+export function moduleUriOf(element) {
+  for (let node = element; node?.nodeType === 1; node = node.parentNode) {
+    if (moduleUris.has(node)) return moduleUris.get(node);
+  }
+  return undefined;
+}
+
 const ROOT_INFO = Object.freeze({
   namespaces: new Map([["xml", XML_NS]]),
   version: 3,

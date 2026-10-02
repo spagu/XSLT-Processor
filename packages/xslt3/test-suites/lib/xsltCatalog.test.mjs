@@ -72,7 +72,11 @@ describe("xslt30-test catalog", () => {
     assert.equal(one.test.params[0].static, true);
     assert.equal(one.test.initialTemplate.name, "main");
     assert.equal(one.test.initialTemplate.params[0].tunnel, true);
-    assert.deepEqual(one.test.output, { file: "out.xml", serialize: "yes" });
+    assert.deepEqual(one.test.output, {
+      file: "out.xml",
+      path: "/suite/tests/fn/format-number/out.xml",
+      serialize: "yes",
+    });
     assert.equal(one.test.postureAndSweep, false);
     assert.equal(one.result.children[1].kind, "assert-message");
     assert.equal(one.result.children[1].children[0].kind, "assert-xml");

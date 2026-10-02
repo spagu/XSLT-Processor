@@ -144,6 +144,11 @@ describe("format-date, format-time and format-dateTime", () => {
     assert.equal(z("+05:30", "[Z0]"), "+5:30");
     assert.equal(z("Z", "[Z0:00]"), "+0:00");
     assert.equal(z("+13:00", "[Z0000]"), "+1300");
+    // no room for hh:mm: the hours, and the minutes when not zero
+    assert.equal(z("-14:00", "[z,2-2]"), "GMT-14");
+    assert.equal(z("-13:30", "[z,2-2]"), "GMT-13:30");
+    assert.equal(z("+05:00", "[z,1-3]"), "GMT+5");
+    assert.equal(z("+05:00", "[z,2-6]"), "GMT+05:00");
     assert.equal(z("Z", "[Z00:00t]"), "Z");
     assert.equal(z("-05:00", "[ZZ]"), "R");
     assert.equal(z("+05:30", "[ZZ]"), "+05:30");

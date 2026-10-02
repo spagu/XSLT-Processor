@@ -69,12 +69,13 @@ export function resourceUri(href, baseUri) {
  * during an evaluation) and decodes.
  * @param {((uri: string) => import("../../functions/textDecoding.js").TextResource)|undefined} loader
  * @param {string|undefined} baseUri
- * @returns {(href: string, encoding?: string) => string}
+ * @returns {(href: string, encoding?: string, base?: string) => string}
+ *   the hook; `base` replaces the base URI of relative references
  */
 export function createTextLoader(loader = noResources, baseUri) {
   const texts = new Map();
-  return (href, encoding) => {
-    const uri = resourceUri(href, baseUri);
+  return (href, encoding, base = baseUri) => {
+    const uri = resourceUri(href, base);
     const key = `${encoding ?? ""} ${uri}`;
     if (texts.has(key)) return texts.get(key);
     let resource;
@@ -119,16 +120,17 @@ export function createXmlParser(parser) {
  * The collection hook.
  * @param {((uri: string|null) => Array|null|undefined)|undefined} collections
  * @param {string|undefined} baseUri
- * @returns {(href: string|null) => Array}
+ * @returns {(href: string|null, base?: string) => Array} the hook; `base`
+ *   replaces the base URI of relative references
  * @throws {XPathError} FODC0002 for an unknown collection, FODC0004 for an
  *   invalid URI
  */
 export function createCollections(collections, baseUri) {
-  return (href) => {
+  return (href, base = baseUri) => {
     let uri = null;
     if (href !== null) {
       try {
-        uri = new globalThis.URL(href, baseUri).href;
+        uri = new globalThis.URL(href, base).href;
       } catch (error) {
         throw new XPathError("FODC0004", `Invalid collection URI ${href}`, {
           cause: error,

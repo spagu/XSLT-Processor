@@ -98,6 +98,8 @@ export class ExpressionCompiler {
         this.library,
       );
       sc.owner = this.owner;
+      // for element-available(), whose unprefixed names use it
+      sc.defaultNamespace = info.namespaces.get("") ?? "";
       byKey.set(key, sc);
     }
     return sc;

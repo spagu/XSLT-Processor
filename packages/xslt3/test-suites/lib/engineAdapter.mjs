@@ -64,6 +64,8 @@ export function parseXml(text, uri) {
   return document;
 }
 
+const XML_NS = "http://www.w3.org/XML/1998/namespace";
+
 /**
  * A text resource of the test environment, or a file: URI.
  *
@@ -104,7 +106,31 @@ function collectionItems(collections, uri, loadFile) {
       : Boolean(c.uri) && (c.uri === uri || uri.endsWith(`/${c.uri}`)),
   );
   if (!collection || collection.queries.length) return null;
-  return collection.sources.map((source) => loadFile(source.file));
+  return collection.sources.map((source) => {
+    // "doc.xml#id": the element of the document with that xml:id
+    const [file, fragment] = source.file.split("#");
+    const document = loadFile(file);
+    return fragment ? elementWithId(document, fragment) : document;
+  });
+}
+
+/**
+ * The element of a document with an xml:id.
+ *
+ * @param {Document} document - The document
+ * @param {string} id - The identifier
+ * @returns {Element|null} The element, null when there is none
+ */
+function elementWithId(document, id) {
+  const stack = [document.documentElement];
+  while (stack.length) {
+    const element = stack.pop();
+    if (element.getAttributeNS(XML_NS, "id") === id) return element;
+    for (const child of [...element.childNodes].reverse()) {
+      if (child.nodeType === 1) stack.push(child);
+    }
+  }
+  return null;
 }
 
 /**
@@ -152,6 +178,10 @@ export function createEngineAdapter(engine) {
       ? createTransform(engine, {
           loadFile,
           loadSource: loadDocument,
+          loadResource,
+          parseXml: (text) => parseXml(text),
+          collection: (collections, uri) =>
+            collectionItems(collections, uri, loadFile),
           evaluate: (expression, contextItem) =>
             engine.compileXPath(expression).evaluate(contextItem, {
               createDocument: () =>

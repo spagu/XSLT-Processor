@@ -8,6 +8,7 @@
  */
 
 import { standardAttr, xsltError } from "../names.js";
+import { matchesOf } from "./visibility.js";
 
 const ENTRY_VISIBILITIES = new Set(["public", "final"]);
 
@@ -73,9 +74,11 @@ export function isEntryPoint(cx, kind, key) {
 export function isEligibleMode(cx, name) {
   if (name === "" || name === cx.defaultModeName) return true;
   if (isEntryPoint(cx, "mode", name)) return true;
-  return (
-    !cx.header.declaredModes &&
-    cx.modes.has(name) &&
-    !cx.table.has(`mode ${name}`)
-  );
+  if (cx.header.declaredModes || !cx.modes.has(name)) return false;
+  if (cx.table.has(`mode ${name}`)) return false;
+  // a mode used without declaration is eligible, unless xsl:expose makes
+  // it private (XSLT 3.0 section 3.5.3.1)
+  const [uri, local] = name.slice(1).split("}");
+  const [best] = matchesOf(cx.exposeRules ?? [], { kind: "mode", uri, local });
+  return !best || ENTRY_VISIBILITIES.has(best.rule.visibility);
 }

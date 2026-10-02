@@ -75,6 +75,48 @@ describe("format-integer", () => {
     assert.equal(f(11n, "Ww", "en"), "Eleven");
     assert.equal(f(null, "1"), "");
     assert.equal(f(5n, "1"), "5");
+    assert.equal(f(21n, "Ww", "de-AT"), "Einundzwanzig");
+    assert.equal(f(3n, "1;o", "de"), "3.");
+    assert.equal(f(3n, "w;o(-er)", "de"), "dritter");
+    assert.equal(f(3n, "w;o", "fr"), "third");
+  });
+});
+
+describe("format-integer in German", () => {
+  const de = (value, picture) => formatInteger(BigInt(value), picture, "de");
+
+  it("writes cardinal words", () => {
+    const cases = {
+      0: "null",
+      1: "eins",
+      16: "sechzehn",
+      21: "einundzwanzig",
+      30: "dreißig",
+      101: "einhunderteins",
+      134: "einhundertvierunddreißig",
+      1000: "eintausend",
+      21000: "einundzwanzigtausend",
+      1000000: "eine Million",
+      2000001: "zwei Millionen eins",
+      3000000000: "drei Milliarden",
+    };
+    for (const [n, words] of Object.entries(cases)) {
+      assert.equal(de(n, "w"), words, n);
+    }
+    assert.equal(de(134, "W"), "EINHUNDERTVIERUNDDREISSIG");
+    assert.equal(de(2134816, "Ww").startsWith("Zwei Millionen Ein"), true);
+  });
+
+  it("writes ordinal words with an ending", () => {
+    assert.equal(de(1, "w;o"), "erste");
+    assert.equal(de(3, "w;o(-es)"), "drittes");
+    assert.equal(de(7, "w;o(%spellout-ordinal)"), "siebte");
+    assert.equal(de(10, "w;o(-er)"), "zehnter");
+    assert.equal(de(20, "w;o(-en)"), "zwanzigsten");
+    assert.equal(de(201, "w;o"), "zweihunderterste");
+    assert.equal(de(1000000, "w;o"), "eine Millionste");
+    assert.equal(de(5, "I;o"), "V");
+    assert.equal(de(5, "Z;o"), "5.");
   });
 });
 

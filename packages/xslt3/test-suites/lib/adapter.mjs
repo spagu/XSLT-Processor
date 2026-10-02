@@ -131,16 +131,19 @@ export function createHelpers(
   adapter,
   { namespaces = [], resultAsContext = false, readFile },
 ) {
-  const evaluate = (expr, value) => {
+  const evaluate = (expr, value, extra = []) => {
     if (!adapter.evaluateXPath) {
       throw new NotRunError("adapter has no evaluateXPath");
     }
-    const context = { variables: { result: value }, namespaces };
+    const context = {
+      variables: { result: value },
+      namespaces: [...namespaces, ...extra],
+    };
     if (resultAsContext) context.contextItem = value;
     return adapter.evaluateXPath(expr, context);
   };
   return {
-    test: (expr, value) => toBoolean(evaluate(expr, value)),
+    test: (expr, value, extra) => toBoolean(evaluate(expr, value, extra)),
     stringValue: (value) =>
       toText(
         evaluate(

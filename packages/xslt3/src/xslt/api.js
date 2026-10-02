@@ -17,6 +17,7 @@
 import { StylesheetCompiler } from "./compiler/stylesheet.js";
 import { normalizeParams } from "./runtime/params.js";
 import { withDefaultMethod } from "./runtime/defaultMethod.js";
+import { setCompiler } from "./runtime/compilerHook.js";
 import { runTransformation } from "./runtime/transformation.js";
 import { xsltError } from "./names.js";
 
@@ -65,11 +66,24 @@ export class CompiledStylesheet {
    * @param {Array} [options.initialMatchSelection] - Items to apply
    *   templates to (default: the source)
    * @param {object|Map} [options.params] - Stylesheet parameters by name
+   * @param {boolean} [options.paramsAsUntyped] - JavaScript strings among
+   *   the stylesheet parameters are xs:untypedAtomic, so that they convert
+   *   to the declared type (`as="xs:integer"`) as command-line parameters
+   *   do in other processors; see also `untypedAtomic()`
    * @param {object|Map} [options.templateParams] - Parameters of the
    *   initial template or mode
    * @param {object|Map} [options.tunnelParams] - Tunnel parameters
-   * @param {(uri: string) => Document} [options.documentLoader] - Loads
-   *   documents for doc() and document()
+   * @param {(uri: string, base?: string) => Document} [options.documentLoader]
+   *   - Loads documents for doc() and document(): gets the absolute URI
+   *   and the base URI the reference was resolved against
+   * @param {(uri: string) => (string|Uint8Array|object|null)} [options.textLoader]
+   *   - Reads text resources for unparsed-text(), json-doc() and the like
+   *   (default: none; `readFileUri` reads `file:` URIs)
+   * @param {(uri: string|null) => Array|null} [options.collections] - The
+   *   items of a collection for collection() and uri-collection(), `uri`
+   *   null for the default collection (default: none)
+   * @param {(text: string, baseUri?: string) => Document} [options.xmlParser]
+   *   - Parser for parse-xml() (default: the global DOMParser)
    * @param {() => Document} [options.createDocument] - Creates documents
    * @param {(message: Node) => void} [options.onMessage] - xsl:message
    * @param {string} [options.baseOutputUri] - Base of result-document URIs
@@ -79,6 +93,9 @@ export class CompiledStylesheet {
    * @param {*} [options.globalContextItem] - Default: the source
    * @param {number} [options.implicitTimezone] - Minutes, default 0
    * @param {Date} [options.currentDateTime] - Default: now
+   * @param {boolean} [options.buildTree] - Overrides the build-tree
+   *   serialization parameter of every result: false delivers the raw
+   *   sequences (as fn:transform does for delivery-format "raw")
    * @param {number} [options.maxDepth] - Deepest nesting of instructions
    *   (default 1,000,000; deeper is reported as an infinite recursion)
    * @returns {{principal: Node|Array, secondary: Map<string, {document:
@@ -108,8 +125,9 @@ export class CompiledStylesheet {
  * @param {Document|Element|string} stylesheet - The principal module
  * @param {object} [options]
  * @param {string} [options.baseUri] - URI of the principal module
- * @param {(uri: string) => Document|string} [options.loadStylesheet] -
- *   Loads included and imported modules
+ * @param {(uri: string, base?: string) => Document|string} [options.loadStylesheet]
+ *   - Loads included and imported modules (and parameter documents): gets
+ *   the absolute URI and the base URI the href was resolved against
  * @param {(text: string, uri?: string) => Document} [options.parseXml] -
  *   XML parser (default: the global DOMParser)
  * @param {object|Map} [options.staticParams] - Values of static
@@ -131,3 +149,5 @@ export function compileStylesheet(stylesheet, options = {}) {
   const uri = options.baseUri ?? (source.documentURI || undefined);
   return new CompiledStylesheet(compiler.compile(source, uri));
 }
+
+setCompiler(compileStylesheet);

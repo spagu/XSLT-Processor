@@ -127,6 +127,13 @@ export function parseInvocation(test, baseDir) {
       const value = attr(output, name);
       if (value !== undefined) outputAttributes[name] = value;
     }
+    // the file the principal result goes to: the base output URI
+    if (
+      outputAttributes.file !== undefined &&
+      outputAttributes.file !== "#absent"
+    ) {
+      outputAttributes.path = join(baseDir, outputAttributes.file);
+    }
   }
   return {
     stylesheets: childElements(test, "stylesheet").map((el) =>

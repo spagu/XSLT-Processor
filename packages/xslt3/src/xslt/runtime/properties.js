@@ -78,6 +78,7 @@ export const availableInstructions = new Set([
   "text",
   "value-of",
   "try",
+  "catch",
   "map",
   "map-entry",
   "variable",

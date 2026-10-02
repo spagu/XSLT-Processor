@@ -37,6 +37,27 @@ export function stripDecider(rules) {
 }
 
 /**
+ * Whether a text node is one that stripping removes: whitespace only,
+ * its parent element matched by xsl:strip-space and not under
+ * xml:space="preserve".
+ * @param {Node} node
+ * @param {object[]} rules
+ * @returns {boolean}
+ */
+export function isStrippedText(node, rules) {
+  const parent = node.parentNode;
+  if (node.nodeType !== 3 || parent?.nodeType !== 1) return false;
+  if (!WHITESPACE.test(node.nodeValue) || !stripDecider(rules)(parent)) {
+    return false;
+  }
+  for (let e = parent; e?.nodeType === 1; e = e.parentNode) {
+    const space = e.getAttributeNS(XML_NS, "space");
+    if (space) return space !== "preserve";
+  }
+  return true;
+}
+
+/**
  * A stripped copy of a document (the document itself when no rule
  * strips anything).
  * @param {Document} document

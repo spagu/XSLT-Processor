@@ -53,14 +53,16 @@ const schemePattern = /^[A-Za-z][A-Za-z0-9+.-]*$/;
  * @param {string} uri
  * @returns {{scheme?: string, authority?: string, path: string,
  *   query?: string, fragment?: string}}
- * @throws {XPathError} FORG0002 for an invalid scheme or percent-encoding
+ * @throws {XPathError} FORG0002 for an invalid scheme or percent-encoding,
+ *   or a "#" in the fragment
  */
 function parseReference(uri) {
   const [, scheme, authority, path, query, fragment] =
     referencePattern.exec(uri);
   if (
     (scheme !== undefined && !schemePattern.test(scheme)) ||
-    /%(?![0-9A-Fa-f]{2})/.test(uri)
+    /%(?![0-9A-Fa-f]{2})/.test(uri) ||
+    fragment?.includes("#")
   ) {
     throw new XPathError("FORG0002", `Invalid URI ${uri}`);
   }

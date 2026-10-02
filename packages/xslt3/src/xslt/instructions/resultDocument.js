@@ -1,7 +1,8 @@
 /**
  * xsl:result-document (XSLT 3.0 section 25.1): a new result tree, with
  * the serialization parameters of an output definition overridden by
- * the instruction's own attributes (attribute value templates).
+ * the instruction's own attributes (attribute value templates); a raw
+ * sequence when build-tree is "no" (see runtime/rawResults.js).
  *
  * @module @tradik/xslt3/xslt/instructions/resultDocument
  */
@@ -9,9 +10,12 @@
 import { resolveUri } from "../../xpath/eval/uris.js";
 import { compileBody } from "../compiler/body.js";
 import { infoOf } from "../compiler/elementInfo.js";
-import { expandCharacterMaps } from "../compiler/outputDecl.js";
+import {
+  expandCharacterMaps,
+  readParameterDocument,
+} from "../compiler/outputDecl.js";
 import { derive } from "../runtime/context.js";
-import { TreeReceiver } from "../runtime/treeReceiver.js";
+import { resultReceiver } from "../runtime/rawResults.js";
 import { avtEvaluator } from "../runtime/values.js";
 import { attr, clarkOf, resolveQName, tokens, xsltError } from "../names.js";
 
@@ -65,8 +69,16 @@ function compileParameters(element, cx, scope) {
       : null;
   const clark = (text, useDefault) =>
     clarkOf(resolveQName(text, namespaces, { useDefault, code: "XTDE1460" }));
+  const documentText = attr(element, "parameter-document");
+  const document =
+    documentText === undefined
+      ? null
+      : avtEvaluator(cx.exprs.avt(documentText, element, scope.vars));
   return (xc) => {
-    const params = {};
+    // the attributes override the parameter document
+    const params = document
+      ? readParameterDocument(document(xc), element, cx)
+      : {};
     for (const [name, value] of compiled) {
       const text = value(xc).trim();
       if (NAME_LISTS.includes(name)) {
@@ -116,9 +128,16 @@ export function compileResultDocument(element, cx, scope) {
       ...cx.outputFor(format ? format(xc) : null, element),
       ...parameters(xc),
     };
-    const fragment = tx.scratch().createDocumentFragment();
+    // "#absent" (XSLT 3.0 section 26.1): no item separator, overriding
+    // the one of the output definition
+    if (output["item-separator"] === "#absent") delete output["item-separator"];
+    const { receiver, value } = resultReceiver(
+      output,
+      tx.scratch,
+      tx.options.buildTree,
+    );
     const context = derive(xc, { outputUri: uri || tx.baseOutputUri });
-    machine.runBody(body, context, new TreeReceiver(fragment, new Map()));
-    tx.addResult(uri, fragment, output);
+    machine.runBody(body, context, receiver);
+    tx.addResult(uri, value(), output);
   };
 }

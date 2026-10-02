@@ -28,6 +28,31 @@ describe("XSLT functions", () => {
     );
   });
 
+  it("find nodes by composite keys and namespace nodes", () => {
+    checkBodies(
+      [
+        [
+          "<out>{key('c', ('a', '1'))/@n} {count(key('c', 'a'))} {count(key('c', ('a', number('x'))))}</out>",
+          "<out>x 0 0</out>",
+        ],
+        [
+          "<out>{count(key('ns', 'p'))} {name(key('ns', 'p')[1]/..)}</out>",
+          "<out>3 doc</out>",
+        ],
+      ],
+      {
+        ...options,
+        declarations:
+          '<xsl:key name="c" match="e" use="@a, @b" composite="yes"/><xsl:key name="ns" match="namespace-node()" use="local-name()"/>',
+        xml: '<doc xmlns:p="urn:p"><e a="a" b="1" n="x"/><e a="a" b="2"/></doc>',
+      },
+    );
+    checkBodies([["<out/>", "XTSE0010"]], {
+      declarations:
+        '<xsl:key name="k" match="*" use="1"><xsl:template match="/"/></xsl:key>',
+    });
+  });
+
   it("load documents", () => {
     const loaded = parse("<loaded/>");
     const documentLoader = (uri) => (uri.endsWith("x.xml") ? loaded : null);

@@ -125,7 +125,7 @@ export function compileSimpleContent(
       : avtEvaluator(cx.exprs.avt(separatorText, element, scope.vars));
   if (select === undefined) {
     return (xc, machine) =>
-      simpleContent(bodySequence(body, xc, machine), separator(xc));
+      simpleContent(bodySequence(body, xc, machine, false), separator(xc));
   }
   const expr = cx.exprs.xpath(select, element, scope.vars);
   if (infoOf(element).version < 2 && separatorText === undefined) {

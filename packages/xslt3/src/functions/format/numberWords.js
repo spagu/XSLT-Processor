@@ -147,7 +147,9 @@ export function caseWords(words, token) {
   if (token === "W") return words.toUpperCase();
   if (token === "Ww") {
     // title case, with "and" kept lower-case as in the F&O examples
-    return words.replace(/\b(?!and\b)[a-z]/g, (c) => c.toUpperCase());
+    return words.replace(/(?<!\p{L})(?!and(?!\p{L}))\p{Ll}/gu, (c) =>
+      c.toUpperCase(),
+    );
   }
   return words;
 }

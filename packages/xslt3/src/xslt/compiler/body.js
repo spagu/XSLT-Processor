@@ -15,6 +15,7 @@ import { compileLiteralElement } from "../instructions/literal.js";
 import { compileLocalVariable } from "../instructions/variables.js";
 import { checkAttributes } from "./attributes.js";
 import { conditionalBody } from "../runtime/conditional.js";
+import { locate, recordStep } from "../runtime/locations.js";
 
 /**
  * The scope of a compilation: the variables in scope (a linked list of
@@ -101,6 +102,24 @@ function compileInstruction(element, cx, scope) {
 }
 
 /**
+ * Compiles a child of a sequence constructor other than xsl:variable.
+ * @param {Node} child - Text or element
+ * @param {object} cx
+ * @param {Scope} scope
+ * @returns {Function|null} the step, null for none
+ */
+function compileChild(child, cx, scope) {
+  if (child.nodeType === 3) return compileText(child, cx, scope);
+  if (child.namespaceURI === XSL_NS) {
+    return compileInstruction(child, cx, scope);
+  }
+  if (infoOf(child).extension.has(child.namespaceURI)) {
+    return compileFallback(child, cx, scope);
+  }
+  return compileLiteralElement(child, cx, scope);
+}
+
+/**
  * Compiles the children of a stylesheet element as a sequence
  * constructor.
  * @param {Element} parent
@@ -113,21 +132,21 @@ export function compileBody(parent, cx, scope, children) {
   const body = [];
   let current = scope;
   for (const child of children ?? cx.children(parent)) {
-    let step;
-    if (child.nodeType === 3) step = compileText(child, cx, current);
-    else if (child.namespaceURI === XSL_NS) {
-      if (child.localName === "variable") {
+    try {
+      if (child.nodeType === 1 && isXsl(child, "variable")) {
         checkAttributes(child, cx);
         const compiled = compileLocalVariable(child, cx, current);
+        recordStep(compiled.step, child);
         body.push(compiled.step);
         current = compiled.scope;
         continue;
       }
-      step = compileInstruction(child, cx, current);
-    } else if (infoOf(child).extension.has(child.namespaceURI)) {
-      step = compileFallback(child, cx, current);
-    } else step = compileLiteralElement(child, cx, current);
-    if (step) body.push(step);
+      const step = compileChild(child, cx, current);
+      recordStep(step, child);
+      if (step) body.push(step);
+    } catch (error) {
+      throw locate(error, child);
+    }
   }
   // xsl:on-empty and xsl:on-non-empty make the whole body conditional
   const conditional = body.some((step) => step.conditional !== undefined);

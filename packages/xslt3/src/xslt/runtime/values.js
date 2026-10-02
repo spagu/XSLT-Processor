@@ -17,11 +17,16 @@ import { TreeReceiver } from "./treeReceiver.js";
  * @param {import("./machine.js").Body} body
  * @param {object} xc
  * @param {import("./machine.js").Machine} machine
+ * @param {boolean} [temporary] - The body runs in temporary output state
+ *   (XSLT 3.0 section 25.2: variables, functions, keys, sort keys...),
+ *   not for the content of xsl:attribute, xsl:value-of, xsl:comment,
+ *   xsl:message and the like
  * @returns {Array}
  */
-export function bodySequence(body, xc, machine) {
+export function bodySequence(body, xc, machine, temporary = true) {
   const out = new SequenceReceiver(xc.tx.scratch);
-  machine.runBody(body, derive(xc, { temporary: true }), out);
+  const context = temporary ? derive(xc, { temporary: true }) : xc;
+  machine.runBody(body, context, out);
   return out.items;
 }
 

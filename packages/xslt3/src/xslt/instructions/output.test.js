@@ -41,6 +41,11 @@ describe("xsl:message", () => {
     assert.equal(show(messages[0]), "@a=1");
   });
 
+  it("reports an error in its content in the message", () => {
+    const { messages } = result('<xsl:message select="1 div 0"/><ok/>');
+    assert.match(show(messages[0]), /^Error in xsl:message: FOAR0001/);
+  });
+
   it("terminates", () => {
     checkBodies([
       ['<xsl:message terminate="yes">stop</xsl:message>', "XTMM9000"],

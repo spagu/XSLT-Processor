@@ -28,9 +28,11 @@ const library = defaultFunctionLibrary.extend(availabilityFunctions);
  * @param {string} text
  * @param {Element} element
  * @param {Map<string, Array>} statics - Static variables by Clark name
+ * @param {object} [resources] - Dynamic options: `xmlParser` and
+ *   `createDocument`, for parse-xml(), json-to-xml() and the like
  * @returns {Array} the value
  */
-export function evaluateStatic(text, element, statics) {
+export function evaluateStatic(text, element, statics, resources = {}) {
   const info = infoOf(element);
   const sc = createStaticContext(
     {
@@ -42,6 +44,7 @@ export function evaluateStatic(text, element, statics) {
     },
     library,
   );
+  sc.defaultNamespace = info.namespaces.get("") ?? "";
   let vars = null;
   let env = null;
   for (const [key, value] of statics) {
@@ -49,7 +52,7 @@ export function evaluateStatic(text, element, statics) {
     env = { value, next: env };
   }
   const run = compileNode(parseXPath(text), { sc, vars });
-  const dyn = createDynamicContext(sc, {}, undefined);
+  const dyn = createDynamicContext(sc, resources, undefined);
   dyn.sc = sc;
   return run({ item: undefined, position: 0, size: 0, env, dyn });
 }
@@ -59,14 +62,18 @@ export function evaluateStatic(text, element, statics) {
  * @param {string} text
  * @param {Element} element
  * @param {Map<string, Array>} statics
+ * @param {object} [resources] - See {@link evaluateStatic}
  * @returns {string}
  */
-export function evaluateStaticAvt(text, element, statics) {
+export function evaluateStaticAvt(text, element, statics, resources) {
   return parseAvt(text)
     .map((part) =>
       typeof part === "string"
         ? part
-        : simpleContent(evaluateStatic(part.expr, element, statics), " "),
+        : simpleContent(
+            evaluateStatic(part.expr, element, statics, resources),
+            " ",
+          ),
     )
     .join("");
 }
@@ -75,10 +82,13 @@ export function evaluateStaticAvt(text, element, statics) {
  * Evaluates the use-when condition of an element.
  * @param {Element} element
  * @param {Map<string, Array>} [statics] - Static variables in scope
+ * @param {object} [resources] - See {@link evaluateStatic}
  * @returns {boolean} true when the element is included
  */
-export function useWhen(element, statics = new Map()) {
+export function useWhen(element, statics = new Map(), resources = {}) {
   const condition = standardAttr(element, "use-when");
   if (condition === undefined) return true;
-  return effectiveBooleanValue(evaluateStatic(condition, element, statics));
+  return effectiveBooleanValue(
+    evaluateStatic(condition, element, statics, resources),
+  );
 }

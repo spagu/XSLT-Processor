@@ -14,6 +14,7 @@ import { XS_NAMESPACE } from "../../xdm/types.js";
 import { parseSequenceType } from "../syntax/types.js";
 import { TokenStream } from "../syntax/tokenStream.js";
 import { coerce } from "./coercion.js";
+import { dynamicCallContext } from "./dynamicCall.js";
 import { compileSequenceType } from "./sequenceType.js";
 import { createStaticContext } from "./staticContext.js";
 import { compileCastTarget, LIST_TYPES } from "./typeExprs.js";
@@ -187,6 +188,7 @@ export function functionItemOf(resolved, ctx) {
     name: resolved.name,
     arity: resolved.arity,
     signature: resolved.signature,
-    invoke: (args) => resolved.call(args, ctx),
+    invoke: (args) =>
+      resolved.call(args, { ...ctx, dyn: dynamicCallContext(ctx.dyn) }),
   });
 }

@@ -74,17 +74,40 @@ export function declareAttributeSet(element, cx) {
  * @param {import("../runtime/machine.js").Machine} machine
  * @param {object} cx - Stylesheet compiler
  * @param {Set<string>} [active] - Sets being applied (cycle detection)
+ * @param {boolean} [crossed] - The chain went through another package
  */
-export function applyAttributeSets(names, xc, out, machine, cx, active) {
+export function applyAttributeSets(
+  names,
+  xc,
+  out,
+  machine,
+  cx,
+  active,
+  crossed = false,
+) {
   const applying = active ?? new Set();
   const context = derive(xc, { env: xc.tx.globalEnv });
   for (const name of names) {
     if (applying.has(name)) {
-      throw xsltError("XTSE0720", `The attribute set ${name} uses itself`);
+      // a cycle made by overriding in another package shows only when
+      // the components are bound: a dynamic error (XSLT 3.0 10.2)
+      throw xsltError(
+        crossed ? "XTDE0640" : "XTSE0720",
+        `The attribute set ${name} uses itself`,
+      );
     }
     applying.add(name);
     for (const part of cx.attributeSets.get(name)) {
-      applyAttributeSets(part.uses, xc, out, machine, part.cx, applying);
+      const across = crossed || part.cx !== cx;
+      applyAttributeSets(
+        part.uses,
+        xc,
+        out,
+        machine,
+        part.cx,
+        applying,
+        across,
+      );
       machine.runBody(part.body, context, out);
     }
     applying.delete(name);

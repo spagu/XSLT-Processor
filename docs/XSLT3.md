@@ -78,8 +78,8 @@ Pass rates per feature are published here as they come in.
 | Suite | Stage | Applicable | Pass | Rate |
 |---|---|---:|---:|---:|
 | qt3tests (XPath 3.1) | parsing and static analysis | 21,787 | 21,759 | 99.9% |
-| qt3tests (XPath 3.1) | evaluation, all families | 21,787 | 21,767 | 99.9% |
-| xslt30-test (XSLT 3.0 and 2.0) | transformation, all families | 7,901 | 7,522 | 95.2% |
+| qt3tests (XPath 3.1) | evaluation, all families | 21,787 | 21,770 | 99.9% |
+| xslt30-test (XSLT 3.0 and 2.0) | transformation, all families | 7,914 | 7,772 | 98.2% |
 
 The 20 remaining evaluation failures are `collation-key` with UCA collations
 (JavaScript's `Intl` exposes no sort keys), `fn:transform` and
@@ -92,17 +92,21 @@ XSLT per family:
 
 | Family | Applicable | Pass | Rate |
 |---|---:|---:|---:|
-| expr (expressions in stylesheets) | 659 | 649 | 98.5% |
-| misc | 1,884 | 1,852 | 98.3% |
-| type (types and conversions) | 777 | 758 | 97.6% |
-| attr (attributes and AVTs) | 1,002 | 958 | 95.6% |
-| insn (instructions) | 1,410 | 1,334 | 94.6% |
-| decl (declarations, packages) | 1,053 | 987 | 93.7% |
-| fn (XSLT functions) | 1,116 | 984 | 88.2% |
+| fn (XSLT functions) | 1,117 | 1,108 | 99.2% |
+| misc | 1,884 | 1,854 | 98.4% |
+| expr (expressions in stylesheets) | 659 | 650 | 98.6% |
+| attr (attributes and AVTs) | 1,002 | 981 | 97.9% |
+| insn (instructions) | 1,412 | 1,381 | 97.8% |
+| decl (declarations, packages) | 1,053 | 1,019 | 96.8% |
+| type (types and conversions) | 787 | 779 | 99.0% |
 
 Streaming (2,542 tests) and schema awareness are out of scope; stylesheets
-that ask for streaming run without it. Five tests are not run because they
-check warnings (`assert-warning`), which the runner does not support.
+that ask for streaming run without it. Of the 142 failures, about 20 expect
+whitespace the test driver of the reference processor drops, some need what
+the DOM cannot do (external entities, XInclude, `inherit-namespaces="no"`),
+and about a dozen contradict the current specification (listed in
+tasks of the repository, not counted as bugs). Five tests are not run: they
+check warnings (`assert-warning`).
 
 ## Using XSLT 3.0
 
@@ -156,6 +160,19 @@ be turned off per transformation:
   `transform({ dynamicEvaluation: false })`: `xsl:evaluate` then runs its
   `xsl:fallback` children or raises XTDE3175.
 - `xsl:assert`: `transform({ assertions: false })` skips the assertions.
+
+More `transform()` options: `textLoader`, `xmlParser` and `collections` (as
+for XPath: `unparsed-text()`, `json-doc()`, `parse-xml()`, `collection()`
+read nothing unless you pass them), `buildTree: false` or `xsl:output
+method="json"`/`"adaptive"` to get the raw result sequence (a map, an array)
+instead of a tree, and `paramsAsUntyped: true` to pass string parameters as
+`xs:untypedAtomic` so that `as="xs:integer"` converts them, as on a command
+line (`untypedAtomic(value)` is exported for single values). The
+`loadStylesheet` and `documentLoader` options receive `(uri, baseUri)`.
+Errors carry the W3C code in `code` and, when known, `location` (`{ module,
+line, column }`), also appended to the message. `fn:transform` runs another
+stylesheet from inside one, and `xsl:number`/`format-integer` write English
+and German words and ordinals.
 
 Packages (`xsl:use-package`) are found through a resolver you pass to
 `compileStylesheet`; it returns the package as a document, a string or

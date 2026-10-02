@@ -19,28 +19,14 @@ import {
   xsltError,
 } from "../names.js";
 import { significantChildren } from "./children.js";
-import { infoOf } from "./elementInfo.js";
+import { forgetInfo, infoOf } from "./elementInfo.js";
+import {
+  isModuleReference,
+  loadModuleDocument,
+  preloadModule,
+} from "./moduleLoading.js";
+import { declareConsistently } from "./staticVariables.js";
 import { evaluateStatic, evaluateStaticAvt, useWhen } from "./useWhen.js";
-
-/**
- * An embedded stylesheet module: the element of a document whose id is
- * the fragment identifier of its URI.
- * @param {Document} document
- * @param {string} id
- * @param {string} uri - For the error message
- * @returns {Element}
- */
-function embeddedStylesheet(document, id, uri) {
-  const stack = [document.documentElement];
-  while (stack.length > 0) {
-    const element = stack.pop();
-    if (element.getAttribute("id") === id) return element;
-    for (let child = element.lastChild; child; child = child.previousSibling) {
-      if (child.nodeType === 1) stack.push(child);
-    }
-  }
-  throw xsltError("XTSE0165", `No element with id ${id} in ${uri}`);
-}
 
 /**
  * @param {Element} element
@@ -68,6 +54,25 @@ export class StaticStage {
     this.moduleDocuments = new Map();
     this.childCache = new WeakMap();
     this.includedCache = new WeakMap();
+    /** @type {Map<string, Document|Element>} loaded modules by URI */
+    this.loadedModules = new Map();
+    /** @type {Map<string, object>} static declarations by Clark name */
+    this.staticDeclarations = new Map();
+    /** @type {number[]} the xsl:import elements being loaded, outermost first */
+    this.importPath = [];
+    this.imports = 0;
+    /** @type {Set<string>} modules being loaded ahead (cycles) */
+    this.preloading = new Set();
+    // static expressions parse XML and build nodes with the XML parser
+    const parse = (text) => options.parse(text);
+    this.resources = {
+      xmlParser: parse,
+      createDocument: () => {
+        const document = parse("<x/>");
+        document.removeChild(document.documentElement);
+        return document;
+      },
+    };
   }
 
   /**
@@ -92,11 +97,15 @@ export class StaticStage {
   included(element) {
     let included = this.includedCache.get(element);
     if (included === undefined) {
-      included = useWhen(element, this.statics);
+      // a shadow use-when (_use-when) is evaluated before the condition
+      const early = element.hasAttribute?.("_use-when");
+      if (early) this.applyShadows(element);
+      included = useWhen(element, this.statics, this.resources);
       this.includedCache.set(element, included);
       if (included) {
-        this.applyShadows(element);
+        if (!early) this.applyShadows(element);
         if (isStaticDeclaration(element)) this.declareStatic(element);
+        if (isModuleReference(element)) this.preload(element);
       }
     }
     return included;
@@ -112,10 +121,18 @@ export class StaticStage {
     for (const attribute of element.attributes) {
       const name = attribute.name;
       if (!name.startsWith("_") || attribute.namespaceURI) continue;
-      const value = evaluateStaticAvt(attribute.value, element, this.statics);
+      const value = evaluateStaticAvt(
+        attribute.value,
+        element,
+        this.statics,
+        this.resources,
+      );
       values.set(name.slice(1), value);
     }
-    if (values.size > 0) setShadowAttributes(element, values);
+    if (values.size > 0) {
+      setShadowAttributes(element, values);
+      forgetInfo(element);
+    }
   }
 
   /**
@@ -147,28 +164,34 @@ export class StaticStage {
     if (isXsl(element, "param") && supplied !== undefined) {
       value = toSequence(supplied);
     } else if (select !== undefined) {
-      value = evaluateStatic(select, element, this.statics);
-    } else value = [stringItem("")];
-    this.statics.set(key, value);
+      value = evaluateStatic(select, element, this.statics, this.resources);
+    } else {
+      // no select, no content: "" without "as", else the empty sequence
+      value = attr(element, "as") === undefined ? [stringItem("")] : [];
+    }
+    declareConsistently(this, key, {
+      element,
+      value,
+      path: [...this.importPath],
+    });
   }
 
   /**
-   * Loads an included or imported module (`uri#id` for an embedded one).
-   * @param {string} uri
+   * Loads the module of an xsl:import or xsl:include as soon as it is
+   * met (see moduleLoading.js).
+   * @param {Element} element
+   */
+  preload(element) {
+    preloadModule(this, element);
+  }
+
+  /**
+   * Loads an included or imported module (see moduleLoading.js).
+   * @param {string} uri - Absolute URI
+   * @param {string} [base] - Base URI it was resolved against
    * @returns {Document|Element}
    */
-  loadModule(uri) {
-    const [location, fragment] = uri.split("#");
-    let document;
-    try {
-      document = this.options.loadStylesheet?.(location);
-    } catch (error) {
-      throw xsltError("XTSE0165", `Cannot load ${uri}: ${error.message}`);
-    }
-    if (!document) throw xsltError("XTSE0165", `Cannot load ${uri}`);
-    if (typeof document === "string") {
-      document = this.options.parse(document, location);
-    }
-    return fragment ? embeddedStylesheet(document, fragment, uri) : document;
+  loadModule(uri, base) {
+    return loadModuleDocument(this, uri, base);
   }
 }

@@ -54,7 +54,13 @@ describe("global variables and parameters", () => {
   it("are checked", () => {
     checkErrors([
       ['<xsl:param name="p" required="yes"/>', "XTDE0050"],
-      ['<xsl:variable name="a" select="$a"/>', "XTDE0640", "<out>{$a}</out>"],
+      // a global variable is not in scope in its own declaration
+      ['<xsl:variable name="a" select="$a"/>', "XPST0008", "<out>{$a}</out>"],
+      [
+        '<xsl:variable name="a" select="$b"/><xsl:variable name="b" select="$a"/>',
+        "XTDE0640",
+        "<out>{$a}</out>",
+      ],
       ['<xsl:variable name="a"/><xsl:variable name="a"/>', "XTSE0630"],
       ['<xsl:variable name="a" required="yes"/>', "XTSE0090"],
       ['<xsl:param name="a" tunnel="yes"/>', "XTSE0020"],

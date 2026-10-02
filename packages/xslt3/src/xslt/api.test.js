@@ -166,10 +166,49 @@ describe("XSLTProcessor", () => {
     assert.equal(fragment.nodeType, 11);
     assert.equal(fragment.ownerDocument, owner);
     processor.removeParameter("urn:q", "q");
-    assert.equal(processor.getParameter("urn:q", "q"), undefined);
+    assert.equal(processor.getParameter("urn:q", "q"), "");
     processor.clearParameters();
-    assert.equal(processor.getParameter(null, "p"), undefined);
+    assert.equal(processor.getParameter(null, "p"), "");
     processor.reset();
     assert.equal(processor.stylesheet, null);
+  });
+
+  it("serializes results and takes loaders", () => {
+    const processor = new XSLTProcessor({ parseXml: parse, createDocument });
+    assert.throws(() => processor.setDocumentLoader(1), TypeError);
+    assert.throws(() => processor.setStylesheetLoader("x"), TypeError);
+    const seen = [];
+    processor
+      .setStylesheetLoader((uri, base) => {
+        seen.push([uri, base]);
+        return stylesheet('<xsl:template name="t"><t/></xsl:template>');
+      })
+      .setDocumentLoader((uri) => (uri.endsWith("x.xml") ? "<x/>" : null));
+    processor.options.baseUri = "file:///s/main.xsl";
+    processor.importStylesheet(
+      stylesheet(
+        '<xsl:include href="inc.xsl"/><xsl:output omit-xml-declaration="yes"/><xsl:template match="/"><out><xsl:copy-of select="doc(\'x.xml\')"/></out></xsl:template>',
+      ),
+    );
+    assert.deepEqual(seen, [["file:///s/inc.xsl", "file:///s/main.xsl"]]);
+    assert.equal(
+      processor.transformToString(parse("<doc/>")),
+      "<out><x/></out>",
+    );
+    processor.setDocumentLoader(null).setStylesheetLoader(null);
+    assert.equal(processor.options.documentLoader, undefined);
+    assert.equal(processor.options.loadStylesheet, undefined);
+    const plain = new XSLTProcessor({ createDocument });
+    const restore = globalThis.DOMParser;
+    globalThis.DOMParser = DOMParser;
+    try {
+      plain.setDocumentLoader(() => "<y/>");
+      assert.equal(
+        plain.options.documentLoader("u").documentElement.nodeName,
+        "y",
+      );
+    } finally {
+      globalThis.DOMParser = restore;
+    }
   });
 });
