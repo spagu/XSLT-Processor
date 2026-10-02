@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `make publish` and `make publish-xslt3` ask for the npm one-time password after the build and the tests, just before publishing: a code is valid for about 30 seconds and the checks take minutes, so `make publish OTP=123456` expired before it was used. `OTP=…` still works for scripted runs.
+
 ## [1.3.0] - 2026-10-02
 
 The first release of **`@tradik/xslt3` 1.0.0**, a separate XSLT 3.0 and XPath 3.1 engine (99.9% of the W3C qt3tests, 98.2% of xslt30-test), and an opt-in route to it from `XSLTProcessor` (`xsltVersion: "auto"`). The XSLT 1.0 behaviour of `@tradik/xslt-processor` is unchanged by default.
