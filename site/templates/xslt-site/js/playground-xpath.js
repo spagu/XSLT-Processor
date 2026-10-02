@@ -86,7 +86,7 @@ export function createXPathMode({
     const count = result.items.length;
     const items =
       count === 0 ? "Empty sequence" : `${count} item${count === 1 ? "" : "s"}`;
-    statusLine.textContent = `${items} in ${result.ms.toFixed(1)} ms with @tradik/xslt3 ${lib.VERSION} (in development).`;
+    statusLine.textContent = `${items} in ${result.ms.toFixed(1)} ms with @tradik/xslt3 ${lib.VERSION}.`;
     showMessages([]);
   }
 

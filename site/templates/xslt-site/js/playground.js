@@ -89,7 +89,7 @@ const modes = {
       library,
       isActive: () => mode === MODES.xslt3,
     }),
-    name: "XSLT 3.0",
+    name: "XSLT 2.0 / 3.0",
     runLabel: "Transform",
     outputTitle: "serialize() output",
   },
