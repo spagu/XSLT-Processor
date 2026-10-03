@@ -1,8 +1,8 @@
 # xslt-migrate-check
 
 [![npm version](https://img.shields.io/npm/v/xslt-migrate-check.svg)](https://www.npmjs.com/package/xslt-migrate-check)
-[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20.19-brightgreen.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/npm/l/xslt-migrate-check.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Node.js](https://img.shields.io/node/v/xslt-migrate-check.svg)](https://nodejs.org/)
 [![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](package.json)
 
 Chrome 158 (17 November 2026) stops running XSLT; by Chrome 176 (17 August 2027) the code is gone. Pages that call `XSLTProcessor`, and XML files that

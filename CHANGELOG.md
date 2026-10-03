@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Documentation
+
+- **README badges read their values live**: Node.js version and licence come from the published package (`engines`, `license`) instead of being typed in, the root README shows the current versions of `@tradik/xslt3` and `xslt-migrate-check` next to the library's, monthly npm downloads and the latest GitHub release; the package READMEs do the same for their own package.
+
 ## [1.3.3] - 2026-10-02
 
 ### Added
