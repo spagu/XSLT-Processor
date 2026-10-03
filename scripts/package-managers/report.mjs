@@ -12,6 +12,17 @@
  * @param {Array<{name: string, version: string, results: Array}>} rows - Rows
  * @returns {void}
  */
+/**
+ * The table mark of one check: passed, failed, or not run.
+ *
+ * @param {{ok: boolean}|undefined} found - The check's result, if it ran
+ * @returns {string} "✓", "✗" or "-"
+ */
+function mark(found) {
+  if (!found) return "-";
+  return found.ok ? "✓" : "✗";
+}
+
 export function report(rows) {
   const checks = [
     ...new Set(rows.flatMap((row) => row.results.map((r) => r.check))),
@@ -20,10 +31,7 @@ export function report(rows) {
   const lines = rows.map((row) => [
     row.name,
     row.version,
-    ...checks.map((name) => {
-      const found = row.results.find((r) => r.check === name);
-      return found ? (found.ok ? "✓" : "✗") : "-";
-    }),
+    ...checks.map((name) => mark(row.results.find((r) => r.check === name))),
   ]);
   const widths = header.map((h, i) =>
     Math.max(h.length, ...lines.map((l) => l[i].length)),

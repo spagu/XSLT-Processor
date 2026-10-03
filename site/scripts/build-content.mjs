@@ -180,7 +180,7 @@ const migrateCheck = await buildMigrateCheckBundle({
 console.log(`Site content: ${sources.length} documents, version ${version}.`);
 console.log(
   stats
-    ? `Site stats as of ${stats.fetchedAt}: ${stats.downloads} npm downloads last month, ${stats.stars} GitHub stars.`
+    ? `Site stats as of ${stats.fetchedAt}: ${Number(stats.downloads)} npm downloads last month, ${Number(stats.stars)} GitHub stars.`
     : "Site stats: none fetched or saved yet; the references page shows none.",
 );
 console.log(

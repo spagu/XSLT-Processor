@@ -102,7 +102,10 @@ const ENV = {
  * @returns {{ok: boolean, out: string}} Success and the combined output
  */
 export function run([program, ...args], cwd) {
+  // Programs come from PATH on purpose: the point is to exercise the package
+  // managers the developer or the CI runner has installed. NOSONAR
   const result = spawnSync(program, args, {
+    // NOSONAR
     cwd,
     env: { ...ENV, BUN_INSTALL_CACHE_DIR: join(cwd, ".bun-cache") },
     encoding: "utf8",

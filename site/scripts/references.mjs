@@ -105,7 +105,7 @@ export async function fetchStats({
   const downloads = npm.downloads;
   const stars = repo.stargazers_count;
   if (!Number.isInteger(downloads) || !Number.isInteger(stars)) {
-    throw new Error("unexpected API response: no downloads or stars");
+    throw new TypeError("unexpected API response: no downloads or stars");
   }
   return { downloads, stars, fetchedAt: now.toISOString().slice(0, 10) };
 }
@@ -141,7 +141,26 @@ export async function loadStats({
       );
     }
   }
-  return readCache();
+  return validStats(readCache());
+}
+
+/**
+ * Saved stats as they may be shown and logged: whole numbers and an ISO date,
+ * else null (a hand-edited or damaged cache file is ignored, not printed).
+ *
+ * @param {*} stats - Parsed cache file
+ * @returns {{downloads: number, stars: number, fetchedAt: string}|null} Stats
+ */
+export function validStats(stats) {
+  if (
+    !Number.isInteger(stats?.downloads) ||
+    !Number.isInteger(stats?.stars) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(stats?.fetchedAt)
+  ) {
+    return null;
+  }
+  const { downloads, stars, fetchedAt } = stats;
+  return { downloads, stars, fetchedAt };
 }
 
 /**

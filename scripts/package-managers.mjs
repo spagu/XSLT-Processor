@@ -47,7 +47,9 @@ function pack(dir) {
   const tarballs = {};
   for (const extra of [[], workspaces]) {
     const args = ["pack", "--json", "--pack-destination", dir, ...extra];
-    const result = spawnSync("npm", args, { cwd: ROOT, encoding: "utf8" });
+    // The developer's own npm from PATH, by design: this script tests the
+    // package managers installed on the machine (or the CI runner). NOSONAR
+    const result = spawnSync("npm", args, { cwd: ROOT, encoding: "utf8" }); // NOSONAR
     if (result.status !== 0) throw new Error(`npm pack: ${result.stderr}`);
     for (const { name, filename } of JSON.parse(result.stdout)) {
       tarballs[name] = filename;
