@@ -49,6 +49,7 @@
     "test": "node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=96 --test-coverage-exclude=\"**/*.test.js\" --test-coverage-exclude=\"packages/**\" \"src/**/*.test.js\"",
     "test:xslt3": "npm test --workspace @tradik/xslt3",
     "test:migrate-check": "npm test --workspace xslt-migrate-check",
+    "test:package-managers": "node scripts/package-managers.mjs",
     "suites:fetch": "node packages/xslt3/test-suites/fetch.mjs all",
     "test:suites:unit": "node --test --experimental-test-coverage --test-coverage-include=\"packages/xslt3/test-suites/**\" --test-coverage-exclude=\"**/*.test.mjs\" --test-coverage-lines=96 \"packages/xslt3/test-suites/**/*.test.mjs\"",
     "test:qt3:parse": "node packages/xslt3/test-suites/run.mjs qt3 --parse-only",

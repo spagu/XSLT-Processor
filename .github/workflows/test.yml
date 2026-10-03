@@ -102,6 +102,37 @@ jobs:
       - name: Run the DOM test matrix
         run: npm run test:dom
 
+  package-managers:
+    # The packed packages installed with npm, Yarn 1, Yarn 4 (Plug'n'Play),
+    # pnpm and bun: CommonJS and ES module smoke tests, /polyfill,
+    # xsltVersion "auto" with and without @tradik/xslt3, and the bins.
+    # Yarn and pnpm are pinned in scripts/package-managers/managers.mjs.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js 24.x
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          cache: "npm"
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build distribution
+        run: npm run build
+
+      - name: Install and smoke-test with every package manager
+        run: npm run test:package-managers -- --require
+
   binary-scripts:
     # The standalone-binary scripts run on every release OS: the release
     # workflow builds each binary natively, and a test that only fails on

@@ -20,7 +20,16 @@ streaming run without it).
 
 ```sh
 npm install @tradik/xslt3
+yarn add @tradik/xslt3     # Yarn 1 and Yarn 4, Plug'n'Play included
+pnpm add @tradik/xslt3
+bun add @tradik/xslt3
 ```
+
+Every release is installed and tested with npm, Yarn 1, Yarn 4
+(Plug'n'Play), pnpm and bun in CI. Next to `@tradik/xslt-processor` with
+`xsltVersion: "auto"`, install it in the same project: when it is missing
+the processor says so (`Cannot load @tradik/xslt3: install @tradik/xslt3
+...`), under Yarn Plug'n'Play too.
 
 ## XSLT 3.0
 

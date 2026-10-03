@@ -58,7 +58,15 @@ Suggested migration: @tradik/xslt-processor</code></pre>
     </div>
   </section>
 
-  <section class="band band--alt" aria-labelledby="install-title">
+  {{ with .Data.references.home }}<section class="band band--alt" aria-labelledby="used-by-title">
+    <div class="wrap">
+      <h2 id="used-by-title">Used by</h2>
+      {{template "reference-cards" .}}
+      <p class="ref-more"><a href="{{ $b }}/references/">All references</a>, with the specifications and test suites it is verified against</p>
+    </div>
+  </section>{{ end }}
+
+  <section class="band" aria-labelledby="install-title">
     <div class="wrap prose narrow">
       <h2 id="install-title">Install</h2>
       {{ $l.install | safeHTML }}
@@ -68,7 +76,7 @@ Suggested migration: @tradik/xslt-processor</code></pre>
     </div>
   </section>
 
-  <section class="band" aria-labelledby="guides-title">
+  <section class="band band--alt" aria-labelledby="guides-title">
     <div class="wrap">
       <h2 id="guides-title">Guides</h2>
       <dl class="guide-list">

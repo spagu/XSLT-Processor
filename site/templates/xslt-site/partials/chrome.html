@@ -65,6 +65,7 @@
 {{ if eq .Layout "playground" }}<link rel="stylesheet" href="{{ $b }}/css/playground.css">{{ end }}
 {{ if eq .Layout "migrate" }}<link rel="stylesheet" href="{{ $b }}/css/migrate.css">{{ end }}
 {{ if eq .Layout "check" }}<link rel="stylesheet" href="{{ $b }}/css/check.css">{{ end }}
+{{ if or (eq .Layout "landing") (eq .Layout "references") }}<link rel="stylesheet" href="{{ $b }}/css/references.css">{{ end }}
 </head>
 <body>
 {{/* Google Tag Manager (noscript half), immediately after <body>. */}}
@@ -100,6 +101,7 @@
         <li><a href="{{ $b }}/docs/getting-started/">Getting started</a></li>
         <li><a href="{{ $b }}/docs/api/">API reference</a></li>
         <li><a href="{{ $b }}/docs/cli/">Command line</a></li>
+        <li><a href="{{ $b }}/references/">References</a></li>
         <li><a href="{{ $b }}/blog/rss.xml">Blog RSS feed</a></li>
         <li><a href="{{ $b }}/cookie-policy/">Cookie policy</a></li>
         {{ if .Vars.cookie_consent }}<li><button type="button" class="link-button" data-cookie-settings>Cookie settings</button></li>{{ end }}

@@ -1,0 +1,75 @@
+{
+  "usedBy": [
+    {
+      "name": "Schema Resume",
+      "url": "https://schema-resume.org",
+      "use": "Its CV Editor renders résumés from XML with XSLT through @tradik/xslt-processor.",
+      "approved": true
+    },
+    {
+      "name": "Job Tailor",
+      "url": "https://jobtailor.co.uk",
+      "use": "UK service for ATS-friendly CVs and cover letters.",
+      "approved": true
+    },
+    {
+      "name": "Learning portal (issue #17)",
+      "url": "https://github.com/spagu/XSLT-Processor/issues/17",
+      "use": "Pending: the reporter was asked on 2026-10-03 whether it may be listed. Set approved to true only after an explicit yes.",
+      "approved": false
+    }
+  ],
+  "builtOn": [
+    {
+      "name": "XSLT 1.0, W3C Recommendation",
+      "url": "https://www.w3.org/TR/xslt-10/",
+      "detail": "Every element and function is implemented by @tradik/xslt-processor; the few gaps are listed as known deviations.",
+      "docs": { "label": "Conformance", "path": "/docs/conformance/#known-deviations" }
+    },
+    {
+      "name": "XPath 1.0, W3C Recommendation",
+      "url": "https://www.w3.org/TR/xpath-10/",
+      "detail": "The expression language of XSLT 1.0: all axes and core functions, evaluated by the built-in engine.",
+      "docs": { "label": "Conformance", "path": "/docs/conformance/" }
+    },
+    {
+      "name": "XSLT 3.0, W3C Recommendation",
+      "url": "https://www.w3.org/TR/xslt-30/",
+      "detail": "Implemented by @tradik/xslt3, which also runs XSLT 2.0 stylesheets.",
+      "docs": { "label": "XSLT 3.0 guide", "path": "/docs/xslt3/" }
+    },
+    {
+      "name": "XPath 3.1, W3C Recommendation",
+      "url": "https://www.w3.org/TR/xpath-31/",
+      "detail": "The expression language of @tradik/xslt3, with maps, arrays and higher-order functions."
+    },
+    {
+      "name": "XSLT and XQuery Serialization 3.1, W3C Recommendation",
+      "url": "https://www.w3.org/TR/xslt-xquery-serialization-31/",
+      "detail": "How @tradik/xslt3 writes its results: xml, html, xhtml, text, json and adaptive output."
+    },
+    {
+      "name": "libxslt regression corpus",
+      "url": "https://gitlab.gnome.org/GNOME/libxslt",
+      "detail": "The test corpus of libxslt 1.1.45, the engine behind Chrome's native XSLTProcessor: 299 of 299 applicable cases pass.",
+      "docs": { "label": "Test results", "path": "/docs/conformance/#conformance-test-suite" }
+    },
+    {
+      "name": "W3C qt3tests",
+      "url": "https://github.com/w3c/qt3tests",
+      "detail": "The W3C XPath 3.1 test suite: 21,770 of 21,787 applicable tests pass.",
+      "docs": { "label": "Current results", "path": "/docs/xslt3/#current-results" }
+    },
+    {
+      "name": "W3C xslt30-test",
+      "url": "https://github.com/w3c/xslt30-test",
+      "detail": "The W3C XSLT 3.0 and 2.0 test suite: 7,772 of 7,914 applicable tests pass.",
+      "docs": { "label": "Current results", "path": "/docs/xslt3/#current-results" }
+    },
+    {
+      "name": "Chrome: Removing XSLT for a more secure browser",
+      "url": "https://developer.chrome.com/docs/web-platform/deprecating-xslt",
+      "detail": "Why this library exists: Chrome's announcement of the removal of native XSLT."
+    }
+  ]
+}

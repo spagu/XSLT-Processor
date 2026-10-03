@@ -1,0 +1,14 @@
+{{/*
+  Cards of the projects that use the library, on /references/ and in the
+  home page's "Used by" band. Items are the approved entries of
+  site/references/references.json (site/scripts/references.mjs drops the
+  others). No logos: none are approved yet, so each card is text only.
+*/}}
+{{define "reference-cards"}}<ul class="ref-cards">
+  {{ range . }}<li class="ref-card">
+    <h3>{{ .name }}</h3>
+    <p>{{ .use }}</p>
+    <p class="ref-card__link"><a href="{{ .url }}" rel="noopener">{{ .domain }}</a></p>
+  </li>
+  {{ end }}
+</ul>{{end}}

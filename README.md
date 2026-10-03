@@ -32,6 +32,8 @@ Chrome and other browsers are removing native XSLT ([Chrome's announcement](http
 
 This library ensures your XSLT-based applications continue to work regardless of browser support.
 
+**Used by** [Schema Resume](https://schema-resume.org), [Job Tailor](https://jobtailor.co.uk) and others: see [References](https://xslt-processor.tradik.com/references/).
+
 ## Features
 
 - **1:1 Native API Compatibility**: Drop-in replacement for native `XSLTProcessor`
@@ -70,7 +72,17 @@ All guides are listed in the [documentation index](docs/README.md).
 
 ```bash
 npm install @tradik/xslt-processor
+# or
+yarn add @tradik/xslt-processor
+pnpm add @tradik/xslt-processor
+bun add @tradik/xslt-processor
 ```
+
+Every change is installed and smoke-tested in CI with npm, Yarn 1, Yarn 4
+(Plug'n'Play), pnpm and bun (`npm run test:package-managers`). The XSLT 2.0/3.0
+engine installs the same way (`yarn add @tradik/xslt3` and so on), and the
+migration checker runs without installing: `npx xslt-migrate-check .`,
+`pnpm dlx xslt-migrate-check .` or `bunx xslt-migrate-check .`.
 
 The library itself has no dependencies. The `xslt` command line tool also
 needs `jsdom` (an optional peer dependency, `>=25`), see [CLI Usage](#cli-usage).

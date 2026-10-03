@@ -1,4 +1,4 @@
-.PHONY: install test test-watch test-browser test-dom conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help site site-content site-serve site-test site-clean site-deploy publish publish-dry publish-xslt3 publish-xslt3-dry publish-migrate-check publish-migrate-check-dry
+.PHONY: install test test-watch test-browser test-dom test-package-managers conformance conformance-baseline build binaries binaries-all binaries-test binaries-smoke lint format format-check clean docker-test docker-dev docker-build docker-clean help site site-content site-serve site-test site-clean site-deploy publish publish-dry publish-xslt3 publish-xslt3-dry publish-migrate-check publish-migrate-check-dry
 
 # Default target
 help:
@@ -8,6 +8,7 @@ help:
 	@echo "  test-watch   - Run tests in watch mode"
 	@echo "  test-browser - Build, then run Playwright tests in Chromium, Firefox and WebKit"
 	@echo "  test-dom     - Run the test suites and conformance with jsdom and @xmldom/xmldom"
+	@echo "  test-package-managers - Build, pack and install the packages with npm, Yarn 1, Yarn 4 (PnP), pnpm and bun"
 	@echo "  conformance  - Run the XSLT 1.0 conformance suite (libxslt corpus)"
 	@echo "  conformance-baseline - Rewrite the conformance baseline"
 	@echo "  build        - Build distribution bundles"
@@ -53,6 +54,10 @@ test-browser: build
 # DOM test matrix: suites and conformance per DOM implementation
 test-dom:
 	npm run test:dom
+
+# Install the packed packages with every package manager and smoke-test them
+test-package-managers: build
+	npm run test:package-managers
 
 # XSLT 1.0 conformance suite (downloads the corpus on first run)
 conformance:

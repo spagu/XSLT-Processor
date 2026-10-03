@@ -1,0 +1,38 @@
+{{/*
+  /references/ (site/pages/references.md): who uses the library, the
+  numbers fetched from npm and GitHub at build time, and the specifications
+  and test suites it is verified against. Everything below the intro comes
+  from data/references.json (site/scripts/references.mjs).
+*/}}
+{{define "references.html"}}{{template "head" .}}{{ $b := .Vars.base_path }}{{ $r := .Data.references }}
+<main id="main" class="wrap references">
+  <h1>{{ .Page.Title }}</h1>
+  <div class="prose narrow">{{ .Page.Content | safeHTML }}</div>
+
+  <section aria-labelledby="used-by-title">
+    <h2 id="used-by-title">Used by</h2>
+    {{template "reference-cards" $r.usedBy}}
+    <p class="ref-note">Using it too? <a href="{{ .Vars.repo_url }}/issues">Open an issue</a> with a link and a sentence on what it does for you, and we will list it.</p>
+  </section>
+
+  {{ with $r.stats }}<section aria-labelledby="numbers-title">
+    <h2 id="numbers-title">In numbers</h2>
+    <dl class="ref-stats">
+      <div><dt>npm downloads in the last month</dt><dd>{{ .downloads }}</dd></div>
+      <div><dt>Stars on GitHub</dt><dd>{{ .stars }}</dd></div>
+    </dl>
+    <p class="ref-note">As of <time datetime="{{ .fetchedAt }}">{{ .asOf }}</time>, from the <a href="{{ $.Vars.npm_url }}">npm registry</a> and the <a href="{{ $.Vars.repo_url }}">GitHub repository</a>.</p>
+  </section>{{ end }}
+
+  <section aria-labelledby="built-on-title">
+    <h2 id="built-on-title">Built on and verified against</h2>
+    <ul class="ref-sources">
+      {{ range $r.builtOn }}<li>
+        <a href="{{ .url }}" rel="noopener">{{ .name }}</a>
+        <p>{{ .detail }}{{ with .docs }} <a href="{{ $b }}{{ .path }}">{{ .label }}</a>{{ end }}</p>
+      </li>
+      {{ end }}
+    </ul>
+  </section>
+</main>
+{{template "footer" .}}{{end}}

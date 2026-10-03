@@ -21,6 +21,22 @@ npx xslt-migrate-check . --fix         # writes migration.patch; git apply it
 npx -p xslt-migrate-check -p @tradik/xslt-processor -p jsdom xslt-migrate-test .
 ```
 
+With another package manager:
+
+```sh
+yarn dlx xslt-migrate-check .     # Yarn 4; Yarn 1: npx as above
+pnpm dlx xslt-migrate-check .
+bunx xslt-migrate-check .
+pnpm dlx --package xslt-migrate-check --package @tradik/xslt-processor --package jsdom xslt-migrate-test .
+bunx --package xslt-migrate-check xslt-migrate-test .   # with the library and jsdom installed in the project
+```
+
+As a dev dependency: `npm install -D xslt-migrate-check`,
+`yarn add -D xslt-migrate-check`, `pnpm add -D xslt-migrate-check` or
+`bun add -d xslt-migrate-check`. Yarn 4 does not install a release in its
+first day (`npmMinimalAgeGate`, 1440 minutes); right after a release,
+`yarn dlx` reports "quarantined" until then.
+
 ## Output
 
 ```

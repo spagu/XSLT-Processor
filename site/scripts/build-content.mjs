@@ -8,6 +8,12 @@
  * - site/pages/*.md (hand-written: playground, 404) are copied beside them;
  * - site/data/landing.json and site/data/nav.json feed the home page and the
  *   documentation sidebar;
+ * - site/data/references.json feeds /references/ and the home page's "Used
+ *   by" band: the approved entries of site/references/references.json and
+ *   the npm downloads and GitHub stars, fetched now or, offline
+ *   (SITE_OFFLINE=1) or on failure, read from the last fetch in site/data/stats.json,
+ *   else the committed site/references/stats.json
+ *   (references.mjs);
  * - the browser bundle dist/xslt-processor.browser.min.js (run `npm run
  *   build` first) is copied to site/static/vendor/ for the playground, and
  *   @tradik/xslt3 is bundled beside it for the XSLT 3.0 and XPath 3.1 modes,
@@ -37,6 +43,7 @@ import {
   pageMap,
   publishImages,
 } from "./pages.mjs";
+import { loadStats, referencesData } from "./references.mjs";
 import {
   buildMigrateCheckBundle,
   buildXslt3Bundle,
@@ -129,6 +136,29 @@ write(
   ),
 );
 
+const referencesDir = join(siteDir, "references");
+// Fresh numbers go to the git-ignored site/data/ (a build must not change
+// tracked files); site/references/stats.json is the committed fallback for a
+// clean checkout that cannot reach the APIs
+const statsCache = join(dataDir, "stats.json");
+const statsFallback = join(referencesDir, "stats.json");
+const stats = await loadStats({
+  offline: process.env.SITE_OFFLINE === "1",
+  readCache: () => {
+    const file = [statsCache, statsFallback].find((path) => existsSync(path));
+    return file ? JSON.parse(readFileSync(file, "utf8")) : null;
+  },
+  writeCache: (fresh) =>
+    write(statsCache, JSON.stringify(fresh, null, 2) + "\n"),
+});
+const source = JSON.parse(
+  readFileSync(join(referencesDir, "references.json"), "utf8"),
+);
+write(
+  join(dataDir, "references.json"),
+  JSON.stringify(referencesData({ source, stats }), null, 2),
+);
+
 const built = join(rootDir, "dist", bundle);
 if (!existsSync(built)) {
   console.error(`Missing dist/${bundle}: run \`npm run build\` first.`);
@@ -148,6 +178,11 @@ const migrateCheck = await buildMigrateCheckBundle({
 });
 
 console.log(`Site content: ${sources.length} documents, version ${version}.`);
+console.log(
+  stats
+    ? `Site stats as of ${stats.fetchedAt}: ${stats.downloads} npm downloads last month, ${stats.stars} GitHub stars.`
+    : "Site stats: none fetched or saved yet; the references page shows none.",
+);
 console.log(
   `@tradik/xslt3 bundle (XSLT 3.0 and XPath 3.1): ${formatSize(xslt3.raw)} (${formatSize(xslt3.gzip)} gzip).`,
 );
