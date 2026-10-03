@@ -1,8 +1,8 @@
 # @tradik/xslt3
 
 [![npm version](https://img.shields.io/npm/v/@tradik/xslt3.svg)](https://www.npmjs.com/package/@tradik/xslt3)
-[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22.8-brightgreen.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/npm/l/@tradik/xslt3.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Node.js](https://img.shields.io/node/v/@tradik/xslt3.svg)](https://nodejs.org/)
 
 XSLT 3.0 and XPath 3.1 in JavaScript, with no runtime dependencies. It also
 runs XSLT 2.0 stylesheets, and 1.0 ones in backwards-compatible mode, in
@@ -20,7 +20,16 @@ streaming run without it).
 
 ```sh
 npm install @tradik/xslt3
+yarn add @tradik/xslt3     # Yarn 1 and Yarn 4, Plug'n'Play included
+pnpm add @tradik/xslt3
+bun add @tradik/xslt3
 ```
+
+Every release is installed and tested with npm, Yarn 1, Yarn 4
+(Plug'n'Play), pnpm and bun in CI. Next to `@tradik/xslt-processor` with
+`xsltVersion: "auto"`, install it in the same project: when it is missing
+the processor says so (`Cannot load @tradik/xslt3: install @tradik/xslt3
+...`), under Yarn Plug'n'Play too.
 
 ## XSLT 3.0
 

@@ -9,9 +9,15 @@
  * @module bridge/loader
  */
 
-/** What to do when @tradik/xslt3 is missing. */
+/**
+ * What to do when @tradik/xslt3 is missing, with the command of each package
+ * manager. Shown whatever the import error was: Node's "Cannot find package",
+ * Yarn Plug'n'Play's "tried to access ... but it isn't provided", bun's own.
+ */
 export const XSLT3_MISSING =
-  "install @tradik/xslt3 to run XSLT 2.0/3.0 stylesheets (npm install @tradik/xslt3)";
+  "install @tradik/xslt3 to run XSLT 2.0/3.0 stylesheets " +
+  "(npm install @tradik/xslt3, yarn add @tradik/xslt3, " +
+  "pnpm add @tradik/xslt3 or bun add @tradik/xslt3)";
 
 /**
  * The default importer. The specifier is a literal so that bundlers of the

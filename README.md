@@ -8,8 +8,12 @@
 [![Browser tests](https://github.com/spagu/XSLT-Processor/actions/workflows/browser.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/browser.yml)
 [![Release](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml/badge.svg)](https://github.com/spagu/XSLT-Processor/actions/workflows/release.yml)
 [![npm version](https://img.shields.io/npm/v/@tradik/xslt-processor.svg)](https://www.npmjs.com/package/@tradik/xslt-processor)
-[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.19.0-brightgreen.svg)](https://nodejs.org/)
+[![@tradik/xslt3](https://img.shields.io/npm/v/@tradik/xslt3.svg?label=%40tradik%2Fxslt3)](https://www.npmjs.com/package/@tradik/xslt3)
+[![xslt-migrate-check](https://img.shields.io/npm/v/xslt-migrate-check.svg?label=xslt-migrate-check)](https://www.npmjs.com/package/xslt-migrate-check)
+[![npm downloads](https://img.shields.io/npm/dm/@tradik/xslt-processor.svg)](https://www.npmjs.com/package/@tradik/xslt-processor)
+[![GitHub release](https://img.shields.io/github/v/release/spagu/XSLT-Processor)](https://github.com/spagu/XSLT-Processor/releases/latest)
+[![License](https://img.shields.io/npm/l/@tradik/xslt-processor.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Node.js Version](https://img.shields.io/node/v/@tradik/xslt-processor.svg)](https://nodejs.org/)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=spagu_XSLT-Processor&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=spagu_XSLT-Processor)
 [![Line Coverage](https://img.shields.io/badge/line%20coverage-100%25-brightgreen.svg)](docs/CONFORMANCE.md#test-coverage)
 [![TypeScript](https://img.shields.io/badge/types-included-3178c6.svg?logo=typescript&logoColor=white)](docs/API.md#typescript)
@@ -27,6 +31,8 @@ Chrome and other browsers are removing native XSLT ([Chrome's announcement](http
 - Firefox and WebKit support the removal but have not announced dates
 
 This library ensures your XSLT-based applications continue to work regardless of browser support.
+
+**Used by** [Schema Resume](https://schema-resume.org), [Job Tailor](https://jobtailor.co.uk) and others: see [References](https://xslt-processor.tradik.com/references/).
 
 ## Features
 
@@ -66,7 +72,17 @@ All guides are listed in the [documentation index](docs/README.md).
 
 ```bash
 npm install @tradik/xslt-processor
+# or
+yarn add @tradik/xslt-processor
+pnpm add @tradik/xslt-processor
+bun add @tradik/xslt-processor
 ```
+
+Every change is installed and smoke-tested in CI with npm, Yarn 1, Yarn 4
+(Plug'n'Play), pnpm and bun (`npm run test:package-managers`). The XSLT 2.0/3.0
+engine installs the same way (`yarn add @tradik/xslt3` and so on), and the
+migration checker runs without installing: `npx xslt-migrate-check .`,
+`pnpm dlx xslt-migrate-check .` or `bunx xslt-migrate-check .`.
 
 The library itself has no dependencies. The `xslt` command line tool also
 needs `jsdom` (an optional peer dependency, `>=25`), see [CLI Usage](#cli-usage).

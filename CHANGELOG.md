@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Installs with yarn, pnpm and bun, tested in CI** (task 0046): a `package-managers` job and `npm run test:package-managers` (`make test-package-managers`) pack the three packages and install them with npm, Yarn 1.22, Yarn 4 in Plug'n'Play mode, pnpm and bun, then check CommonJS, ESM with the `/polyfill` entry, `xsltVersion: "auto"` with and without `@tradik/xslt3`, `xslt --version` and `xslt-migrate-check --version`. The install sections of the READMEs, the website and the `/migrate/` wizard list `yarn add`, `pnpm add` and `bun add` (and `pnpm dlx`/`bunx` for the checker; Yarn 4 refuses packages published less than a day ago in `yarn dlx`).
+- **Website: references** (`/references/`, a "Used by" band on the home page, a footer link): the projects that use the library, Schema Resume and Job Tailor (only entries with `approved: true` in the hand-maintained `site/references/references.json` are published); npm downloads of the last month and GitHub stars fetched at build time with a 5 s timeout, cached in the git-ignored `site/data/stats.json` and falling back to the committed `site/references/stats.json` (`SITE_OFFLINE=1` skips fetching), shown with their date; and the specifications and test suites the library is verified against (W3C XSLT 1.0, XPath 1.0, XSLT 3.0, XPath 3.1, Serialization 3.1, libxslt corpus 299/299, qt3tests 21,770/21,787, xslt30-test 7,772/7,914, Chrome's deprecation announcement). A test keeps the quoted numbers in step with docs/CONFORMANCE.md and docs/XSLT3.md.
+
+### Changed
+
+- **The "Cannot load @tradik/xslt3" message names `yarn add`, `pnpm add` and `bun add`** next to `npm install`; it also appears under Yarn Plug'n'Play, whose resolution error is different.
+
+### Documentation
+
+- **README badges read their values live**: Node.js version and licence come from the published package (`engines`, `license`) instead of being typed in, the root README shows the current versions of `@tradik/xslt3` and `xslt-migrate-check` next to the library's, monthly npm downloads and the latest GitHub release; the package READMEs do the same for their own package.
+
 ## [1.3.3] - 2026-10-02
 
 ### Added

@@ -1,8 +1,8 @@
 # xslt-migrate-check
 
 [![npm version](https://img.shields.io/npm/v/xslt-migrate-check.svg)](https://www.npmjs.com/package/xslt-migrate-check)
-[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20.19-brightgreen.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/npm/l/xslt-migrate-check.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Node.js](https://img.shields.io/node/v/xslt-migrate-check.svg)](https://nodejs.org/)
 [![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](package.json)
 
 Chrome 158 (17 November 2026) stops running XSLT; by Chrome 176 (17 August 2027) the code is gone. Pages that call `XSLTProcessor`, and XML files that
@@ -20,6 +20,22 @@ npx xslt-migrate-check . --html        # also writes xslt-migration-report.html
 npx xslt-migrate-check . --fix         # writes migration.patch; git apply it
 npx -p xslt-migrate-check -p @tradik/xslt-processor -p jsdom xslt-migrate-test .
 ```
+
+With another package manager:
+
+```sh
+yarn dlx xslt-migrate-check .     # Yarn 4; Yarn 1: npx as above
+pnpm dlx xslt-migrate-check .
+bunx xslt-migrate-check .
+pnpm dlx --package xslt-migrate-check --package @tradik/xslt-processor --package jsdom xslt-migrate-test .
+bunx --package xslt-migrate-check xslt-migrate-test .   # with the library and jsdom installed in the project
+```
+
+As a dev dependency: `npm install -D xslt-migrate-check`,
+`yarn add -D xslt-migrate-check`, `pnpm add -D xslt-migrate-check` or
+`bun add -d xslt-migrate-check`. Yarn 4 does not install a release in its
+first day (`npmMinimalAgeGate`, 1440 minutes); right after a release,
+`yarn dlx` reports "quarantined" until then.
 
 ## Output
 

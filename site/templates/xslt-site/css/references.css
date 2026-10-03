@@ -1,0 +1,112 @@
+/*
+ * References: the "Used by" cards (home page band and /references/), the
+ * numbers from npm and GitHub, and the list of specifications and test
+ * suites. Text cards without logos; every colour is a token of tokens.css,
+ * so the light and dark pairs keep the WCAG 2.2 AA ratios check-site.mjs
+ * verifies. Grid items get min-width: 0 so long names and URLs wrap instead
+ * of widening the page on phones.
+ */
+
+.references {
+  padding-block: var(--space-5);
+}
+
+.ref-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A primary rule along the top marks the card without an image. */
+.ref-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-top: 4px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  overflow-wrap: anywhere;
+}
+
+.ref-card h3 {
+  margin: 0 0 var(--space-2);
+}
+
+.ref-card p {
+  margin: 0 0 var(--space-3);
+}
+
+/* The link sits at the bottom, so cards of different length line up. */
+.ref-card .ref-card__link {
+  margin: auto 0 0;
+  font: 600 0.95rem var(--font-mono);
+}
+
+.ref-note,
+.ref-more {
+  margin-top: var(--space-4);
+  color: var(--color-muted);
+}
+
+.ref-more a {
+  font-weight: 600;
+}
+
+.ref-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.ref-stats > div {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+/* The number first, the label under it; flex-end is the top of a reversed
+   column, so the numbers line up whatever the labels' height */
+.ref-stats div {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+}
+
+.ref-stats dt {
+  color: var(--color-muted);
+}
+
+.ref-stats dd {
+  margin: 0;
+  font: 700 2rem/1.1 var(--font-heading);
+}
+
+.ref-sources {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ref-sources li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ref-sources li > a {
+  font-weight: 600;
+}
+
+.ref-sources p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-muted);
+}

@@ -66,7 +66,7 @@ site is built from it:
 
 | Workflow | Runs when these change |
 |---|---|
-| `test.yml` (lint, format, unit tests of every package, DOM matrix, build) | `src/`, `bin/`, `packages/`, `scripts/`, `tests/`, package files, ESLint/Prettier config |
+| `test.yml` (lint, format, unit tests of every package, DOM matrix, package managers, build) | `src/`, `bin/`, `packages/`, `scripts/`, `tests/`, package files, ESLint/Prettier config |
 | `browser.yml` (Playwright: Chromium, Firefox, WebKit, Chromium without XSLT) | the same paths |
 | `conformance.yml` (libxslt corpus) | `src/`, the conformance runner and its tests, package files |
 | `site.yml` (site tests, docs links, build, deploy from `main`) | `site/`, `docs/`, `README.md`, `CHANGELOG.md`, and the code the site is built from (`src/`, `packages/xslt3/src/`, `packages/migrate-check/`, `scripts/build.js`); also by hand (`workflow_dispatch`) |
@@ -228,6 +228,12 @@ Every post gets a "Listen" player (`post.html`, `js/listen.js` and
 Mark an element `data-listen-skip` to leave it out; give images an `alt`
 text, which is what the player says for them.
 
+References (`/references/` and the home page's "Used by" band) come from
+`site/references/references.json`: a project is published only with
+`approved: true`, which means it agreed to be named. The npm downloads and
+GitHub stars are fetched during the build; `SITE_OFFLINE=1 make site` uses the
+last fetch (`site/data/stats.json`) or the committed `site/references/stats.json`.
+
 The playground has three modes, kept in the address (`?mode=xslt3`,
 `?mode=xpath`; XSLT 1.0 has no parameter) and remembered in localStorage.
 XSLT 1.0 uses `dist/xslt-processor.browser.min.js` (copied to
@@ -273,6 +279,26 @@ the conformance suite with jsdom and with @xmldom/xmldom.
 `DOM=xmldom node --test <files>` runs any suite built on
 `src/domEnvironment.test.js` with xmldom; mark jsdom-only tests with
 `jsdomOnly("feature")`.
+
+## Package managers
+
+`npm run test:package-managers` (after `npm run build`) packs
+`@tradik/xslt-processor`, `@tradik/xslt3` and `xslt-migrate-check` and
+installs the tarballs in a fresh temporary project with npm, Yarn 1, Yarn 4
+(Plug'n'Play), pnpm and bun. In each it runs the smoke tests of
+`tests/package-managers/` (CommonJS, ES modules with `/polyfill`,
+`xsltVersion: "auto"` without @tradik/xslt3, where the "install
+@tradik/xslt3" message must appear, and with it) and the `xslt` and
+`xslt-migrate-check` bins through the manager's exec, then prints a table
+with one ✓/✗ per check and the output of each failure.
+`--manager <name>` (repeatable: `npm`, `yarn-classic`, `yarn-berry-pnp`,
+`pnpm`, `bun`) picks the managers. Yarn and pnpm run at the versions pinned
+in `scripts/package-managers/managers.mjs` through `npx --yes` (Node.js 25
+no longer bundles corepack); bun comes from `~/.bun/bin` or the PATH. A
+manager that cannot start is "not available", which fails the run only with
+`--require`; the `package-managers` job of `test.yml` passes it, with bun
+pinned by `oven-sh/setup-bun`. Bump the pins there and in `managers.mjs`
+together.
 
 ## Benchmarks
 

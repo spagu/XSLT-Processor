@@ -53,6 +53,34 @@ describe("loading @tradik/xslt3", () => {
     assert.strictEqual(await loadXslt3(), module);
   });
 
+  it("names the install command of every package manager", () => {
+    for (const command of [
+      "npm install @tradik/xslt3",
+      "yarn add @tradik/xslt3",
+      "pnpm add @tradik/xslt3",
+      "bun add @tradik/xslt3",
+    ]) {
+      assert.ok(XSLT3_MISSING.includes(command), command);
+    }
+  });
+
+  it("reports a package Yarn Plug'n'Play does not let it require", async () => {
+    // PnP rejects an undeclared or uninstalled dependency with its own
+    // wording; the install hint must appear all the same
+    const pnpError = Object.assign(
+      new Error(
+        "@tradik/xslt-processor tried to access @tradik/xslt3 (a peer dependency) but it isn't provided by its ancestors",
+      ),
+      { code: "MODULE_NOT_FOUND" },
+    );
+    setXslt3Importer(() => Promise.reject(pnpError));
+    await assert.rejects(loadXslt3(), (error) => {
+      assert.match(error.message, /yarn add @tradik\/xslt3/);
+      assert.strictEqual(error.cause, pnpError);
+      return true;
+    });
+  });
+
   it("imports once for concurrent and later calls", async () => {
     let calls = 0;
     const module = {};
