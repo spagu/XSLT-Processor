@@ -6,6 +6,7 @@
  * the html serializer, which overrides the dialect hooks defined here.
  */
 
+import { locateNamespace } from "../namespaceLookup.js";
 import { TEXT_MODE, VOID_ELEMENTS, XHTML_NAMESPACE } from "./constants.js";
 import { escapeXmlAttribute, escapeXmlText } from "./escape.js";
 import { characterReference } from "./encoding.js";
@@ -126,7 +127,7 @@ export class XmlWriter extends BaseWriter {
       (qname) =>
         qname.localName === localName &&
         namespaceUri !== null &&
-        element.lookupNamespaceURI(qname.prefix) === namespaceUri,
+        locateNamespace(element, qname.prefix) === namespaceUri,
     );
   }
 

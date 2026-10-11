@@ -1290,9 +1290,9 @@ describe("XSLTProcessor", () => {
     });
   });
 
-  describe("transformToFragment with an HTML owner document", () => {
+  describe("transformToFragment with an HTML owner document and no output method", () => {
     it(
-      "should keep element names and namespaces",
+      "should parse the output as HTML, as Chrome does",
       jsdomOnly("HTML documents"),
       () => {
         const processor = new XSLTProcessor();
@@ -1309,11 +1309,14 @@ describe("XSLTProcessor", () => {
           document,
         );
 
-        // xml output: elements in no namespace stay in no namespace with
-        // their names as written, as Chrome and Firefox return them
+        // No xsl:output method: Chrome parses the output as HTML into an
+        // HTML owner whatever the root (measured in Chromium 153, issue #30)
         assert.strictEqual(fragment.ownerDocument, document);
-        assert.strictEqual(fragment.firstChild.localName, "BAR");
-        assert.strictEqual(fragment.firstChild.namespaceURI, null);
+        assert.strictEqual(fragment.firstChild.localName, "bar");
+        assert.strictEqual(
+          fragment.firstChild.namespaceURI,
+          "http://www.w3.org/1999/xhtml",
+        );
         assert.strictEqual(fragment.firstChild.firstChild.localName, "qux");
       },
     );

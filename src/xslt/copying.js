@@ -15,6 +15,7 @@
 
 import { childAxis } from "../xpath/axes.js";
 import { NAMESPACE_NODE, inScopeBindings } from "../xpath/namespaceNodes.js";
+import { locateNamespace } from "./namespaceLookup.js";
 import { copyNamespaceDeclarations } from "./resultNamespaces.js";
 import { XMLNS_NAMESPACE } from "./stylesheetNamespaces.js";
 
@@ -156,8 +157,7 @@ function appendChildCopies(node, target, doc, stringValue) {
  * @returns {void}
  */
 function copyInScopeNamespaces(source, copy, output) {
-  const inOutput = (prefix, uri) =>
-    output.nodeType === 1 && output.lookupNamespaceURI(prefix || null) === uri;
+  const inOutput = (prefix, uri) => locateNamespace(output, prefix) === uri;
   for (const [prefix, uri] of inScopeBindings(source)) {
     if (!inOutput(prefix, uri)) {
       copyNamespaceNode(

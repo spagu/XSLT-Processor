@@ -5,7 +5,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
 import { JSDOM } from "jsdom";
-import { compareCodePoints, compareNumbers } from "./sort.js";
+import { compareNumbers } from "./sort.js";
 import { XsltEngine } from "./engine.js";
 
 const { window } = new JSDOM("");
@@ -42,22 +42,6 @@ function sortValues(values, sortAttributes, params = {}) {
   return engine.transformToString(xml);
 }
 
-describe("compareCodePoints", () => {
-  it("orders by Unicode code point", () => {
-    assert.ok(compareCodePoints("B", "a") < 0);
-    assert.ok(compareCodePoints("1", "§") < 0);
-    assert.ok(compareCodePoints("ab", "a") > 0);
-    assert.ok(compareCodePoints("a", "ab") < 0);
-    assert.strictEqual(compareCodePoints("same", "same"), 0);
-    assert.strictEqual(compareCodePoints("", ""), 0);
-  });
-
-  it("compares astral characters by code point, not UTF-16 unit", () => {
-    // U+1F600 (surrogate pair D83D DE00) sorts after U+FFFD by code point
-    assert.ok(compareCodePoints("\u{1F600}", "�") > 0);
-  });
-});
-
 describe("compareNumbers", () => {
   it("puts NaN before every number", () => {
     assert.ok(compareNumbers(NaN, -Infinity) < 0);
@@ -69,13 +53,21 @@ describe("compareNumbers", () => {
 });
 
 describe("xsl:sort", () => {
-  it("sorts text by code point like libxslt (issue #9)", () => {
+  it("sorts text as Chrome does without lang: English collation, upper case first (issue #30)", () => {
     assert.strictEqual(
       sortValues(
         ["§112 Science", "100-00 Energy", "b", "B", "a"],
         'select="."',
       ),
-      "100-00 Energy,B,a,b,§112 Science",
+      // Chromium 153's native XSLTProcessor gives exactly this order
+      "§112 Science,100-00 Energy,a,B,b",
+    );
+    assert.strictEqual(
+      sortValues(
+        ["Earthquake", "Earth’s Axis", "earth", "Earth"],
+        'select="."',
+      ),
+      "Earth,earth,Earth’s Axis,Earthquake",
     );
   });
 

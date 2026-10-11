@@ -35,7 +35,8 @@
     "REC/test-7.1.1-3": "deviation: libxslt ignores xsl:exclude-result-prefixes on a literal result element for the namespaces it inherits from the template; XSLT 1.0 section 7.1.1 excludes them, as Firefox does and this processor does",
     "general/bug-6-": "deviation: empty XHTML elements are written as <hr /> and <a></a> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype",
     "general/bug-142": "deviation: empty XHTML elements are written as <li></li> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype",
-    "general/bug-168": "deviation: empty XHTML elements are written as <A></A> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype"
+    "general/bug-168": "deviation: empty XHTML elements are written as <A></A> (XHTML compatibility guidelines, as XMLSerializer writes a transformToDocument result in Chrome and Firefox, since 1.1.3); libxml2 applies them only with an XHTML 1.0 doctype",
+    "general/bug-166": "implementation-defined: xsl:sort without lang; xsltproc collates with the C library locale (tcpdump before tcp_wrappers), Chrome's native XSLTProcessor with English collation (tcp_wrappers first, measured in Chromium 153), which this library follows (issue #30)"
   },
   "casesByDom": {
     "xmldom": {
