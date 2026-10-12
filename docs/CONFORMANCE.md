@@ -268,10 +268,12 @@ Differences from the XSLT 1.0 / XPath 1.0 specifications and from libxslt
   literal `1e3` is a syntax error), as XPath 1.0 section 3.7 and Firefox have
   it; libxml2 and so Chrome read `1e3` as 1000, also in `data-type="number"`
   sorts.
-- **The Content-Type meta of html output** is written as
-  `<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">`, as
-  libxslt 1.1.45 and its test suite have it; Chrome 153's newer libxml2 writes
-  `<meta charset="UTF-8">`.
+- **The Content-Type meta of html output** is `<meta charset="UTF-8">` (with
+  the output encoding), as Chrome 153's libxml2 writes it; libxslt 1.1.45 and
+  its test suite write `<meta http-equiv="Content-Type" content="text/html;
+  charset=UTF-8">`, which `new XSLTProcessor({ legacyContentTypeMeta: true })`
+  restores (the conformance runner uses it). XHTML 1.0 documents written with
+  the xml method keep the http-equiv form, as in Chrome.
 - **Not reproduced Chrome quirks**: an empty XHTML-namespace `br` in html
   output comes back as two `br` elements in Chrome's fragments and documents
   (libxml2 writes `<br></br>`, which the HTML parser reads as two), and xml

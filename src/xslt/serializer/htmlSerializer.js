@@ -201,7 +201,10 @@ export class HtmlWriter extends XmlWriter {
     ) {
       return "";
     }
-    const { mediaType, encoding } = this.settings;
+    const { mediaType, encoding, contentTypeMeta } = this.settings;
+    if (contentTypeMeta !== "http-equiv") {
+      return `<meta charset="${this.escapeAttribute(encoding)}">`;
+    }
     const content = `${mediaType || "text/html"}; charset=${encoding}`;
     return `<meta http-equiv="Content-Type" content="${this.escapeAttribute(content)}">`;
   }

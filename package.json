@@ -1,6 +1,6 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "workspaces": [

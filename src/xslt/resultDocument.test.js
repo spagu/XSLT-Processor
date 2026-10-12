@@ -108,10 +108,7 @@ describe("transformToDocument with html output", () => {
       assert.strictEqual(doc.contentType, "text/html");
       assert.ok(doc.body.firstChild instanceof dom.window.HTMLParagraphElement);
       assert.strictEqual(doc.title, "t");
-      assert.strictEqual(
-        doc.head.firstChild.getAttribute("http-equiv"),
-        "Content-Type",
-      );
+      assert.strictEqual(doc.head.firstChild.getAttribute("charset"), "UTF-8");
     },
   );
 

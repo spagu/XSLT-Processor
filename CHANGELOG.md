@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.4] - 2026-10-12
 
 ### Fixed
 
@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **html output writes `<meta charset="UTF-8">`** (the output encoding) as the first child of `head`, as Chrome 153's libxml2 does, instead of `<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">`; `new XSLTProcessor({ legacyContentTypeMeta: true })` (or `contentTypeMeta: "http-equiv"` for `serializeResult()`) keeps the old form, which the libxslt conformance runner uses. XHTML 1.0 documents written with the xml method keep the http-equiv form, as Chrome does.
 - **`xsl:sort` without `lang` sorts text as Chrome does** ([#30](https://github.com/spagu/XSLT-Processor/issues/30)): English collation with upper case first, whatever the browser's language (measured in Chromium 153 under en-US, sv-SE and de-DE), instead of Unicode code points: "Earth’s Axis" now comes before "Earthquake", "Earth" before "earth", "Ångström" among the a's, "§112" and "100-00" before letters. `lang` and `case-order` work as before. The previous claim that Chrome sorts by code point came from `xsltproc`, which collates with the C library locale; the libxslt case `general/bug-166` is excluded as implementation-defined for that reason.
 - **`transformToFragment()` of a stylesheet without `xsl:output method` into an HTML document parses the output as HTML whatever its root element**, as Chrome does: `<report>` becomes an `HTMLElement` named `report` in the XHTML namespace, `<html>` roots lose their `html`/`head`/`body` tags. A declared `method="xml"` keeps the nodes as before.
 - **The "Cannot load @tradik/xslt3" message names `yarn add`, `pnpm add` and `bun add`** next to `npm install`; it also appears under Yarn Plug'n'Play, whose resolution error is different.

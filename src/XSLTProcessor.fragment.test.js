@@ -315,3 +315,37 @@ describe("legacyXhtmlFragments (deprecated)", () => {
     assert.strictEqual(fragment.firstChild.namespaceURI, XHTML);
   });
 });
+
+describe("legacyContentTypeMeta", () => {
+  /**
+   * The head of html output, through transformToDocument.
+   *
+   * @param {object} [options] - XSLTProcessor options
+   * @returns {string} The head's first child as markup
+   */
+  const firstHeadChild = (options) => {
+    const processor = new XSLTProcessor(options);
+    processor.importStylesheet(
+      parseXML(
+        '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:output method="html"/><xsl:template match="/"><html><head><title>t</title></head></html></xsl:template></xsl:stylesheet>',
+      ),
+    );
+    return serialize(
+      processor.transformToDocument(parseXML("<d/>")).head.firstChild,
+    );
+  };
+
+  it("writes <meta charset> by default, as Chrome does", () => {
+    assert.strictEqual(
+      firstHeadChild(),
+      `<meta xmlns="${XHTML}" charset="UTF-8" />`,
+    );
+  });
+
+  it("restores the http-equiv form of 1.3.3 and libxslt 1.1.45", () => {
+    assert.strictEqual(
+      firstHeadChild({ legacyContentTypeMeta: true }),
+      `<meta xmlns="${XHTML}" http-equiv="Content-Type" content="text/html; charset=UTF-8" />`,
+    );
+  });
+});
