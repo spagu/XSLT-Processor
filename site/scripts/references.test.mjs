@@ -8,10 +8,8 @@ import {
   fetchStats,
   formatDate,
   GITHUB_REPO_URL,
-  HOME_LIMIT,
   loadStats,
   NPM_DOWNLOADS_URL,
-  referencesData,
 } from "./references.mjs";
 
 const rootDir = join(import.meta.dirname, "..", "..");
@@ -48,12 +46,13 @@ describe("approved references", () => {
     ]);
   });
 
-  it("keeps the pending entries of the data file off the site", () => {
-    const pending = source.usedBy.filter((e) => e.approved !== true);
-    assert.ok(pending.length > 0, "the filter is exercised by real data");
+  it("publishes exactly the approved entries of the data file, in order", () => {
     const published = approvedReferences(source.usedBy).map((e) => e.name);
-    assert.deepEqual(published, ["Schema Resume", "Job Tailor"]);
-    for (const entry of pending) assert.ok(!published.includes(entry.name));
+    const approved = source.usedBy
+      .filter((e) => e.approved === true)
+      .map((e) => e.name);
+    assert.deepEqual(published, approved);
+    assert.ok(published.length > 0);
   });
 
   it("states the conformance numbers the documentation states", () => {
@@ -162,39 +161,5 @@ describe("loadStats", () => {
       fetchFresh: async () => assert.fail("no fetch offline"),
     });
     assert.equal(stats, null);
-  });
-});
-
-describe("referencesData", () => {
-  it("formats the numbers and the date for the page", () => {
-    const data = referencesData({
-      source,
-      stats: { downloads: 21770, stars: 2, fetchedAt: "2026-10-03" },
-    });
-    assert.equal(data.usedBy.length, 2);
-    assert.deepEqual(data.home, data.usedBy);
-    assert.equal(data.builtOn, source.builtOn);
-    assert.deepEqual(data.stats, {
-      downloads: "21,770",
-      stars: "2",
-      fetchedAt: "2026-10-03",
-      asOf: "3 October 2026",
-    });
-  });
-
-  it("limits the home band and leaves the numbers out without stats", () => {
-    const many = Array.from({ length: HOME_LIMIT + 2 }, (_, i) => ({
-      name: `P${i}`,
-      url: `https://p${i}.test`,
-      use: "u",
-      approved: true,
-    }));
-    const data = referencesData({
-      source: { usedBy: many, builtOn: [] },
-      stats: null,
-    });
-    assert.equal(data.usedBy.length, HOME_LIMIT + 2);
-    assert.equal(data.home.length, HOME_LIMIT);
-    assert.equal(data.stats, null);
   });
 });

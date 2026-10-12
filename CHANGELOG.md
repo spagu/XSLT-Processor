@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Documentation
+
+- **References: LJ Cloud, LJ Create's learning portal** (cloud.ljcreate.com), which renders its course menus and lesson content with the library, listed with the reporter's permission (issue #17). The references tests read the approved entries from the data file instead of a fixed list.
+
 ## [1.3.4] - 2026-10-12
 
 ### Fixed
