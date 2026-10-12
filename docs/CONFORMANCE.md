@@ -55,7 +55,7 @@ This implementation follows these W3C specifications; the exceptions are listed 
 | 7.6.2 | Namespace Aliases | Supported | `xsl:namespace-alias` |
 | 8 | Repetition | Supported | `xsl:for-each` |
 | 9 | Conditional Processing | Supported | `xsl:if`, `xsl:choose`, `xsl:when`, `xsl:otherwise` |
-| 10 | Sorting | Supported | `xsl:sort` with multiple keys, `data-type`, `order`, `case-order`, `lang` (all attribute value templates). Text sorts by Unicode code point like libxslt/Chrome; `lang` or `case-order` switch to locale collation. Numbers sort with NaN first. |
+| 10 | Sorting | Supported | `xsl:sort` with multiple keys, `data-type`, `order`, `case-order`, `lang` (all attribute value templates). Text sorts with English collation and upper case first when `lang` is absent, as Chrome's native `XSLTProcessor` does whatever the browser's language ("Earth’s Axis" before "Earthquake"); `lang` and `case-order` choose the collation. `xsltproc` collates with the C library locale instead, so its order can differ (libxslt case `general/bug-166`). Numbers sort with NaN first. |
 | 11 | Variables/Parameters | Supported | `xsl:variable`, `xsl:param`, scoping rules |
 | 11.1 | Result Tree Fragments | Supported | RTF handling as per spec |
 | 7.7 | Numbering | Supported | `xsl:number` with `level`, `count`, `from`, `value`, `format`, grouping; `lang` and `letter-value` are ignored |
@@ -234,7 +234,7 @@ Not supported, as in libexslt: `date:format-date`, `date:parse-date`,
 - `xsl:number` supports `level="single|multiple|any"` with `count`, `from`, `grouping-separator`/`grouping-size`, the `1`, `01`, `a`, `A`, `i`, `I` format tokens and decimal tokens of any Unicode digit family
 - Unprefixed name tests (`item`, `@a`) match only nodes in no namespace (XPath 1.0 section 2.3); in HTML documents element names are matched case-insensitively regardless of namespace, as browsers do
 - The `namespace::` axis returns a namespace node for every binding in scope, including `xml`
-- `transformToFragment()` parses html output as HTML, like Chrome, whether the owner document is an HTML or an XML one, so the fragment contains real `HTMLElement`s with lower-case names in the XHTML namespace (`XMLSerializer` writes `xmlns="http://www.w3.org/1999/xhtml"` and `<img ... />`); text output is one text node, and xml output keeps the result nodes in their namespaces, as Chrome and Firefox do. Not reproduced: libxslt's line breaks around block elements in html output, and the `application/xhtml+xml` content type of Chrome's text result document
+- `transformToFragment()` parses html output as HTML, like Chrome, whether the owner document is an HTML or an XML one, so the fragment contains real `HTMLElement`s with lower-case names in the XHTML namespace (`XMLSerializer` writes `xmlns="http://www.w3.org/1999/xhtml"` and `<img ... />`); text output is one text node, and xml output keeps the result nodes in their namespaces, as Chrome and Firefox do. A stylesheet that declares no `xsl:output` method is parsed as HTML into an HTML owner document whatever its root element, as in Chrome. Not reproduced: libxslt's line breaks around block elements in html output, and the `application/xhtml+xml` content type of Chrome's text result document
 - The result tree is built in a neutral XML document and imported into the output
   document at the end, so element names and namespaces survive an HTML owner document
 
@@ -262,7 +262,22 @@ Differences from the XSLT 1.0 / XPath 1.0 specifications and from libxslt
 - **Number to string conversion** follows XPath 1.0 section 4.2 (shortest
   round-trip form, no exponent): `string(10000000000)` is `10000000000`, while
   libxml2 rounds to 15 significant digits and uses exponents (`1e+10`), as
-  Chrome does. Firefox follows the specification.
+  Chrome does: `1 div 3` is `0.333333333333333`, `0.1 + 0.2` is `0.3`,
+  `0.000001` is `1e-06`. Firefox follows the specification.
+- **Numbers with an exponent** are not numbers (`number('1e3')` is NaN, and a
+  literal `1e3` is a syntax error), as XPath 1.0 section 3.7 and Firefox have
+  it; libxml2 and so Chrome read `1e3` as 1000, also in `data-type="number"`
+  sorts.
+- **The Content-Type meta of html output** is `<meta charset="UTF-8">` (with
+  the output encoding), as Chrome 153's libxml2 writes it; libxslt 1.1.45 and
+  its test suite write `<meta http-equiv="Content-Type" content="text/html;
+  charset=UTF-8">`, which `new XSLTProcessor({ legacyContentTypeMeta: true })`
+  restores (the conformance runner uses it). XHTML 1.0 documents written with
+  the xml method keep the http-equiv form, as in Chrome.
+- **Not reproduced Chrome quirks**: an empty XHTML-namespace `br` in html
+  output comes back as two `br` elements in Chrome's fragments and documents
+  (libxml2 writes `<br></br>`, which the HTML parser reads as two), and xml
+  output with a doctype gives `null` from Chrome's `transformToFragment`.
 - **`xsl:exclude-result-prefixes` on a literal result element** also excludes
   namespaces inherited from the template (XSLT 1.0 section 7.1.1, Firefox);
   libxslt ignores it for inherited namespaces.

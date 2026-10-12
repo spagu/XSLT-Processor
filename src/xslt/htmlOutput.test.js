@@ -33,8 +33,8 @@ function html(xml, settings = {}) {
   return serializeResult(parseXml(xml), { method: "html", ...settings });
 }
 
-const META_UTF8 =
-  '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">';
+/** The meta Chrome's libxml2 writes, the default since issue #30. */
+const META_UTF8 = '<meta charset="UTF-8">';
 
 describe("content type meta element", () => {
   it("is inserted as the first child of head", () => {
@@ -44,11 +44,22 @@ describe("content type meta element", () => {
     );
   });
 
-  it("names the output encoding and media type", () => {
+  it("names the output encoding, not the media type, as Chrome does", () => {
     assert.strictEqual(
       html("<html><HEAD/></html>", {
         encoding: "ISO-8859-1",
         mediaType: "application/xhtml+xml",
+      }),
+      '<html><HEAD><meta charset="ISO-8859-1"></HEAD></html>',
+    );
+  });
+
+  it("takes libxslt 1.1.45's http-equiv form with contentTypeMeta", () => {
+    assert.strictEqual(
+      html("<html><HEAD/></html>", {
+        encoding: "ISO-8859-1",
+        mediaType: "application/xhtml+xml",
+        contentTypeMeta: "http-equiv",
       }),
       '<html><HEAD><meta http-equiv="Content-Type" ' +
         'content="application/xhtml+xml; charset=ISO-8859-1"></HEAD></html>',

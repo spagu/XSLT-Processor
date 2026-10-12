@@ -18,6 +18,7 @@
 
 "use strict";
 
+import { locateNamespace } from "./namespaceLookup.js";
 import {
   XMLNS_NAMESPACE,
   XML_NAMESPACE,
@@ -184,7 +185,7 @@ export function copyLiteralNamespaces(
   const parentElement = parent.nodeType === 1 ? parent : null;
   for (const [prefix, uri] of nodes) {
     if (isAliased(uri)) continue;
-    if (parentElement?.lookupNamespaceURI(prefix || null) === uri) continue;
+    if (locateNamespace(parentElement, prefix) === uri) continue;
     if ((element.prefix ?? "") === prefix && element.namespaceURI !== uri) {
       continue;
     }

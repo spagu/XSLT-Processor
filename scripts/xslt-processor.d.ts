@@ -127,6 +127,12 @@ export class XSLTProcessor {
      * keep such elements in no namespace, the default since 1.3.1.
      */
     legacyXhtmlFragments?: boolean;
+    /**
+     * html output gets libxslt 1.1.45's `<meta http-equiv="Content-Type"
+     * content="text/html; charset=...">` instead of Chrome's `<meta charset>`
+     * (the default since 1.3.4).
+     */
+    legacyContentTypeMeta?: boolean;
     /** Allow EXSLT `dyn:evaluate()`; it evaluates XPath built from data. */
     enableDynamicEvaluate?: boolean;
     /** Clock for EXSLT current-time functions (reproducible output). */
@@ -547,6 +553,12 @@ export class XsltEngine {
      * keep such elements in no namespace, the default since 1.3.1.
      */
     legacyXhtmlFragments?: boolean;
+    /**
+     * html output gets libxslt 1.1.45's `<meta http-equiv="Content-Type"
+     * content="text/html; charset=...">` instead of Chrome's `<meta charset>`
+     * (the default since 1.3.4).
+     */
+    legacyContentTypeMeta?: boolean;
     /** Allow EXSLT `dyn:evaluate()`; it evaluates XPath built from data. */
     enableDynamicEvaluate?: boolean;
     /** Clock for EXSLT current-time functions (reproducible output). */
@@ -607,6 +619,8 @@ export interface OutputSettings {
   doctypePublic?: string | null;
   doctypeSystem?: string | null;
   mediaType?: string | null;
+  /** html output: `"charset"` (default, as Chrome) or libxslt 1.1.45's `"http-equiv"` meta. */
+  contentTypeMeta?: "charset" | "http-equiv";
   /**
    * QNames (whitespace separated or as an array), or expanded names as the
    * engine resolves them from xsl:output.

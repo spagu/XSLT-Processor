@@ -94,6 +94,9 @@ export class XsltEngine {
    *   instantiations (default XSLT_MAX_TEMPLATE_DEPTH, 3000 as in libxslt)
    * @param {boolean} [options.legacyNameTests] - Deprecated: unprefixed name
    *   tests also match nodes in a namespace, as before 1.2.0
+   * @param {boolean} [options.legacyContentTypeMeta] - html output gets
+   *   `<meta http-equiv="Content-Type" content="...">` as in libxslt 1.1.45
+   *   instead of Chrome's `<meta charset="...">`
    * @param {boolean} [options.legacyXhtmlFragments] - Deprecated: xml output
    *   of transformToFragment becomes XHTML elements in an HTML owner
    *   document, as in 1.2.0 to 1.3.0 (browsers keep it in no namespace)
@@ -124,6 +127,9 @@ export class XsltEngine {
     this.globalVariables = {};
     this.globalParameters = {};
     this.outputSettings = createOutputSettings();
+    if (options.legacyContentTypeMeta === true) {
+      this.outputSettings.contentTypeMeta = "http-equiv";
+    }
     this.namespaces = {};
     this.decimalFormats = {};
     this.stylesheetDoc = null;

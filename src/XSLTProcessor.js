@@ -52,6 +52,10 @@ export class XSLTProcessor {
    * @param {boolean} [options.legacyNameTests] - Deprecated: let unprefixed
    *   name tests (`item`, `@a`) also match nodes in a namespace, as before
    *   1.2.0. XPath 1.0 and Chrome only match nodes in no namespace.
+   * @param {boolean} [options.legacyContentTypeMeta] - html output gets the
+   *   `<meta http-equiv="Content-Type" content="text/html; charset=...">` of
+   *   libxslt 1.1.45 and versions up to 1.3.3 instead of Chrome's
+   *   `<meta charset="...">`.
    * @param {boolean} [options.legacyXhtmlFragments] - Deprecated: let
    *   `transformToFragment` turn xml output into XHTML elements of an HTML
    *   owner document, as 1.2.0 to 1.3.0 did. Chrome and Firefox keep such
@@ -84,6 +88,7 @@ export class XSLTProcessor {
     this._options = {
       legacyNameTests: options?.legacyNameTests === true,
       legacyXhtmlFragments: options?.legacyXhtmlFragments === true,
+      legacyContentTypeMeta: options?.legacyContentTypeMeta === true,
       enableDynamicEvaluate: options?.enableDynamicEvaluate === true,
       clock: options?.clock ?? null,
       maxTemplateDepth: options?.maxTemplateDepth,
@@ -330,6 +335,7 @@ export class XSLTProcessor {
     const engineOptions = {
       legacyNameTests: this._options.legacyNameTests,
       legacyXhtmlFragments: this._options.legacyXhtmlFragments,
+      legacyContentTypeMeta: this._options.legacyContentTypeMeta,
       enableDynamicEvaluate: this._options.enableDynamicEvaluate,
       clock: this._options.clock,
       maxTemplateDepth: this._options.maxTemplateDepth,

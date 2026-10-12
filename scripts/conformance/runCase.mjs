@@ -177,7 +177,8 @@ export async function runCase(testCase, baseDir) {
           }
         : standaloneStylesheet(dom, sourceDoc, realpathSync(testCase.source));
 
-      const processor = new XSLTProcessor();
+      // The corpus is libxslt 1.1.45's output: the http-equiv meta form
+      const processor = new XSLTProcessor({ legacyContentTypeMeta: true });
       processor.setStylesheetLoader(createStylesheetLoader(root));
       processor.setDocumentLoader(createDocumentLoader(root, console.warn));
       processor.importStylesheet(stylesheet.node, stylesheet.uri);

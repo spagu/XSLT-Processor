@@ -173,6 +173,10 @@ export function resolveOutputSettings(outputSettings, node) {
     doctypePublic: raw.doctypePublic || null,
     doctypeSystem: raw.doctypeSystem || null,
     mediaType: raw.mediaType || null,
+    // html output: <meta charset> as Chrome's libxml2 writes it, or the
+    // http-equiv form of libxslt 1.1.45 (legacyContentTypeMeta)
+    contentTypeMeta:
+      raw.contentTypeMeta === "http-equiv" ? "http-equiv" : "charset",
     cdataSectionElements: cdata.expanded,
     cdataSectionQNames: cdata.qnames,
   };

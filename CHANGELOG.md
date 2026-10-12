@@ -5,16 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.4] - 2026-10-12
+
+### Fixed
+
+- **Redundant `xmlns` declarations on copied elements in Firefox and with @xmldom/xmldom** ([#30](https://github.com/spagu/XSLT-Processor/issues/30)): XHTML content copied with `xsl:copy-of` into an XHTML result got its own `xmlns="http://www.w3.org/1999/xhtml"` on every copied element (`<p xmlns="…">` inside `<html xmlns="…">`). Whether the namespace was already in scope was asked of the DOM's `lookupNamespaceURI`, which in Firefox and xmldom only reads `xmlns` attributes and so answered "no" for an element whose own name carries the namespace. The library now resolves prefixes itself by the DOM Standard's algorithm (`namespaceLookup.js`), for copies, literal result elements and prefixed `cdata-section-elements`.
+
+### Changed
+
+- **html output writes `<meta charset="UTF-8">`** (the output encoding) as the first child of `head`, as Chrome 153's libxml2 does, instead of `<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">`; `new XSLTProcessor({ legacyContentTypeMeta: true })` (or `contentTypeMeta: "http-equiv"` for `serializeResult()`) keeps the old form, which the libxslt conformance runner uses. XHTML 1.0 documents written with the xml method keep the http-equiv form, as Chrome does.
+- **`xsl:sort` without `lang` sorts text as Chrome does** ([#30](https://github.com/spagu/XSLT-Processor/issues/30)): English collation with upper case first, whatever the browser's language (measured in Chromium 153 under en-US, sv-SE and de-DE), instead of Unicode code points: "Earth’s Axis" now comes before "Earthquake", "Earth" before "earth", "Ångström" among the a's, "§112" and "100-00" before letters. `lang` and `case-order` work as before. The previous claim that Chrome sorts by code point came from `xsltproc`, which collates with the C library locale; the libxslt case `general/bug-166` is excluded as implementation-defined for that reason.
+- **`transformToFragment()` of a stylesheet without `xsl:output method` into an HTML document parses the output as HTML whatever its root element**, as Chrome does: `<report>` becomes an `HTMLElement` named `report` in the XHTML namespace, `<html>` roots lose their `html`/`head`/`body` tags. A declared `method="xml"` keeps the nodes as before.
+- **The "Cannot load @tradik/xslt3" message names `yarn add`, `pnpm add` and `bun add`** next to `npm install`; it also appears under Yarn Plug'n'Play, whose resolution error is different.
 
 ### Added
 
 - **Installs with yarn, pnpm and bun, tested in CI** (task 0046): a `package-managers` job and `npm run test:package-managers` (`make test-package-managers`) pack the three packages and install them with npm, Yarn 1.22, Yarn 4 in Plug'n'Play mode, pnpm and bun, then check CommonJS, ESM with the `/polyfill` entry, `xsltVersion: "auto"` with and without `@tradik/xslt3`, `xslt --version` and `xslt-migrate-check --version`. The install sections of the READMEs, the website and the `/migrate/` wizard list `yarn add`, `pnpm add` and `bun add` (and `pnpm dlx`/`bunx` for the checker; Yarn 4 refuses packages published less than a day ago in `yarn dlx`).
 - **Website: references** (`/references/`, a "Used by" band on the home page, a footer link): the projects that use the library, Schema Resume and Job Tailor (only entries with `approved: true` in the hand-maintained `site/references/references.json` are published); npm downloads of the last month and GitHub stars fetched at build time with a 5 s timeout, cached in the git-ignored `site/data/stats.json` and falling back to the committed `site/references/stats.json` (`SITE_OFFLINE=1` skips fetching), shown with their date; and the specifications and test suites the library is verified against (W3C XSLT 1.0, XPath 1.0, XSLT 3.0, XPath 3.1, Serialization 3.1, libxslt corpus 299/299, qt3tests 21,770/21,787, xslt30-test 7,772/7,914, Chrome's deprecation announcement). A test keeps the quoted numbers in step with docs/CONFORMANCE.md and docs/XSLT3.md.
-
-### Changed
-
-- **The "Cannot load @tradik/xslt3" message names `yarn add`, `pnpm add` and `bun add`** next to `npm install`; it also appears under Yarn Plug'n'Play, whose resolution error is different.
 
 ### Documentation
 

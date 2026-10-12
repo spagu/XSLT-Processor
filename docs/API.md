@@ -36,6 +36,7 @@ non-W3C options:
 | `enableDynamicEvaluate` | Allow EXSLT `dyn:evaluate()` (trusted input only) |
 | `clock` | `() => Date` used by EXSLT date functions and `current-dateTime()` |
 | `legacyNameTests` | Deprecated: unprefixed name tests also match namespaced nodes, as before 1.2.0 |
+| `legacyContentTypeMeta` | html output gets libxslt 1.1.45's `<meta http-equiv="Content-Type" content="text/html; charset=…">`, as up to 1.3.3, instead of Chrome's `<meta charset="…">` (the default since 1.3.4). `serializeResult()` takes the same choice as `contentTypeMeta: "http-equiv"` |
 | `legacyXhtmlFragments` | Deprecated: `transformToFragment` turns xml output into XHTML elements of an HTML owner document, as in 1.2.0 to 1.3.0; Chrome and Firefox keep them in no namespace, the default since 1.3.1 |
 
 ### Methods

@@ -9,6 +9,7 @@ import { WhitespaceFilter, stripWhitespaceNodes } from "../whitespace.js";
 import {
   createResultDocument,
   importResultFragment,
+  isHtmlDocument,
   parseHtmlFragment,
   textFragment,
   wrapTextResult,
@@ -67,6 +68,8 @@ export const transformationMethods = {
    *   and `body` tags are dropped (see parseHtmlFragment); a DOM without an
    *   HTML parser gets the result nodes as XHTML elements instead;
    * - text output is one text node;
+   * - a stylesheet without `xsl:output method` into an HTML owner document
+   *   is parsed as HTML too, whatever its root element (Chrome's rule);
    * - xml output keeps the result nodes as they are, in their namespaces
    *   (with the deprecated `legacyXhtmlFragments` option, elements in no
    *   namespace become XHTML elements of an HTML owner, as before 1.3.1).
@@ -82,8 +85,14 @@ export const transformationMethods = {
     if (method === "text") {
       return textFragment(doc, serializeResult(fragment, this.outputSettings));
     }
-    if (method === "html") {
-      const markup = serializeResult(fragment, this.outputSettings);
+    // A stylesheet that declares no output method gets HTML into an HTML
+    // owner document whatever its root element, as in Chrome (issue #30)
+    const undeclared = !this.outputSettings.method;
+    if (method === "html" || (undeclared && isHtmlDocument(doc))) {
+      const markup = serializeResult(fragment, {
+        ...this.outputSettings,
+        method: "html",
+      });
       return (
         parseHtmlFragment(markup, doc) ??
         importResultFragment(fragment, doc, { htmlMethod: true })

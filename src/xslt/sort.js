@@ -5,33 +5,15 @@
  * once per comparison, and the attributes `order`, `lang`, `data-type` and
  * `case-order` are evaluated as attribute value templates.
  *
- * Text keys are compared by Unicode code point unless `lang` or `case-order`
- * is given. That matches libxslt, the engine behind the native XSLTProcessor
- * in Chromium browsers, so a stylesheet sorts the same way with this library
- * as it did natively. With `lang` or `case-order` an `Intl.Collator` is used.
+ * Text keys are compared with an `Intl.Collator`, as Chrome's native
+ * XSLTProcessor does: without `lang`, Chrome sorts the same way whatever the
+ * browser's language, by English collation with upper case first (issue #30:
+ * "Earth’s Axis" before "Earthquake", "Earth" before "earth", "Ångström" among
+ * the a's), measured in Chromium 153 under en-US, sv-SE and de-DE. `lang`
+ * picks the language and `case-order` the case order.
  *
  * @module xslt/sort
  */
-
-/**
- * Compare two strings by Unicode code point (not by UTF-16 code unit).
- *
- * @param {string} a - First string
- * @param {string} b - Second string
- * @returns {number} Negative, zero or positive
- */
-export function compareCodePoints(a, b) {
-  const left = a[Symbol.iterator]();
-  const right = b[Symbol.iterator]();
-
-  for (;;) {
-    const x = left.next();
-    const y = right.next();
-    if (x.done || y.done) return Number(y.done) - Number(x.done) || 0;
-    const diff = x.value.codePointAt(0) - y.value.codePointAt(0);
-    if (diff !== 0) return diff;
-  }
-}
 
 /**
  * Compare two numeric sort keys; NaN precedes every number (section 10).
@@ -48,6 +30,9 @@ export function compareNumbers(a, b) {
   return a < b ? -1 : 1;
 }
 
+/** Collation of text keys without `lang`, as in Chrome (see the module doc). */
+export const DEFAULT_SORT_LANG = "en";
+
 /**
  * Build the text comparator for one sort key.
  *
@@ -56,16 +41,14 @@ export function compareNumbers(a, b) {
  * @returns {(a: string, b: string) => number} The comparator
  */
 function textComparator(lang, caseOrder) {
-  if (!lang && !caseOrder) return compareCodePoints;
-
   let collator;
   try {
-    collator = new Intl.Collator(lang || undefined, {
+    collator = new Intl.Collator(lang || DEFAULT_SORT_LANG, {
       caseFirst: caseOrder === "lower-first" ? "lower" : "upper",
       sensitivity: "variant",
     });
   } catch {
-    collator = new Intl.Collator(undefined, {
+    collator = new Intl.Collator(DEFAULT_SORT_LANG, {
       caseFirst: caseOrder === "lower-first" ? "lower" : "upper",
       sensitivity: "variant",
     });
