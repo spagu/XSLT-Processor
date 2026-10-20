@@ -1,7 +1,7 @@
 /*
  * References: the "Used by" cards (home page band and /references/), the
  * numbers from npm and GitHub, and the list of specifications and test
- * suites. Text cards without logos; every colour is a token of tokens.css,
+ * suites. Text cards, with a logo on a light plate where its owner allowed one; every colour is a token of tokens.css,
  * so the light and dark pairs keep the WCAG 2.2 AA ratios check-site.mjs
  * verifies. Grid items get min-width: 0 so long names and URLs wrap instead
  * of widening the page on phones.
@@ -31,6 +31,20 @@
   border-radius: var(--radius);
   background: var(--color-bg);
   overflow-wrap: anywhere;
+}
+
+.ref-card__logo {
+  /* The card is a flex column: without align-self the image is stretched */
+  align-self: flex-start;
+  display: block;
+  max-width: 100%;
+  height: auto;
+  max-height: 3.5rem;
+  width: auto;
+  margin-bottom: var(--space-3);
+  padding: var(--space-2);
+  border-radius: calc(var(--radius) / 2);
+  background: var(--color-logo-plate);
 }
 
 .ref-card h3 {

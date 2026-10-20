@@ -13,7 +13,11 @@
  * @module site/scripts/references
  */
 
-/* global fetch, AbortSignal, URL -- Node.js 18+ globals */
+import { approvedReferences } from "./approved-references.mjs";
+
+export { approvedReferences };
+
+/* global fetch, AbortSignal -- Node.js 18+ globals */
 
 /** npm downloads of the last month (30 days). */
 export const NPM_DOWNLOADS_URL =
@@ -28,24 +32,6 @@ export const FETCH_TIMEOUT_MS = 5000;
 
 /** Entries of the home page band. */
 export const HOME_LIMIT = 6;
-
-/**
- * The usedBy entries that may be published: those with `approved: true`.
- *
- * @param {Array<{name: string, url: string, use: string, approved?: boolean}>} entries
- * @returns {Array<{name: string, url: string, domain: string, use: string}>}
- *   Approved entries with the host name to show as the link text
- */
-export function approvedReferences(entries) {
-  return entries
-    .filter((entry) => entry.approved === true)
-    .map(({ name, url, use }) => ({
-      name,
-      url,
-      domain: new URL(url).hostname.replace(/^www\./, ""),
-      use,
-    }));
-}
 
 /**
  * A date as the page writes it, e.g. "3 October 2026".

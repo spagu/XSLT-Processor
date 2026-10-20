@@ -11,7 +11,7 @@
 
   <section aria-labelledby="used-by-title">
     <h2 id="used-by-title">Used by</h2>
-    {{template "reference-cards" $r.usedBy}}
+    {{template "reference-cards" (dict "Items" $r.usedBy "Base" $b)}}
     <p class="ref-note">Using it too? <a href="{{ .Vars.repo_url }}/issues">Open an issue</a> with a link and a sentence on what it does for you, and we will list it.</p>
   </section>
 

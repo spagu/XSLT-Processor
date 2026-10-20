@@ -22,6 +22,7 @@
   /* contrast pairs checked by check-site.mjs: fg / bg */
   --color-bg: #ffffff; /* style guide: Background */
   --color-surface: #f8f9fa; /* Google Grey 50 */
+  --color-logo-plate: #ffffff; /* behind third-party logos, both schemes */
   --color-surface-strong: #f1f3f4; /* Google Grey 100 */
   --color-hero: #e8f0fe; /* Google Blue 50 */
   --color-text: #1f2937; /* style guide: Text */
@@ -53,6 +54,7 @@
   :root {
     --color-bg: #202124; /* Google Grey 900 */
     --color-surface: #292a2d; /* Google dark surface */
+    --color-logo-plate: #ffffff; /* logos are made for light backgrounds */
     --color-surface-strong: #35363a; /* Google dark surface, raised */
     --color-hero: #292a2d;
     --color-text: #e8eaed; /* Google Grey 200 */
