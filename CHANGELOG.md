@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **source-map-js 1.2.2** (CVE-2026-93749, GHSA-68fv-2mgg-jv7q, event-loop denial of service through indexed source-map section offsets): a development-only, transitive dependency (jsdom → css-tree), raised in the lockfile; the published packages never contained it. jsdom, the development DOM and the CLI's optional peer, goes to 30.1.3 at the same time.
+
 ### Documentation
 
+- **LJ Create's logo on its reference card**, as LJ Create offered in #17: the card shows a logo on a light plate (a `--color-logo-plate` token, white in both colour schemes, since logos are drawn for light backgrounds) when its entry in `site/references/references.json` has one; only a complete logo (a file under `images/references/`, an alt text, its intrinsic size) is published. The approval filter moved to `site/scripts/approved-references.mjs`.
 - **References: LJ Cloud, LJ Create's learning portal** (cloud.ljcreate.com), which renders its course menus and lesson content with the library, listed with the reporter's permission (issue #17). The references tests read the approved entries from the data file instead of a fixed list.
 
 ## [1.3.4] - 2026-10-12

@@ -1,11 +1,13 @@
 {{/*
   Cards of the projects that use the library, on /references/ and in the
-  home page's "Used by" band. Items are the approved entries of
-  site/references/references.json (site/scripts/references.mjs drops the
-  others). No logos: none are approved yet, so each card is text only.
+  home page's "Used by" band. Called with (dict "Items" ... "Base" base_path);
+  items are the approved entries of site/references/references.json
+  (site/scripts/references.mjs drops the others). A logo, when its owner
+  allowed one, sits on a light plate so it reads in both colour schemes.
 */}}
-{{define "reference-cards"}}<ul class="ref-cards">
-  {{ range . }}<li class="ref-card">
+{{define "reference-cards"}}{{ $b := .Base }}<ul class="ref-cards">
+  {{ range .Items }}<li class="ref-card">
+    {{ with .logo }}<img class="ref-card__logo" src="{{ $b }}/{{ .src }}" alt="{{ .alt }}" width="{{ .width }}" height="{{ .height }}" loading="lazy">{{ end }}
     <h3>{{ .name }}</h3>
     <p>{{ .use }}</p>
     <p class="ref-card__link"><a href="{{ .url }}" rel="noopener">{{ .domain }}</a></p>

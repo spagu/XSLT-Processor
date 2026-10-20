@@ -16,7 +16,13 @@
       "name": "LJ Cloud — Learning Portal (LJ Create)",
       "url": "https://cloud.ljcreate.com",
       "use": "Renders its course menus and lesson content with XSLT through @tradik/xslt-processor, which also keeps LJ ClassAct II working.",
-      "approved": true
+      "approved": true,
+      "logo": {
+        "src": "images/references/ljcreate.png",
+        "alt": "LJ Create, Learning for life",
+        "width": 225,
+        "height": 88
+      }
     }
   ],
   "builtOn": [

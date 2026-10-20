@@ -34,6 +34,35 @@ const apis = {
 };
 
 describe("approved references", () => {
+  it("keeps a complete logo and drops an incomplete or foreign one", () => {
+    const logo = {
+      src: "images/references/a.png",
+      alt: "A",
+      width: 10,
+      height: 4,
+    };
+    const entry = (extra) => ({
+      name: "A",
+      url: "https://a.test",
+      use: "a",
+      approved: true,
+      ...extra,
+    });
+    assert.deepEqual(approvedReferences([entry({ logo })])[0].logo, logo);
+    for (const bad of [
+      { ...logo, src: "https://evil.test/x.png" },
+      { ...logo, src: "images/references/../x.png" },
+      { ...logo, alt: "" },
+      { ...logo, width: "10" },
+      null,
+    ]) {
+      assert.equal(
+        approvedReferences([entry({ logo: bad })])[0].logo,
+        undefined,
+      );
+    }
+  });
+
   it("publishes only entries with approved: true", () => {
     const entries = [
       { name: "A", url: "https://www.a.test/x", use: "a", approved: true },
