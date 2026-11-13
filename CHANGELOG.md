@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **The browser bundle did not load in Safari 15.4 to 16.3** ([#35](https://github.com/spagu/XSLT-Processor/issues/35)): `SyntaxError: Invalid regular expression: invalid group specifier name`. The check for unpaired surrogates of EXSLT `str:encode-uri()`/`str:decode-uri()` used a regex lookbehind, which Safari only parses from 16.4, and a syntax error stops the whole script. It is now a loop over the code units. The build targets the browsers of docs/BROWSER-SUPPORT.md (Chrome/Edge 93, Firefox 92, Safari 15.4) instead of plain ES2022, and `src/browserSupport.test.js` fails on any lookbehind, `v` flag or built-in newer than Safari 15.4 in the sources.
+- **@tradik/xslt3 1.0.1 loads in Safari 15.4 to 16.3 as well** (issue #35): title-case number words (`format-integer($n, 'Ww')`) used a regex lookbehind, now a captured word start; the `m` flag's `^` still needs a lookbehind, which is now built at run time after a check of the engine, so Safari before 16.4 gets FORX0002 naming the cause for that one pattern instead of a bundle that does not load. The browser-support test scans `packages/xslt3/src` too.
 
 ### Added
 

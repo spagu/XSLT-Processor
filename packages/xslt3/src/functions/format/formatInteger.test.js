@@ -45,6 +45,7 @@ describe("format-integer", () => {
     assert.equal(fi(-5, "Ww;o"), "-Fifth");
     assert.equal(fi(123, "w"), "one hundred and twenty-three");
     assert.equal(fi(2003, "Ww"), "Two Thousand and Three");
+    assert.equal(fi(1_000_021, "Ww"), "One Million and Twenty-One");
     assert.equal(fi(12, "W;o"), "TWELFTH");
     assert.equal(fi(1234, "()Ww;o"), "1234th");
     assert.equal(fi(5, "#"), "5");
