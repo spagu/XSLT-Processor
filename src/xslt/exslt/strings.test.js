@@ -13,7 +13,7 @@ import {
   splitString,
   tokenizeString,
 } from "./stringOps.js";
-import { decodeUri, encodeUri } from "./uri.js";
+import { decodeUri, encodeUri, hasLoneSurrogate } from "./uri.js";
 
 const XML =
   "<r><n>1</n><n>2</n><s>a</s><s>ab</s><t>X</t><t>Y</t><e></e><w>b</w><w>c</w></r>";
@@ -181,6 +181,23 @@ describe("str:encode-uri() / str:decode-uri()", () => {
     assert.strictEqual(encodeUri("a\uD800", true), "");
     assert.strictEqual(decodeUri("\uDC00"), "");
     assert.strictEqual(encodeUri("😀", true), "%F0%9F%98%80");
+  });
+
+  it("finds unpaired surrogates without a regular expression (issue #35)", () => {
+    for (const lone of [
+      "\uD800",
+      "a\uD800",
+      "\uD800a",
+      "\uDC00",
+      "a\uDC00b",
+      "\uDC00\uD800",
+      "😀\uD83D",
+    ]) {
+      assert.strictEqual(hasLoneSurrogate(lone), true, JSON.stringify(lone));
+    }
+    for (const fine of ["", "abc", "😀", "a😀b😀", "\uD83D\uDE00"]) {
+      assert.strictEqual(hasLoneSurrogate(fine), false, JSON.stringify(fine));
+    }
   });
 });
 

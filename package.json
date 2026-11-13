@@ -1,6 +1,6 @@
 {
   "name": "@tradik/xslt-processor",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "JavaScript implementation of XSLTProcessor for browser environments and CLI",
   "type": "module",
   "workspaces": [
@@ -99,13 +99,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.65.0",
     "@xmldom/xmldom": "^0.9.12",
     "esbuild": "^0.28.2",
-    "eslint": "^10.11.0",
-    "jsdom": "^30.1.3",
-    "linkedom": "^0.18.13",
-    "prettier": "^3.9.9"
+    "eslint": "^10.14.0",
+    "jsdom": "^31.0.1",
+    "linkedom": "^0.18.15",
+    "prettier": "^3.10.1"
   },
   "peerDependencies": {
     "@tradik/xslt3": "^1.0.0",
@@ -122,5 +122,8 @@
     "jsdom": {
       "optional": true
     }
+  },
+  "overrides": {
+    "minimatch": "^11.0.8"
   }
 }

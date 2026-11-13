@@ -21,13 +21,28 @@ const RESERVED = ";/?:@&=+$,[]";
 /**
  * Whether a string contains an unpaired surrogate, which has no UTF-8 form.
  *
+ * A loop over the code units rather than a regular expression: the natural
+ * pattern needs a lookbehind, which Safari before 16.4 cannot parse, so the
+ * whole bundle failed to load there (issue #35). `isWellFormed()` would need
+ * Safari 16.4 too.
+ *
  * @param {string} str - Any string
  * @returns {boolean} True when the string is not well-formed
+ *
+ * @example
+ * hasLoneSurrogate("a\uD800"); // true
  */
-function hasLoneSurrogate(str) {
-  return /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(
-    str,
-  );
+export function hasLoneSurrogate(str) {
+  for (let i = 0; i < str.length; i++) {
+    const unit = str.charCodeAt(i);
+    if (unit >= 0xdc00 && unit <= 0xdfff) return true;
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const next = str.charCodeAt(i + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return true;
+      i++;
+    }
+  }
+  return false;
 }
 
 /**

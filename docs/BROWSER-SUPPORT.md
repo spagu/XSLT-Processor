@@ -1,7 +1,13 @@
 # Browser Compatibility
 
-The bundles are built for ES2022 without transpiling and use `Object.hasOwn()`
-and `Array.prototype.at()`, which set the minimum browser versions below.
+The bundles are built for the browsers below (esbuild targets `chrome93`,
+`edge93`, `firefox92`, `safari15.4`), so newer syntax is lowered for them.
+What esbuild cannot lower is kept out of the sources by a test
+(`src/browserSupport.test.js`): regular expression lookbehind, the `v` flag,
+and built-ins newer than Safari 15.4 such as `isWellFormed()`, `toSorted()` or
+`Object.groupBy()`. A lookbehind made the 1.3.4 bundle a `SyntaxError` in
+Safari 15.4 to 16.3 (issue #35). `Object.hasOwn()` and
+`Array.prototype.at()` set the minimum versions.
 
 ## Polyfill Support
 

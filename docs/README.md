@@ -8,7 +8,7 @@ implements the W3C `XSLTProcessor` API for browsers and Node.js and ships an
 | Guide | Contents |
 |-------|----------|
 | [API Reference](API.md) | `XSLTProcessor` methods, parameters, `xsl:output` serialization, module exports, `XsltEngine` options, TypeScript |
-| [Loaders](LOADERS.md) | `xsl:import`, `xsl:include` and the `document()` function |
+| [Loaders](LOADERS.md) | `xsl:import`, `xsl:include` and the `document()` function; `fetchOptions` for cross-origin requests with credentials |
 | [Complete Example](EXAMPLES.md) | A product list transformed into an HTML table (browser and CLI) |
 | [Command Line Tool](CLI.md) | `xslt` options, base directory, includes, input encodings |
 | [Conformance](CONFORMANCE.md) | W3C compliance tables, supported elements and functions, known deviations, test coverage |

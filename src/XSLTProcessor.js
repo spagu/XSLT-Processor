@@ -16,6 +16,7 @@
  * XSLT support is deprecated or unavailable.
  */
 
+import { checkFetchOptions } from "./async/loaders.js";
 import { XsltEngine } from "./xslt/engine.js";
 import { findParseError } from "./xslt/domParsing.js";
 import { preloadedDocumentLoader } from "./async/preload.js";
@@ -52,6 +53,11 @@ export class XSLTProcessor {
    * @param {boolean} [options.legacyNameTests] - Deprecated: let unprefixed
    *   name tests (`item`, `@a`) also match nodes in a namespace, as before
    *   1.2.0. XPath 1.0 and Chrome only match nodes in no namespace.
+   * @param {object} [options.fetchOptions] - `RequestInit` for the requests
+   *   the processor makes itself with `fetch` (the async API's `xsl:import`,
+   *   `xsl:include` and `document()` without a loader), e.g.
+   *   `{ credentials: "include" }` for a cross-origin server that needs
+   *   cookies, or `{ mode: "cors", headers: {...} }` (issue #34).
    * @param {boolean} [options.legacyContentTypeMeta] - html output gets the
    *   `<meta http-equiv="Content-Type" content="text/html; charset=...">` of
    *   libxslt 1.1.45 and versions up to 1.3.3 instead of Chrome's
@@ -93,6 +99,7 @@ export class XSLTProcessor {
       clock: options?.clock ?? null,
       maxTemplateDepth: options?.maxTemplateDepth,
       xsltVersion: xsltVersionMode(options?.xsltVersion),
+      fetchOptions: checkFetchOptions(options?.fetchOptions),
     };
     this._engine = null;
     this._stylesheet = null;
