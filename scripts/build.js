@@ -24,6 +24,19 @@ const distDir = join(rootDir, "dist");
 
 // @tradik/xslt3 (XSLT 2.0/3.0, xsltVersion "auto") is an optional peer
 // dependency loaded with import() at run time: never bundled
+/**
+ * Browsers of docs/BROWSER-SUPPORT.md: esbuild lowers newer syntax for them.
+ * Regular expression features and built-in methods cannot be lowered;
+ * src/browserSupport.test.js keeps those out of the sources.
+ */
+const BROWSER_TARGETS = [
+  "es2022",
+  "chrome93",
+  "edge93",
+  "firefox92",
+  "safari15.4",
+];
+
 const external = ["@tradik/xslt3"];
 
 // Ensure dist directory exists
@@ -41,7 +54,7 @@ async function buildAll() {
     external,
     format: "esm",
     platform: "neutral",
-    target: ["es2022"],
+    target: BROWSER_TARGETS,
     sourcemap: true,
   });
 
@@ -68,7 +81,7 @@ async function buildAll() {
     format: "iife",
     globalName: "XsltProcessorLib",
     platform: "browser",
-    target: ["es2022"],
+    target: BROWSER_TARGETS,
     sourcemap: true,
     footer: {
       js: `
@@ -92,7 +105,7 @@ if (typeof window !== 'undefined') {
     format: "iife",
     globalName: "XsltProcessorLib",
     platform: "browser",
-    target: ["es2022"],
+    target: BROWSER_TARGETS,
     minify: true,
     sourcemap: true,
     footer: {

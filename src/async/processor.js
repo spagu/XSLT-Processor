@@ -13,7 +13,11 @@
 import { readSource } from "../io/readSource.js";
 import { toChunkSize } from "../xslt/serializer/chunks.js";
 import { throwIfAborted } from "./abort.js";
-import { createDocumentFetcher, resolveAsyncLoader } from "./loaders.js";
+import {
+  checkFetchOptions,
+  createDocumentFetcher,
+  resolveAsyncLoader,
+} from "./loaders.js";
 import {
   preloadDocuments,
   preloadModules,
@@ -37,10 +41,11 @@ function checkLoader(loader) {
  * external references needs neither a loader nor `fetch`.
  *
  * @param {Function|null|undefined} loader - Configured loader
+ * @param {object} [fetchOptions] - `RequestInit` of the default fetch loader
  * @returns {Function} The lazy loader
  */
-function lazyLoader(loader) {
-  return (...args) => resolveAsyncLoader(loader)(...args);
+function lazyLoader(loader, fetchOptions) {
+  return (...args) => resolveAsyncLoader(loader, fetchOptions)(...args);
 }
 
 /**
@@ -60,13 +65,23 @@ function ownerOf(node) {
  * @param {string|undefined} stylesheetUri - URI of the main stylesheet
  * @param {Function|null|undefined} loader - Asynchronous document loader
  * @param {AbortSignal} [signal] - Optional signal
+ * @param {object} [fetchOptions] - `RequestInit` of the default fetch loader
  * @returns {Promise<Map<string, object>>} Preloaded outcomes by URI
  */
-async function preloadStaticDocuments(modules, stylesheetUri, loader, signal) {
-  const fetchDocument = createDocumentFetcher(lazyLoader(loader), {
-    signal,
-    referenceDoc: ownerOf(modules[0]),
-  });
+async function preloadStaticDocuments(
+  modules,
+  stylesheetUri,
+  loader,
+  signal,
+  fetchOptions,
+) {
+  const fetchDocument = createDocumentFetcher(
+    lazyLoader(loader, fetchOptions),
+    {
+      signal,
+      referenceDoc: ownerOf(modules[0]),
+    },
+  );
   const documents = await preloadDocuments(
     modules,
     stylesheetUri,
@@ -75,6 +90,19 @@ async function preloadStaticDocuments(modules, stylesheetUri, loader, signal) {
   );
   throwIfAborted(signal);
   return documents;
+}
+
+/**
+ * The `fetchOptions` of a call, else the processor's.
+ *
+ * @param {import('../XSLTProcessor.js').XSLTProcessor} processor - Processor
+ * @param {object} options - Call options
+ * @returns {object|undefined} The `RequestInit` of the default fetch loader
+ */
+function fetchOptionsOf(processor, options) {
+  return (
+    checkFetchOptions(options.fetchOptions) ?? processor._options.fetchOptions
+  );
 }
 
 /**
@@ -90,6 +118,9 @@ async function preloadStaticDocuments(modules, stylesheetUri, loader, signal) {
  * @param {Function} [options.documentLoader] - Asynchronous document() loader,
  *   `options.loader` by default
  * @param {AbortSignal} [options.signal] - Cancels loading
+ * @param {object} [options.fetchOptions] - `RequestInit` of the default fetch
+ *   loader for this call, such as `{ credentials: "include" }`; the
+ *   processor's `fetchOptions` otherwise
  * @returns {Promise<void>} Resolves once the stylesheet is compiled
  */
 export async function importStylesheetAsync(
@@ -100,6 +131,7 @@ export async function importStylesheetAsync(
 ) {
   const { signal, loader } = options;
   const documentLoader = options.documentLoader ?? loader;
+  const fetchOptions = fetchOptionsOf(processor, options);
   checkLoader(loader);
   checkLoader(documentLoader);
 
@@ -109,7 +141,7 @@ export async function importStylesheetAsync(
   const modules = await preloadModules(
     node,
     stylesheetUri,
-    createDocumentFetcher(lazyLoader(loader), {
+    createDocumentFetcher(lazyLoader(loader, fetchOptions), {
       signal,
       referenceDoc: ownerOf(node),
     }),
@@ -120,6 +152,7 @@ export async function importStylesheetAsync(
     stylesheetUri,
     documentLoader,
     signal,
+    fetchOptions,
   );
 
   processor._compile(node, stylesheetUri, {
@@ -143,6 +176,8 @@ export async function importStylesheetAsync(
  * @param {string} [options.stylesheetUri] - Its URI
  * @param {Function} [options.fetchStylesheet] - Asynchronous stylesheet loader
  * @param {Function} [options.fetchDocument] - Asynchronous document() loader
+ * @param {object} [options.fetchOptions] - `RequestInit` of the default fetch
+ *   loader (see importStylesheetAsync)
  * @returns {Promise<string>} The serialized result
  * @throws {Error} When loading, parsing or the transformation fails
  */
@@ -153,6 +188,7 @@ export async function transformAsync(processor, source, options = {}) {
       loader: fetchStylesheet,
       documentLoader: fetchDocument,
       signal,
+      fetchOptions: options.fetchOptions,
     });
   } else {
     processor._requireStylesheet("transformAsync");

@@ -12,6 +12,7 @@ an XML string. See the [API Reference](API.md) for the rest of the API.
   - [Advanced: the engine accessor](#advanced-the-engine-accessor)
 - [Using the document() function](#using-the-document-function)
   - [Import vs Include Behavior](#import-vs-include-behavior)
+- [Cross-origin requests and credentials](#cross-origin-requests-and-credentials)
 
 ## Using xsl:import and xsl:include
 
@@ -169,3 +170,37 @@ const result = processor.transformToDocument(xmlDoc);
   </xsl:template>
 </xsl:stylesheet>
 ```
+
+## Cross-origin requests and credentials
+
+Without a loader, the asynchronous API (`importStylesheetAsync`,
+`transformAsync`) loads `xsl:import`, `xsl:include` and literal `document()`
+URIs with the global `fetch`. Its defaults are `fetch`'s own: CORS for another
+origin, cookies only for the same origin. A server on another origin that
+needs cookies or HTTP authentication gets them with `fetchOptions`, any
+[`RequestInit`](https://developer.mozilla.org/docs/Web/API/RequestInit):
+
+```js
+// Every request of this processor sends credentials
+const processor = new XSLTProcessor({
+  fetchOptions: { credentials: "include" },
+});
+await processor.importStylesheetAsync(
+  (await fetch(url, { credentials: "include" })).body,
+  url,
+);
+
+// Or for one call: takes the place of the processor's fetchOptions
+await processor.importStylesheetAsync(stylesheet, url, {
+  fetchOptions: { credentials: "include", headers: { "X-Client": "app" } },
+});
+```
+
+This is the same opt-in as `crossorigin="use-credentials"` on a `<script>`
+or `<link>`: the server has to answer with
+`Access-Control-Allow-Credentials: true` and a specific
+`Access-Control-Allow-Origin` (not `*`), as for any credentialed CORS
+request. The call's `signal` still cancels the request. A loader of your own
+makes its own requests, so `fetchOptions` does not apply to it; set the
+options in its `fetch` call. The stylesheet you pass in is fetched by you,
+so give that `fetch` the same options.

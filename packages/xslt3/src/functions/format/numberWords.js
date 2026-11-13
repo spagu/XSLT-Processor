@@ -41,7 +41,8 @@ export function cardinalWords(n) {
       (rest ? ` and ${cardinalWords(rest)}` : "")
     );
   }
-  const [scale, name] = SCALES.find(([s]) => n >= s) ?? SCALES[0];
+  // n >= 1000 here, so the last scale (thousand) always matches
+  const [scale, name] = SCALES.find(([s]) => n >= s);
   const rest = n % scale;
   const joiner = rest === 0n ? "" : rest < 100n ? " and " : " ";
   return (
@@ -146,9 +147,11 @@ export function alphabetic(n, first) {
 export function caseWords(words, token) {
   if (token === "W") return words.toUpperCase();
   if (token === "Ww") {
-    // title case, with "and" kept lower-case as in the F&O examples
-    return words.replace(/(?<!\p{L})(?!and(?!\p{L}))\p{Ll}/gu, (c) =>
-      c.toUpperCase(),
+    // title case, with "and" kept lower-case as in the F&O examples; the
+    // word start is captured, not looked behind (Safari < 16.4, issue #35)
+    return words.replace(
+      /(^|\P{L})(?!and(?!\p{L}))(\p{Ll})/gu,
+      (_, start, c) => start + c.toUpperCase(),
     );
   }
   return words;

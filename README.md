@@ -52,7 +52,7 @@ The documentation is also published as a website with an interactive playground:
 | Guide | Contents |
 |-------|----------|
 | [API Reference](docs/API.md) | `XSLTProcessor` methods, parameters, `xsl:output` serialization, module exports, `XsltEngine` options, TypeScript |
-| [Loaders](docs/LOADERS.md) | `xsl:import`, `xsl:include` and the `document()` function |
+| [Loaders](docs/LOADERS.md) | `xsl:import`, `xsl:include` and the `document()` function; `fetchOptions` for cross-origin requests with credentials |
 | [Complete Example](docs/EXAMPLES.md) | A product list transformed into an HTML table (browser and CLI) |
 | [Command Line Tool](docs/CLI.md) | `xslt` options, base directory, includes, input encodings |
 | [Conformance](docs/CONFORMANCE.md) | W3C compliance tables, supported elements and functions, known deviations, test coverage |

@@ -914,6 +914,13 @@ describe("XSLTProcessor", () => {
 
       assert.strictEqual(processor.getParameter(null, "testParam"), "");
     });
+
+    it("should remove a namespaced parameter by its expanded name", () => {
+      const processor = new XSLTProcessor();
+      processor.setParameter("urn:p", "testParam", "value");
+      processor.removeParameter("urn:p", "testParam");
+      assert.strictEqual(processor.getParameter("urn:p", "testParam"), "");
+    });
   });
 
   describe("clearParameters with engine", () => {

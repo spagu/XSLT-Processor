@@ -13,12 +13,32 @@ import { RegexReader } from "./reader.js";
 
 const isDigit = (c) => c !== undefined && c >= "0" && c <= "9";
 
+/**
+ * Whether the engine supports regular expression lookbehind (every
+ * supported browser except Safari before 16.4). Probed through the
+ * constructor, so older engines still parse this module.
+ * @param {RegExpConstructor} [Ctor] - Injected by tests
+ * @returns {boolean}
+ */
+export function supportsLookbehind(Ctor = RegExp) {
+  try {
+    new Ctor("(?<=a)b"); // browser-probed: the probe itself
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const LOOKBEHIND = supportsLookbehind();
+
 /** Recursive-descent translator of one pattern to JS source. */
 export class RegexParser {
   /**
    * @param {string} pattern
-   * @param {{dotAll: boolean, multiLine: boolean, caseless: boolean}} options
-   *   - The s and m flags; caseless: categories ignore the i flag
+   * @param {{dotAll: boolean, multiLine: boolean, caseless: boolean,
+   *   lookbehind?: boolean}} options
+   *   - The s and m flags; caseless: categories ignore the i flag;
+   *   lookbehind (tests only) overrides the engine probe
    */
   constructor(pattern, options) {
     this.reader = new RegexReader(pattern, options.caseless);
@@ -69,7 +89,13 @@ export class RegexParser {
         return options.dotAll ? "[^]" : "[^\\n\\r]";
       case "^":
         // a line starts after any \n except one that ends the string
-        return options.multiLine ? "(?:^|(?<=\\n)(?!$))" : "(?:^)";
+        if (!options.multiLine) return "(?:^)";
+        if (!(options.lookbehind ?? LOOKBEHIND)) {
+          regexError(
+            "^ with the m flag needs regular expression lookbehind, which this JavaScript engine lacks (Safari before 16.4)",
+          );
+        }
+        return "(?:^|(?<=\\n)(?!$))"; // browser-probed: LOOKBEHIND
       case "$":
         return options.multiLine ? "(?:$|(?=\\n))" : "(?:$)";
       case "\\":

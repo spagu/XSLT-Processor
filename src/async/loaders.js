@@ -11,7 +11,9 @@
  * loaders). Strings are parsed; bytes and `Response` bodies are decoded like
  * files (byte order mark, XML declaration encoding, else UTF-8). Without a
  * loader, the global `fetch` is used when there is one (browsers, Node.js
- * for http(s) URIs).
+ * for http(s) URIs), with the processor's `fetchOptions` (a `RequestInit`
+ * such as `{ credentials: "include" }` for cross-origin requests that need
+ * cookies, issue #34).
  *
  * @module async/loaders
  */
@@ -26,26 +28,51 @@ import { abortable } from "./abort.js";
  */
 
 /**
- * Loader reading a URI with the global `fetch`.
+ * Check the `fetchOptions` given to the processor or to a call.
  *
- * @param {string} uri - The resolved URI
- * @param {string} [_baseUri] - Unused
- * @param {{signal?: AbortSignal}} [init] - Fetch options
- * @returns {Promise<Response>} The response
+ * @param {unknown} fetchOptions - Candidate `RequestInit`
+ * @returns {object|undefined} The options, or undefined when none are given
+ * @throws {TypeError} When they are given but not an object
+ *
+ * @example
+ * checkFetchOptions({ credentials: "include" }); // the same object
  */
-function fetchLoader(uri, _baseUri, init = {}) {
-  return globalThis.fetch(uri, { signal: init.signal });
+export function checkFetchOptions(fetchOptions) {
+  if (fetchOptions === undefined || fetchOptions === null) return undefined;
+  if (typeof fetchOptions !== "object" || Array.isArray(fetchOptions)) {
+    throw new TypeError(
+      'fetchOptions must be an object of fetch() options, such as { credentials: "include" }',
+    );
+  }
+  return fetchOptions;
+}
+
+/**
+ * Loader reading a URI with the global `fetch` and the given options; the
+ * call's abort signal, when there is one, takes the place of theirs.
+ *
+ * @param {object} [fetchOptions] - `RequestInit` for every request
+ * @returns {AsyncLoader} The loader
+ */
+function fetchLoader(fetchOptions = {}) {
+  return (uri, _baseUri, init = {}) =>
+    globalThis.fetch(uri, {
+      ...fetchOptions,
+      signal: init.signal ?? fetchOptions.signal,
+    });
 }
 
 /**
  * The loader to use: the given one, else `fetch` when available.
  *
  * @param {AsyncLoader|null|undefined} loader - Configured loader
+ * @param {object} [fetchOptions] - `RequestInit` of the `fetch` loader
+ *   (ignored when a loader is given: it makes its own requests)
  * @returns {AsyncLoader} A loader
  * @throws {TypeError} When `loader` is not a function, or none is given and
  *   there is no global fetch
  */
-export function resolveAsyncLoader(loader) {
+export function resolveAsyncLoader(loader, fetchOptions) {
   if (loader !== undefined && loader !== null) {
     if (typeof loader !== "function") {
       throw new TypeError("The loader must be a function");
@@ -57,7 +84,7 @@ export function resolveAsyncLoader(loader) {
       "No loader given and no global fetch available to load external resources",
     );
   }
-  return fetchLoader;
+  return fetchLoader(checkFetchOptions(fetchOptions));
 }
 
 /**

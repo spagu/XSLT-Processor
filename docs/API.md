@@ -36,6 +36,7 @@ non-W3C options:
 | `enableDynamicEvaluate` | Allow EXSLT `dyn:evaluate()` (trusted input only) |
 | `clock` | `() => Date` used by EXSLT date functions and `current-dateTime()` |
 | `legacyNameTests` | Deprecated: unprefixed name tests also match namespaced nodes, as before 1.2.0 |
+| `fetchOptions` | `RequestInit` for the requests the processor makes itself with `fetch` (the asynchronous API's `xsl:import`, `xsl:include` and `document()` when no loader is given), e.g. `{ credentials: "include" }` for a cross-origin server that needs cookies, `{ mode: "cors", headers: {…} }`. A call's `fetchOptions` takes its place for that call; a loader of yours makes its own requests and ignores it. See [Loaders](LOADERS.md#cross-origin-requests-and-credentials) |
 | `legacyContentTypeMeta` | html output gets libxslt 1.1.45's `<meta http-equiv="Content-Type" content="text/html; charset=…">`, as up to 1.3.3, instead of Chrome's `<meta charset="…">` (the default since 1.3.4). `serializeResult()` takes the same choice as `contentTypeMeta: "http-equiv"` |
 | `legacyXhtmlFragments` | Deprecated: `transformToFragment` turns xml output into XHTML elements of an HTML owner document, as in 1.2.0 to 1.3.0; Chrome and Firefox keep them in no namespace, the default since 1.3.1 |
 
@@ -236,8 +237,8 @@ large results incrementally. The synchronous W3C methods are unchanged.
 
 | Method | Description |
 |--------|-------------|
-| `importStylesheetAsync(style, stylesheetUri?, { loader?, documentLoader?, signal? })` | Loads the `xsl:import`/`xsl:include` tree (in parallel, each URI once) and the literal `document('...')` URIs with `fetch` or a custom loader, then compiles synchronously. `style` may be a Node, a string, bytes, a `ReadableStream` or an async iterable |
-| `transformAsync(source, { signal?, stylesheet?, stylesheetUri?, fetchStylesheet?, fetchDocument? })` | Returns a `Promise<string>` with the serialized result; failures reject. Sources may be nodes, strings, bytes, `ReadableStream`s or async iterables, decoded by byte order mark, then the XML declaration's encoding, then UTF-8 |
+| `importStylesheetAsync(style, stylesheetUri?, { loader?, documentLoader?, signal?, fetchOptions? })` | Loads the `xsl:import`/`xsl:include` tree (in parallel, each URI once) and the literal `document('...')` URIs with `fetch` or a custom loader, then compiles synchronously. `style` may be a Node, a string, bytes, a `ReadableStream` or an async iterable |
+| `transformAsync(source, { signal?, stylesheet?, stylesheetUri?, fetchStylesheet?, fetchDocument?, fetchOptions? })` | Returns a `Promise<string>` with the serialized result; failures reject. Sources may be nodes, strings, bytes, `ReadableStream`s or async iterables, decoded by byte order mark, then the XML declaration's encoding, then UTF-8 |
 | `transformToStream(source, { signal?, chunkSize? })` | Returns a `ReadableStream<string>` serialized on demand in chunks of about 16 KiB, with backpressure and cancellation |
 
 ```js

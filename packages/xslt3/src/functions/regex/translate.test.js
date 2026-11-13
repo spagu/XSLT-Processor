@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { compileRegex, testRegex } from "./compile.js";
 import { jsChar } from "./escapes.js";
+import { RegexParser, supportsLookbehind } from "./parser.js";
 import { MODIFIERS, stripWhitespace, translateRegex } from "./translate.js";
 import { blockRanges } from "./unicodeBlocks.js";
 import { throwsCode } from "../testing.test.js";
@@ -32,6 +33,26 @@ describe("regex translation: atoms, groups and quantifiers", () => {
     assert.ok(m("^$", "a\n\nb"));
     assert.ok(!testRegex(compileRegex("^b"), "a\nb"));
     assert.ok(testRegex(compileRegex("^*a"), "a"));
+  });
+
+  it("probes lookbehind and explains its absence (Safari < 16.4, issue #35)", () => {
+    assert.equal(supportsLookbehind(), true);
+    const OldEngine = function () {
+      throw new SyntaxError(
+        "Invalid regular expression: invalid group specifier name",
+      );
+    };
+    assert.equal(supportsLookbehind(OldEngine), false);
+    const parse = (multiLine) =>
+      new RegexParser("^a", {
+        dotAll: false,
+        multiLine,
+        caseless: false,
+        lookbehind: false,
+      }).translate();
+    assert.match(parse(false), /^\(\?:\^\)/);
+    throwsCode(() => parse(true), "FORX0002");
+    assert.throws(() => parse(true), /Safari before 16\.4/);
   });
 
   it("supports groups, alternation and back-references", () => {

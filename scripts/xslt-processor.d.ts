@@ -91,6 +91,12 @@ export interface ImportAsyncOptions {
   documentLoader?: AsyncLoader;
   /** Cancels loading. */
   signal?: AbortSignal;
+  /**
+   * `RequestInit` of the requests the processor makes with the global fetch
+   * when no loader is given, e.g. `{ credentials: "include" }`; the
+   * processor's `fetchOptions` otherwise.
+   */
+  fetchOptions?: RequestInit;
 }
 
 /** Options of transformAsync. */
@@ -105,6 +111,12 @@ export interface TransformAsyncOptions {
   fetchStylesheet?: AsyncLoader;
   /** Loader of the literal document() documents of the stylesheet. */
   fetchDocument?: AsyncLoader;
+  /**
+   * `RequestInit` of the requests the processor makes with the global fetch
+   * when no loader is given, e.g. `{ credentials: "include" }`; the
+   * processor's `fetchOptions` otherwise.
+   */
+  fetchOptions?: RequestInit;
 }
 
 /** The `xsltVersion` option of XSLTProcessor. */
@@ -151,6 +163,14 @@ export class XSLTProcessor {
      * @throws RangeError for any other value
      */
     xsltVersion?: XsltVersionMode;
+    /**
+     * `RequestInit` for the requests the processor makes itself with fetch
+     * (xsl:import, xsl:include and document() of the asynchronous API
+     * without a loader), e.g. `{ credentials: "include" }` for a
+     * cross-origin server that needs cookies.
+     * @throws TypeError when it is not an object
+     */
+    fetchOptions?: RequestInit;
   });
 
   /**

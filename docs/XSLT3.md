@@ -56,6 +56,7 @@ typing and XQuery.
 | Years | -999,999,999 to 999,999,999 (XSD 1.1: year 0 exists) |
 | Implicit timezone | an option, default UTC |
 | `xs:anyURI` | lexical form not validated |
+| Regex `m` flag with `^` | needs regular expression lookbehind; Safari 15.4 to 16.3 lack it and raise FORX0002 naming the cause (every other pattern works there) |
 
 ## Milestones
 

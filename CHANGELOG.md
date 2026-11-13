@@ -5,7 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.5] - 2026-11-13
+
+### Fixed
+
+- **The browser bundle did not load in Safari 15.4 to 16.3** ([#35](https://github.com/spagu/XSLT-Processor/issues/35)): `SyntaxError: Invalid regular expression: invalid group specifier name`. The check for unpaired surrogates of EXSLT `str:encode-uri()`/`str:decode-uri()` used a regex lookbehind, which Safari only parses from 16.4, and a syntax error stops the whole script. It is now a loop over the code units. The build targets the browsers of docs/BROWSER-SUPPORT.md (Chrome/Edge 93, Firefox 92, Safari 15.4) instead of plain ES2022, and `src/browserSupport.test.js` fails on any lookbehind, `v` flag or built-in newer than Safari 15.4 in the sources.
+- **@tradik/xslt3 1.0.1 loads in Safari 15.4 to 16.3 as well** (issue #35): title-case number words (`format-integer($n, 'Ww')`) used a regex lookbehind, now a captured word start; the `m` flag's `^` still needs a lookbehind, which is now built at run time after a check of the engine, so Safari before 16.4 gets FORX0002 naming the cause for that one pattern instead of a bundle that does not load. The browser-support test scans `packages/xslt3/src` too.
+
+### Added
+
+- **`fetchOptions` for cross-origin requests** ([#34](https://github.com/spagu/XSLT-Processor/issues/34)): a `RequestInit` for the requests the processor makes itself with `fetch` (the asynchronous API's `xsl:import`, `xsl:include` and `document()` without a loader), e.g. `new XSLTProcessor({ fetchOptions: { credentials: "include" } })` for a server on another origin that needs cookies, the same opt-in as `crossorigin="use-credentials"`. `importStylesheetAsync()` and `transformAsync()` take `fetchOptions` for one call too; the call's `signal` still cancels the request, and a loader of yours is not affected. Documented in docs/LOADERS.md.
+
+### Changed
+
+- **Dependencies and CI**: development dependencies at their latest releases (jsdom 31.0.1, @playwright/test 1.65.0, ESLint 10.14.0, Prettier 3.10.1, linkedom 0.18.15) with minimatch held at 11.0.8 through `overrides` (GHSA-g3hv-75wg-m249 in ESLint's own dependency; `npm audit` is clean); actions/setup-node 7.1.0, actions/upload-artifact 7.0.2, actions/download-artifact 8.0.2; the website is built with ssg 1.9.7, which fixes the fingerprinting of CDN file names we reported (spagu/ssg#316), so the changelog page names the CDN bundle correctly again.
 
 ### Security
 
